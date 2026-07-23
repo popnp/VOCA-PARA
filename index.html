@@ -1452,6 +1452,7 @@
   </div>
 </div>
 
+  <div id="cloudBanner" style="display:none; background:var(--rust); color:#fff; font-family:var(--font-ui); font-size:12px; padding:6px 10px; text-align:center;">Offline — changes are saved on this device and will need a reload to sync.</div>
   <div id="topBar" class="theme-voca">
   <header class="top" id="mainHeader">
     <div class="header-row">
@@ -1494,6 +1495,19 @@
 
   <!-- SHARED EDIT VIEW (backup + raw-text editing for both apps) -->
   <section id="view-edit" class="view">
+    <div class="card-panel">
+      <div class="panel-inner">
+        <label class="field-label">Sync across devices</label>
+        <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
+        <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
+          <input type="text" id="syncIdInput" style="flex:1; min-width:220px; font-size:12.5px;">
+          <button class="btn btn-ghost" onclick="copySyncId()">Copy</button>
+          <button class="btn btn-primary" onclick="applySyncId()">Use this code</button>
+        </div>
+        <p class="hint" id="syncMsg" style="margin:8px 0 0;"></p>
+      </div>
+    </div>
+
     <div class="card-panel">
       <div class="panel-inner">
         <label class="field-label">Pronunciation voice</label>
@@ -2029,6 +2043,70 @@ let flipped = false;
 
    Everything below calls appStorage.get/set, so swapping in a different backend
    later (a server, the GitHub API) means changing only this block. */
+/* ---- Cloud sync (Supabase) ----
+   Only used on a real host; inside the artifact the original window.storage
+   still wins so nothing changes there. The anon key below is designed to be
+   public — access is governed by the table's RLS policy, not by hiding it.
+
+   The device id is what actually separates your data from a stranger's. It's a
+   random string kept in localStorage; anyone who knows it can read and write
+   this data, so treat it like a password. Use "Sync code" in the Edit page to
+   copy it onto a second device. */
+const SUPABASE_URL = 'https://nwjrjptiugewhmxixxix.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53anJqcHRpdWdld2hteGl4eGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MTg2MDIsImV4cCI6MjEwMDM5NDYwMn0.Un6oOpn3iKeMXssTNQmOszHiYxaKFxamTp_oPDaZ42I';
+const SYNC_ID_KEY = 'voca-sync-id';
+
+function getSyncId(){
+  let id = null;
+  try{ id = localStorage.getItem(SYNC_ID_KEY); }catch(e){}
+  if(!id){
+    id = 'u_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    try{ localStorage.setItem(SYNC_ID_KEY, id); }catch(e){}
+  }
+  return id;
+}
+function setSyncId(id){
+  try{ localStorage.setItem(SYNC_ID_KEY, String(id).trim()); }catch(e){}
+}
+
+async function cloudGet(key){
+  const id = getSyncId() + ':' + key;
+  const url = SUPABASE_URL + '/rest/v1/app_data?id=eq.' + encodeURIComponent(id) + '&select=payload';
+  const res = await fetch(url, {
+    headers: {apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY}
+  });
+  if(!res.ok) throw new Error('cloud get ' + res.status);
+  const rows = await res.json();
+  if(!rows.length || rows[0].payload === null) return null;
+  const p = rows[0].payload;
+  // The column is jsonb, so what comes back is already parsed. The rest of the
+  // app works with JSON strings, so put it back into that shape.
+  return {value: typeof p === 'string' ? p : JSON.stringify(p)};
+}
+
+async function cloudSet(key, value){
+  const id = getSyncId() + ':' + key;
+  const url = SUPABASE_URL + '/rest/v1/app_data';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates'
+    },
+    // value is a JSON string; parse it so it lands as real jsonb rather than a
+    // string-wrapped blob. Anything unparseable is stored as-is.
+    body: JSON.stringify({
+      id,
+      payload: (function(){ try{ return JSON.parse(value); }catch(e){ return value; } })(),
+      updated_at: new Date().toISOString()
+    })
+  });
+  if(!res.ok) throw new Error('cloud set ' + res.status);
+  return {value};
+}
+
 const appStorage = (function(){
   const hasArtifactStorage = (typeof window !== 'undefined')
     && window.storage
@@ -2042,28 +2120,70 @@ const appStorage = (function(){
     };
   }
 
-  // localStorage is synchronous, but the callers all await, so these return
-  // promises to keep the two paths interchangeable.
+  const localGet = (key) => {
+    const v = localStorage.getItem(key);
+    // Matching window.storage: a missing key comes back null, and a present
+    // one arrives wrapped as {value}.
+    return v === null ? null : {value: v};
+  };
+  const localSet = (key, value) => {
+    localStorage.setItem(key, value);
+    return {value};
+  };
+
   return {
-    kind: 'local',
-    get(key){
-      const v = localStorage.getItem(key);
-      // Matching window.storage: a missing key comes back null, and a present
-      // one arrives wrapped as {value}.
-      return Promise.resolve(v === null ? null : {value: v});
-    },
-    set(key, value){
+    kind: 'cloud',
+    async get(key){
+      // Cloud is the source of truth across devices, but a network hiccup must
+      // not look like "no data" — fall back to the local copy instead.
       try{
-        localStorage.setItem(key, value);
-        return Promise.resolve({value});
+        const remote = await cloudGet(key);
+        if(remote){
+          try{ localSet(key, remote.value); }catch(e){}
+          return remote;
+        }
+        // Nothing in the cloud yet: adopt whatever this device already has so
+        // existing local data survives the switch to syncing.
+        const local = localGet(key);
+        if(local){
+          cloudSet(key, local.value).catch(()=>{});
+        }
+        return local;
       }catch(e){
-        // Quota exceeded is the realistic failure here. Reject so the existing
-        // retry-and-alert logic in performSave still applies.
-        return Promise.reject(e);
+        console.warn('Cloud read failed, using local copy', e);
+        cloudStatus(false);
+        return localGet(key);
+      }
+    },
+    async set(key, value){
+      // Write locally first so the app never loses an edit to a dropped
+      // connection, then push. A failed push is reported, not thrown, so the
+      // user's work still lands on this device.
+      let localOk = true;
+      try{ localSet(key, value); }catch(e){ localOk = false; }
+      try{
+        const r = await cloudSet(key, value);
+        cloudStatus(true);
+        return r;
+      }catch(e){
+        console.warn('Cloud write failed, kept locally', e);
+        cloudStatus(false);
+        if(localOk) return {value};
+        throw e;
       }
     }
   };
 })();
+
+// Shows a small banner when the device is working offline, so a long stretch of
+// unsynced edits can't go unnoticed.
+let cloudOnline = true;
+function cloudStatus(ok){
+  if(ok === cloudOnline) return;
+  cloudOnline = ok;
+  const el = document.getElementById('cloudBanner');
+  if(el) el.style.display = ok ? 'none' : 'block';
+}
 
 const SHARED = true; // this dataset is shared across all devices/people who open this tool
 
@@ -2193,6 +2313,7 @@ function switchTab(name){
   document.getElementById('unified-tab-edit').classList.toggle('active', name==='edit');
   document.getElementById('view-add').classList.toggle('active', name==='add');
   document.getElementById('view-edit').classList.toggle('active', name==='edit');
+  if(name === 'edit') refreshSyncIdField();
   if(name==='edit') renderBackupStatus();
 
   const isPara = document.getElementById('appTabPara').classList.contains('active');
@@ -3166,6 +3287,42 @@ window.addEventListener('resize', alignNavArrows);
 if(document.fonts && document.fonts.ready){
   // Web fonts change glyph widths, so re-measure once they've loaded.
   document.fonts.ready.then(alignNavArrows);
+}
+
+function refreshSyncIdField(){
+  const el = document.getElementById('syncIdInput');
+  if(el) el.value = getSyncId();
+}
+function copySyncId(){
+  const el = document.getElementById('syncIdInput');
+  if(!el) return;
+  el.select();
+  try{ navigator.clipboard.writeText(el.value); }catch(e){ document.execCommand('copy'); }
+  const msg = document.getElementById('syncMsg');
+  if(msg) msg.textContent = 'Copied.';
+}
+async function applySyncId(){
+  const el = document.getElementById('syncIdInput');
+  const msg = document.getElementById('syncMsg');
+  if(!el) return;
+  const val = el.value.trim();
+  if(!val){ if(msg) msg.textContent = 'Enter a code first.'; return; }
+  if(val === getSyncId()){ if(msg) msg.textContent = 'Already using this code.'; return; }
+  // Switching codes replaces what's on screen with the other device's data, so
+  // make the consequence explicit rather than silently swapping it out.
+  if(!confirm('Switch to this sync code? This device will then show the data stored under that code instead of what you see now.')) return;
+  setSyncId(val);
+  if(msg) msg.textContent = 'Loading…';
+  try{
+    // Same load sequence the app boots with, so the swapped-in data lands in
+    // every view rather than only the one currently on screen.
+    await Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs()]);
+    switchApp('para');
+    switchTab('quiz');
+    if(msg) msg.textContent = 'Now synced to this code.';
+  }catch(e){
+    if(msg) msg.textContent = 'Could not load that code: ' + e.message;
+  }
 }
 
 let currentBlankAnswer = '';
