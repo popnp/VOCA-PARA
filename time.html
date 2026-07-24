@@ -1663,12 +1663,44 @@ function dayVisibleMins(code){
    paused into sw.segments is written to the day on save, and adding it here as
    well would show the time twice. Returns 0 unless the timer is actually
    running and the dial is showing today. */
-function clockLiveMins(code){
-  if(!sw || !sw.startedAt || !sw.actId) return 0;
-  if(code !== todayCode()) return 0;
+/* Every span of the session in progress that has not been written to the day
+   yet: the stretches already banked by earlier pauses, plus the one running
+   right now. Returns [] when there is nothing pending, the dial is showing
+   another day, or the activity is filtered out. */
+function pendingSpans(code){
+  if(!sw || !sw.actId) return [];
+  if(code !== todayCode()) return [];
   const a = actById(sw.actId);
-  if(a && !isVisibleAct(a)) return 0;   // respect the group/activity filter
-  return Math.floor((Date.now() - sw.startedAt) / 60000);
+  if(a && !isVisibleAct(a)) return [];   // respect the group/activity filter
+
+  const spans = (sw.segments || []).map(g => ({s: g.s, e: g.e}));
+  if(sw.startedAt && sw._segStart != null){
+    const end = Math.max(nowMinutes(), sw._segStart + 1);
+    spans.push({s: sw._segStart, e: end});
+  }
+  return mergeSpans(spans);
+}
+
+/* A pause and resume this far apart, in minutes, counts as one continuous
+   stretch. A short break — fetching a drink, a quick interruption — shouldn't
+   slice the record into fragments. */
+const SPAN_JOIN_GAP = 5;
+
+/* Joins spans that touch, overlap, or are separated by no more than the gap
+   above. */
+function mergeSpans(spans){
+  const out = [];
+  spans.slice().sort((x,y) => x.s - y.s).forEach(g => {
+    const last = out[out.length - 1];
+    if(last && g.s <= last.e + SPAN_JOIN_GAP) last.e = Math.max(last.e, g.e);
+    else out.push({s: g.s, e: g.e});
+  });
+  return out;
+}
+
+/* Minutes of the session in progress, for the day's running total. */
+function clockLiveMins(code){
+  return pendingSpans(code).reduce((t,g) => t + Math.max(0, g.e - g.s), 0);
 }
 
 /* A dot on the rim marking the time right now. Only drawn when the dial is
@@ -1685,17 +1717,19 @@ function nowMarkerHtml(code){
    stopwatch runs. Returns '' when nothing is running, the dial is not showing
    today, or the activity is filtered out. */
 function liveWedgeHtml(code){
-  const mins = clockLiveMins(code);
-  if(!mins) return '';
-  const a = actById(sw.actId);
+  const a = sw && sw.actId ? actById(sw.actId) : null;
   if(!a) return '';
-  // sw._segStart is the wall-clock minute the current span began. Fall back to
-  // working backwards from now if it is missing, so a restored timer still draws.
-  const start = (sw._segStart != null) ? sw._segStart : Math.max(0, nowMinutes() - mins);
-  const end = Math.min(1440, start + mins);
-  if(end <= start) return '';
-  return `<path class="clock-wedge is-live" d="${clockWedgePath(clockAngle(start), clockAngle(end), CLOCK_R)}"` +
-         ` fill="${a.color}"><title>${actDisplay(a)} ${minToHHMM(start)}– running</title></path>`;
+  return pendingSpans(code).map(g => {
+    const start = Math.max(0, g.s), end = Math.min(1440, g.e);
+    if(end <= start) return '';
+    const tip = `${actDisplay(a)} ${minToHHMM(start)}–${minToHHMM(end)}` +
+                (sw.startedAt ? ' (running)' : ' (paused)');
+    // Only pulse while the clock is actually moving; a paused session sits
+    // still like any other record.
+    const cls = 'clock-wedge' + (sw.startedAt ? ' is-live' : '');
+    return `<path class="${cls}" d="${clockWedgePath(clockAngle(start), clockAngle(end), CLOCK_R)}"` +
+           ` fill="${a.color}"><title>${tip}</title></path>`;
+  }).join('');
 }
 
 function renderClock(){
@@ -2357,10 +2391,10 @@ function swPause(){
     const end = nowMinutes();
     const seg = {s: sw._segStart, e: Math.max(end, sw._segStart + 1)};
     const last = sw.segments[sw.segments.length - 1];
-    // Pausing and resuming within the same minute would otherwise leave a trail
-    // of one-minute fragments; merge anything that continues where the last
-    // span ended.
-    if(last && seg.s <= last.e) last.e = Math.max(last.e, seg.e);
+    // A short break shouldn't split the record, so anything resuming within
+    // SPAN_JOIN_GAP of the last span is folded into it. Same rule the dial
+    // uses, so what's drawn and what's saved agree.
+    if(last && seg.s <= last.e + SPAN_JOIN_GAP) last.e = Math.max(last.e, seg.e);
     else sw.segments.push(seg);
     sw._segStart = null;
   }
