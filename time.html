@@ -147,7 +147,15 @@
     letter-spacing:0.06em;
     margin-bottom:6px;
   }
-  .hint{font-size:11.5px; color:var(--text-muted); line-height:1.5;}
+  /* Same family and weight as .field-label, so the headings and the notes
+     under them read as one set rather than two. */
+  .hint{
+    font-family:var(--font-ui);
+    font-weight:300;
+    font-size:11.5px;
+    color:var(--text-muted);
+    line-height:1.5;
+  }
   input[type="text"], input[type="time"], select{
     font-family:var(--font-ui);
     font-size:13px;
@@ -170,21 +178,32 @@
     margin:var(--sp-4) 0 var(--sp-2);
   }
   .filter-bar{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:var(--sp-4);
     margin-top:var(--sp-5);
   }
+  .filter-main{min-width:0;}
+  /* Sits at the right end of the filter row. The top margin matches the first
+     .group-row's so the icons line up with the filter buttons rather than the
+     top of the block. */
   .table-top{
     display:flex;
     justify-content:flex-end;
     align-items:center;
     gap:var(--sp-4);
-    margin:2px 0 var(--sp-2);
+    flex:0 0 auto;
+    margin:var(--sp-4) 0 var(--sp-2);
   }
   /* ---- Daily clock (24h pie) --------------------------------------------
      One ring = one day, midnight at the top, clockwise. Recorded activities
      are wedges over a white base, with the off-hours shaded. */
   .clock-wrap{
     position:relative;
-    margin:0 0 2px;
+    /* Clear of the table below — the hour numbers sit right on the rim, so the
+       dial needs room or it reads as part of the table. */
+    margin:0 0 52px;   /* + the table's own 8px top margin = 60px */
   }
   /* The date and total are laid over the dial's right side — the 00:00-06:00
      quadrant, which is shaded off-hours and rarely carries a wedge. Right
@@ -705,20 +724,14 @@
     line-height:1;
     font-variant-numeric:tabular-nums;
     color:#111;
-  }
-  .hw-act{
-    font-family:var(--font-ui);
-    font-size:12px;
-    font-weight:400;
-    color:#111;
-    opacity:0.75;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
+    /* Flex centring aligns the line box, not the glyphs. The font reserves
+       descender space that digits never use, so they sit low in the bar —
+       measured 16px above against 10px below. A 1.5px lift centres them
+       optically; a transform is used so the row's height is unchanged. */
+    transform:translateY(-1.5px);
   }
   /* Dark activity colours need light text to stay readable. */
   #topBar.hw-dark .hw-clock,
-  #topBar.hw-dark .hw-act,
   #topBar.hw-dark .hw-controls button,
   #topBar.hw-dark nav.tabs button{color:#fff;}
   .sw-actions{display:flex; gap:var(--sp-3); flex-wrap:wrap; align-items:center;}
@@ -822,7 +835,6 @@
             <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15"/></svg>
           </button>
         </span>
-        <span class="hw-act" id="hwAct"></span>
       </div>
       <nav class="tabs">
         <button onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">
@@ -843,27 +855,31 @@
        revealing the second tier can't push the table up and down. -->
   <div class="clock-wrap" id="clockWrap"></div>
 
-  <div class="table-top">
-    <button class="mode-toggle" onclick="openAddDate()" aria-label="Add a day" title="Add / edit a day">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
-    </button>
-    <button class="mode-toggle" id="modeToggleBtn" onclick="toggleMode()" aria-label="Switch view" title="Check / Time">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M6.4 7.2 L2.8 10.8 L6.4 14.4 Z"/>
-        <path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>
-        <rect x="4.6" y="9.6" width="14.8" height="2.4"/>
-      </svg>
-    </button>
-  </div>
-
   <table class="day-table">
     <thead id="dayHead"></thead>
     <tbody id="dayBody"></tbody>
   </table>
 
+  <!-- The filters and the two view buttons share a line: filters left, buttons
+       right. The buttons stay pinned to the first row even when the activity
+       filter appears underneath. -->
   <div class="filter-bar">
-    <div class="group-row" id="groupRow"></div>
-    <div class="group-row" id="actRow" style="display:none; margin-top:0;"></div>
+    <div class="filter-main">
+      <div class="group-row" id="groupRow"></div>
+      <div class="group-row" id="actRow" style="display:none; margin-top:0;"></div>
+    </div>
+    <div class="table-top">
+      <button class="mode-toggle" onclick="openAddDate()" aria-label="Add a day" title="Add / edit a day">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
+      </button>
+      <button class="mode-toggle" id="modeToggleBtn" onclick="toggleMode()" aria-label="Switch view" title="Check / Time">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6.4 7.2 L2.8 10.8 L6.4 14.4 Z"/>
+          <path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>
+          <rect x="4.6" y="9.6" width="14.8" height="2.4"/>
+        </svg>
+      </button>
+    </div>
   </div>
 </section>
 
@@ -928,7 +944,6 @@
   <div class="card-panel">
     <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-24b</p>
     <label class="field-label">Activities</label>
-    <p class="hint" style="margin:0 0 10px;">Colour · abbreviation · group. Type a new group name to create one.</p>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
       <button class="mini-toggle" onclick="addActivity()">+ Add activity</button>
@@ -1050,18 +1065,20 @@
    ========================================================================= */
 const DEFAULT_GROUPS = [
   {id:'ielts',  label:'IELTS'},
-  {id:'eng',    label:'English'},
+  {id:'eng',    label:'pavo'},
   {id:'work',   label:'Work'}
 ];
 let GROUPS = DEFAULT_GROUPS.map(g => ({...g}));
 
+/* Activities are identified by group + abbreviation throughout, so there is no
+   separate long name to store. */
 const DEFAULT_ACTIVITIES = [
-  {id:'speaking',  label:'IELTS Speaking',  short:'IS', group:'ielts', color:'#FF4029'},
-  {id:'reading',   label:'IELTS Reading',   short:'IR', group:'ielts', color:'#F80000'},
-  {id:'writing',   label:'IELTS Writing',   short:'IW', group:'ielts', color:'#FF8000'},
-  {id:'listening', label:'IELTS Listening', short:'IL', group:'ielts', color:'#FFAA00'},
-  {id:'vocapara',  label:'Para/Voca', short:'PV', group:'eng',   color:'#ACA140'},
-  {id:'portfolio', label:'Portfolio', short:'PF', group:'work',  color:'#A1B4DF'}
+  {id:'speaking',  short:'S',  group:'ielts', color:'#FFA200'},
+  {id:'reading',   short:'R',  group:'ielts', color:'#11FA00'},
+  {id:'writing',   short:'W',  group:'ielts', color:'#8FECFF'},
+  {id:'listening', short:'L',  group:'ielts', color:'#E1FF00'},
+  {id:'vocapara',  short:'PV', group:'eng',   color:'#000000'},
+  {id:'portfolio', short:'PF', group:'work',  color:'#004CFF'}
 ];
 
 /* Editable at runtime. The id is what recorded time is keyed on, so it is
@@ -1083,7 +1100,6 @@ function sanitizeActivities(list){
     seen.add(a.id);
     out.push({
       id: a.id,
-      label: String(a.label || a.id).slice(0, 40) || a.id,
       short: String(a.short || a.id.slice(0,2)).toUpperCase().slice(0, 3),
       group: String(a.group || 'other'),
       color: /^#[0-9a-f]{6}$/i.test(String(a.color||'')) ? a.color : '#999999'
@@ -2231,8 +2247,6 @@ function renderHeaderState(){
 
   const a = actById(sw.actId);
   document.getElementById('hwClock').textContent = fmtClock(swElapsedMs());
-  document.getElementById('hwAct').textContent =
-    actDisplay(a) + (sw.startedAt ? '' : ' · paused');
   // The colour marks time actively accumulating. A paused session keeps its
   // place in the header but drops back to white, so a glance at the bar says
   // whether the clock is moving.
@@ -2538,10 +2552,8 @@ async function loadData(){
 function renderColorRows(){
   const wrap = document.getElementById('colorRows');
   if(!wrap) return;
-  // Colour, abbreviation, group. The long name is no longer shown or edited —
-  // the interface identifies activities as group + abbreviation. a.label is
-  // still kept as data and follows the abbreviation (see setActField), because
-  // the .txt export writes it out.
+  // Colour, abbreviation, group. Activities are identified by group plus
+  // abbreviation throughout, so there is no long name to show or store.
   wrap.innerHTML = ACTIVITIES.map(a => `
     <div class="color-row">
       <span class="swatch-box"><input type="color" value="${a.color}" onchange="setActField('${a.id}','color',this.value)" aria-label="${escapeAttr(a.short)} colour"></span>
@@ -2564,10 +2576,8 @@ function groupLabelOf(id){
   return g ? g.label : id;
 }
 
-/* How an activity is named everywhere on screen: the group followed by the
-   abbreviation — "IELTS IS", not "IELTS Speaking". The full a.label is kept
-   as stored data (it is what the options editor edits and what the .txt
-   export carries), but it is never shown in the interface. */
+/* How an activity is named everywhere: the group followed by the
+   abbreviation, e.g. "IELTS IS". */
 function actDisplay(a){
   if(!a) return '';
   const g = groupLabelOf(a.group);
@@ -2584,12 +2594,6 @@ async function setActField(id, field, value){
   } else if(field === 'short'){
     if(!v) return;
     a.short = v.toUpperCase().slice(0,3);
-    // The name field is gone from the interface, so keep the stored label in
-    // step with what is shown. It only surfaces in the .txt export now.
-    a.label = actDisplay(a);
-  } else if(field === 'label'){
-    if(!v) return;
-    a.label = v.slice(0,40);
   } else if(field === 'group'){
     if(!v) return;
     // Type an existing group's name to join it, or a new one to create it.
@@ -2597,7 +2601,6 @@ async function setActField(id, field, value){
     a.group = hit ? hit.id : v.toLowerCase().replace(/\s+/g,'-');
     if(!hit) DEFAULT_GROUPS.push({id:a.group, label:v});
     syncGroups();
-    a.label = actDisplay(a);
   }
   syncGroups();
   await saveActivities();
@@ -2610,18 +2613,9 @@ async function addActivity(){
   if(!input || !input.trim()) return;
   const short = input.trim().replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase() || 'XX';
   const id = 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-  ACTIVITIES.push({
-    id,
-    label: short,      // kept in step with the abbreviation; used by .txt export
-    short,
-    group: 'other',
-    color: '#999999'
-  });
+  ACTIVITIES.push({id, short, group: 'other', color: '#999999'});
   if(!DEFAULT_GROUPS.some(g => g.id === 'other')) DEFAULT_GROUPS.push({id:'other', label:'Other'});
   syncGroups();
-  // Now that the group exists, store the full display form as the label.
-  const added = actById(id);
-  if(added) added.label = actDisplay(added);
   await saveActivities();
   refreshAll();
 }
@@ -2710,8 +2704,11 @@ async function applySyncId(btn){
    a restore would lose custom names and colours, and any activity added by the
    user would fail to import at all. Definition lines start with '#'. */
 function buildTxt(){
+  // Abbreviation, group, colour, id. The long name is gone from the app, so it
+  // is not written out either. The id has to stay: it is what links recorded
+  // time to an activity, and without it a restore would lose that link.
   const lines = ACTIVITIES.map(a =>
-    ['#', a.short, a.label, groupLabelOf(a.group), a.color.toUpperCase(), a.id].join('\t')
+    ['#', a.short, groupLabelOf(a.group), a.color.toUpperCase(), a.id].join('\t')
   );
   lines.push('');
   Object.keys(days).sort().forEach(code => {
@@ -2762,13 +2759,14 @@ function parseTxt(raw){
     if(t.startsWith('#')){
       const parts = t.replace(/^#\s*/,'').split('\t').map(x => x.trim()).filter(Boolean);
       if(parts.length >= 2){
-        defs.push({
-          short: parts[0],
-          label: parts[1],
-          group: parts[2] || 'Other',
-          color: parts[3] || '#999999',
-          id:    parts[4] || null
-        });
+        // Older backups carried a long name in column 2; current ones don't.
+        // A colour in the third field is the giveaway for the newer layout.
+        const isNew = /^#[0-9a-f]{6}$/i.test(parts[2] || '');
+        defs.push(isNew
+          ? {short: parts[0], group: parts[1] || 'Other',
+             color: parts[2] || '#999999', id: parts[3] || null}
+          : {short: parts[0], group: parts[2] || 'Other',
+             color: parts[3] || '#999999', id: parts[4] || null});
       }
       return;
     }
@@ -2811,7 +2809,7 @@ function activitiesFromDefs(defs){
     seenGroups[gid] = d.group;
     return {
       id: d.id || ('a_' + d.short.toLowerCase()),
-      label: d.label,
+
       short: d.short.toUpperCase().slice(0,3),
       group: gid,
       color: /^#[0-9a-f]{6}$/i.test(d.color) ? d.color : '#999999'
