@@ -1,0 +1,2919 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIME</title>
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="%23111"/><text x="32" y="33" fill="%23fff" font-family="Helvetica,Arial,sans-serif" font-size="30" font-weight="500" letter-spacing="-0.5" text-anchor="middle" dominant-baseline="central">T</text></svg>'>
+<link href="https://api.fontshare.com/v2/css?f[]=switzer@300,400,500,600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+  :root{
+    --font-ui:'Switzer','Pretendard Variable','Pretendard',
+              'Helvetica Neue',Helvetica,Arial,
+              'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    --paper:#FFFFFF;
+    --paper-line:#D8D8D8;
+    --rust:#FF4602;
+    --text-dark:#111111;
+    --text-muted:#6B6B6B;
+    --sp-1:4px;
+    --sp-2:8px;
+    --sp-3:12px;
+    --sp-4:16px;
+    --sp-5:24px;
+    --sp-6:32px;
+
+    /* Activity colours, supplied by the user. IELTS sits in the red-orange
+       range so the four read as one family; the other two stay clearly apart. */
+    --c-vocapara:#ACA140;
+    --c-portfolio:#A1B4DF;
+    --c-speaking:#FF4029;
+    --c-reading:#F80000;
+    --c-writing:#FF8000;
+    --c-listening:#FFAA00;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  html{scrollbar-gutter:stable; overflow-y:scroll;}
+  body{
+    background:#FFFFFF;
+    color:var(--text-dark);
+    font-family:var(--font-ui);
+    min-height:100vh;
+    padding:var(--header-h, 60px) max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 40px;
+  }
+
+  /* ---- Header: mirrors the Voca/Para app so the two feel like one system ---- */
+  #topBar{
+    position:fixed;
+    top:0; left:0;
+    width:var(--vw);
+    padding:0 max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 0;
+    background:#FFFFFF;
+    z-index:50;
+  }
+  #topBar > *{max-width:640px; margin-left:auto; margin-right:auto;}
+  .header-row{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:2px 0;
+  }
+  .header-row::after{
+    content:'';
+    position:absolute;
+    left:calc(-50vw + 50%);
+    right:calc(-50vw + 50%);
+    bottom:0;
+    border-bottom:1px solid #111;
+  }
+  .brand-header{
+    font-family:var(--font-ui);
+    font-size:38px;
+    font-weight:400;
+    letter-spacing:-0.02em;
+    line-height:1;
+    color:#111;
+    margin:0;
+    display:flex;
+    align-items:center;
+  }
+  .brand-header .app-tab{cursor:pointer;}
+  .brand-header .app-tab + .app-tab{margin-left:17.6px;}
+  nav.tabs{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:17.6px;
+    margin:0;
+  }
+  nav.tabs button{
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    color:#111;
+    display:inline-flex;
+    align-items:center;
+  }
+  .tab-icon{width:26px; height:26px; fill:currentColor;}
+
+  /* ---- Shared controls ---- */
+  .btn{
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    font-weight:400;
+    letter-spacing:0.01em;
+    border:none;
+    border-radius:0;
+    padding:var(--sp-1) var(--sp-4);
+    cursor:pointer;
+    background:transparent;
+    transition:opacity .15s, background .15s;
+  }
+  .btn-primary{background:transparent; color:var(--text-dark); border:1px solid #111;}
+  .btn-primary:hover{background:rgba(0,0,0,0.05);}
+  .btn-ghost{background:transparent; border:1px solid var(--paper-line); color:var(--text-dark);}
+  .btn-ghost:hover{background:rgba(0,0,0,0.04);}
+  .btn-danger{background:transparent; color:var(--rust); border:none; font-size:12.5px; padding:6px 10px;}
+  /* A button waiting for its second press, used when the browser suppresses
+     native confirm dialogs. */
+  .is-armed{
+    background:var(--rust) !important;
+    color:#fff !important;
+    border-color:var(--rust) !important;
+  }
+  .btn:disabled{opacity:0.35; cursor:not-allowed;}
+  .mini-toggle{
+    font-family:var(--font-ui);
+    font-weight:300;
+    font-size:11px;
+    letter-spacing:0.06em;
+    color:#111;
+    background:none;
+    border:1px solid var(--paper-line);
+    padding:3px 9px;
+    cursor:pointer;
+  }
+  .mini-toggle.active{border-color:#111; font-weight:400;}
+  .field-label{
+    display:block;
+    font-family:var(--font-ui);
+    font-weight:300;
+    font-size:11px;
+    color:var(--text-muted);
+    letter-spacing:0.06em;
+    margin-bottom:6px;
+  }
+  .hint{font-size:11.5px; color:var(--text-muted); line-height:1.5;}
+  input[type="text"], input[type="time"], select{
+    font-family:var(--font-ui);
+    font-size:13px;
+    padding:5px 7px;
+    border:1px solid var(--paper-line);
+    border-radius:0;
+    background:#fff;
+    color:#111;
+  }
+  input:focus, select:focus{outline:none; border-color:#111;}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---- Group filter ---- */
+  .group-row{
+    display:flex;
+    gap:var(--sp-2);
+    flex-wrap:wrap;
+    margin:var(--sp-4) 0 var(--sp-2);
+  }
+  .filter-bar{
+    margin-top:var(--sp-5);
+  }
+  .table-top{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:var(--sp-4);
+    margin:2px 0 var(--sp-2);
+  }
+  /* ---- Daily clock (24h pie) --------------------------------------------
+     One ring = one day, midnight at the top, clockwise. Recorded activities
+     are wedges over a white base, with the off-hours shaded. */
+  .clock-wrap{
+    position:relative;
+    margin:0 0 2px;
+  }
+  /* The date and total are laid over the dial's right side — the 00:00-06:00
+     quadrant, which is shaded off-hours and rarely carries a wedge. Right
+     aligned so the figure hugs the edge. pointer-events stay off so the
+     wedges underneath remain tappable. */
+  .clock-head{
+    position:absolute;
+    /* Dropped clear of the dial's top edge. Expressed as a percentage because
+       the dial scales with the screen — a fixed pixel offset would sit at a
+       different height on every device. 23% is 100px at a 430px width. */
+    top:23%; right:4px;
+    z-index:2;
+    text-align:right;
+    pointer-events:none;
+  }
+  /* 70% of the previous 39px. The weekday and wall clock sit on the same line,
+     lighter, so the date still leads. */
+  /* The headline figure. */
+  .clock-total{
+    font-family:var(--font-ui);
+    font-size:72px;
+    font-weight:300;
+    line-height:0.95;
+    letter-spacing:-0.03em;
+    color:#111;
+    font-variant-numeric:tabular-nums;
+  }
+  .clock-total.is-zero{color:#ccc;}
+  /* The figure keeps climbing while a stopwatch runs, but stays black — the
+     dial's live wedge is what signals that something is in progress. */
+  .clock-total.is-running{color:#111;}
+  /* Square, so the dial scales with the width of the screen. */
+  .clock-svg{
+    display:block;
+    width:100%;
+    max-width:520px;
+    margin:0 auto;
+  }
+  .clock-base{fill:#fff;}
+  /* Non-study hours — same ranges as the timeline's shading, so the two views
+     agree about which parts of the day are off. */
+  .clock-off{fill:#ececec;}
+  /* Hour spokes run centre to edge, cutting the dial into 24 slices. They pass
+     over white, the off-hours shading and the coloured wedges alike, so a mid
+     grey is used — white would vanish against the free hours. */
+  .clock-tick{stroke:#111; stroke-width:0.3;}
+  /* Font sizes are in viewBox units and the SVG is scaled up to the screen
+     width, so these are smaller numbers than the rendered result. */
+  /* SVG text does not inherit the page font the way HTML does, so the family
+     and weight are set explicitly here — without them the digits fall back to
+     the browser's default sans at weight 400, which reads heavier and larger
+     than the table's ticks even at a matching size. Sized in viewBox units,
+     which scale with the dial. */
+  .clock-num{
+    font-family:var(--font-ui);
+    font-weight:300;
+    font-size:4.5px;
+    fill:var(--text-muted);
+    text-anchor:middle;
+    dominant-baseline:middle;
+  }
+  /* Marks the current time on the rim. Given a white ring so it stays legible
+     wherever it lands — over a wedge, the shading, or bare white. */
+  .clock-now-dot{
+    fill:var(--rust);
+    stroke:#fff;
+    stroke-width:1.2;
+  }
+  .clock-wedge{cursor:pointer;}
+  .clock-wedge:hover{opacity:0.82;}
+  /* The wedge for a session still in progress, so it reads as unsettled
+     rather than recorded. */
+  .clock-wedge.is-live{
+    cursor:default;
+    animation:clockLivePulse 2s ease-in-out infinite;
+  }
+  @keyframes clockLivePulse{
+    0%,100%{opacity:1;}
+    50%{opacity:0.55;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .clock-wedge.is-live{animation:none; opacity:0.8;}
+  }
+
+  .mode-toggle{
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    color:#111;
+    line-height:0;
+  }
+  .mode-toggle svg{width:15.4px; height:15.4px; fill:currentColor;}
+
+  /* ---- Day table ---- */
+  .day-table{width:100%; border-collapse:collapse; margin-top:var(--sp-2);}
+  .day-table thead th{
+    font-family:var(--font-ui);
+    font-weight:300;
+    font-size:11px;
+    color:var(--text-muted);
+    letter-spacing:0.08em;
+    text-align:left;
+    padding:6px var(--sp-1);
+  }
+  .day-table tbody tr{transition:background .1s;}
+  .day-table tbody tr:hover{background:#EFEFEF;}
+  .day-table tbody tr.is-today:hover{background:#EFEFEF;}
+  .day-table tbody td{
+    padding:7px var(--sp-1);
+    vertical-align:middle;
+    /* Every row is exactly this tall in both modes: the tallest thing inside is
+       a 24px block, and a fixed line-height stops the date/total text or an
+       inline-block's baseline gap from making one mode taller than the other. */
+    height:24px;
+    line-height:24px;
+  }
+  .day-date{
+    font-family:var(--font-ui);
+    font-weight:500;
+    font-size:12.5px;
+    white-space:nowrap;
+    cursor:pointer;
+    width:64px;
+  }
+  .day-table tbody tr.is-weekend .day-date{color:var(--text-muted);}
+  .day-total{
+    font-family:var(--font-ui);
+    font-size:11.5px;
+    color:var(--text-muted);
+    white-space:nowrap;
+    text-align:right;
+    width:58px;
+  }
+  .day-total.has-time{color:#111;}
+
+  /* ---- Mode 1: check marks ---- */
+  /* One narrow column per activity, so columns line up down the table and the
+     group band above can span them. */
+  .day-table th.act-col,
+  .day-table td.act-col{
+    width:34px;
+    text-align:center;
+    padding-left:0;
+    padding-right:0;
+  }
+  /* A rule where one group ends and the next begins. Drawn as a border on the
+     first column of each group — using padding here would clash with the header
+     cells' own padding-left (their letter-spacing correction) and knock the two
+     rows out of alignment. */
+  /* A dedicated narrow cell carries the divider between groups. Widening the
+     activity columns themselves would make a lone-activity group (PV) twice as
+     wide as its neighbours and break the column rhythm. */
+  .day-table th.group-gap,
+  .day-table td.group-gap{
+    width:21px;
+    padding:0;
+    position:relative;
+  }
+  /* Only in the body — a divider between the abbreviation labels would be
+     separating text rather than columns of colour. */
+  .day-table td.group-gap::after{
+    content:'';
+    position:absolute;
+    left:50%;
+    top:0; bottom:0;
+    width:1px;
+    background:#111;
+  }
+  .day-table th.act-col{
+    font-family:var(--font-ui);
+    font-weight:300;
+    font-size:10px;
+    letter-spacing:0.06em;
+    color:var(--text-muted);
+    text-align:center;
+    padding-left:0;
+    padding-right:0;
+  }
+  /* Both modes now put the same thing in the header: a 12px .tick-wrap with an
+     absolutely positioned label inside. Identical structure means identical
+     height, so the table can't shift when the mode is toggled. */
+  .act-abbr{
+    position:absolute;
+    top:0; left:50%;
+    font-size:10px;
+    line-height:12px;
+    height:12px;
+    /* Letter-spacing also lands after the last character, which pushes the
+       text left of true centre. Half of it is added back here. */
+    transform:translateX(calc(-50% + 0.03em));
+    white-space:nowrap;
+  }
+  .check-cells{display:flex; gap:6px; align-items:center; flex-wrap:wrap;}
+  .check-cell{
+    width:22px; height:22px;
+    display:inline-block;
+    vertical-align:middle;
+    border:1px solid transparent;
+  }
+  /* A button styled as a field, standing in for <input type="date"> — the
+     native picker is drawn by the OS, so its language and look can't be
+     controlled from here. */
+  .date-field{
+    font-family:var(--font-ui);
+    font-size:13px;
+    font-weight:400;
+    padding:5px 9px;
+    border:1px solid var(--paper-line);
+    background:#fff;
+    color:#111;
+    cursor:pointer;
+    min-width:118px;
+    text-align:left;
+  }
+  .date-field:hover{border-color:#111;}
+  .dp-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:var(--sp-4);
+  }
+  .dp-title{
+    font-family:var(--font-ui);
+    font-size:14px;
+    font-weight:500;
+    letter-spacing:0.01em;
+  }
+  .dp-nav{
+    font-family:var(--font-ui);
+    font-size:15px;
+    line-height:1;
+    background:none;
+    border:none;
+    padding:2px 6px;
+    cursor:pointer;
+    color:#111;
+  }
+  .dp-grid{
+    display:grid;
+    grid-template-columns:repeat(7, 1fr);
+    gap:2px;
+  }
+  .dp-dow{
+    font-family:var(--font-ui);
+    font-weight:300;
+    font-size:9.5px;
+    letter-spacing:0.08em;
+    color:var(--text-muted);
+    text-align:center;
+    padding-bottom:5px;
+  }
+  .dp-cell{
+    font-family:var(--font-ui);
+    font-size:12.5px;
+    font-weight:400;
+    height:32px;
+    border:none;
+    background:none;
+    cursor:pointer;
+    color:#111;
+    font-variant-numeric:tabular-nums;
+  }
+  .dp-cell:hover{background:#EFEFEF;}
+  .dp-cell.other{color:#C8C8C8;}
+  .dp-cell.weekend{color:var(--text-muted);}
+  .dp-cell.today{outline:1px solid #111; outline-offset:-1px;}
+  .dp-cell.chosen{background:#111; color:#fff;}
+  .dp-cell.has-data::after{
+    content:'';
+    display:block;
+    width:3px; height:3px;
+    background:var(--rust);
+    margin:1px auto 0;
+  }
+  .check-cell{cursor:pointer;}
+  /* Outside the current filter: still there, just quiet. */
+  .day-table th.act-col.dimmed{opacity:0.3;}
+  .check-cell.dimmed{opacity:0.35;}
+  /* Empty slots read as a faint cross rather than an outlined box — an outline
+     looks like a cell waiting to be filled, a cross reads as "nothing here". */
+  .check-cell.off{
+    background:transparent !important;
+    border:1px solid transparent;
+    position:relative;
+  }
+  .check-cell.off::before,
+  .check-cell.off::after{
+    content:'';
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:9px;
+    height:1px;
+    background:#111;
+  }
+  .check-cell.off::before{transform:translate(-50%,-50%) rotate(45deg);}
+  .check-cell.off::after{transform:translate(-50%,-50%) rotate(-45deg);}
+
+  /* ---- Mode 2: timeline bars ---- */
+  .tick-head{padding-left:0 !important; padding-right:0 !important;}
+  .tick-wrap{
+    position:relative;
+    display:block;
+    height:12px;
+  }
+  .timeline-tick{
+    position:absolute;
+    top:0;
+    font-size:9px;
+    line-height:12px;
+    height:12px;
+    color:var(--text-muted);
+    transform:translateX(-50%);
+    white-space:nowrap;
+  }
+  /* Matches the check cell's outer height (22px box + 1px border each side)
+     so a row is exactly as tall in either mode. */
+  .tl-wrap{
+    position:relative;
+    height:24px;
+    background:transparent;
+  }
+  /* Stretched past the row's padding so the hour lines read as one continuous
+     ruler down the table instead of dashes that restart every row. */
+  /* Sits behind the grid lines and bars. */
+  .tl-off{
+    position:absolute;
+    top:-7px; bottom:-7px;
+    background:rgba(0,0,0,0.05);
+  }
+  .tl-grid{
+    position:absolute;
+    top:-7px; bottom:-7px;
+    width:1px;
+    background:rgba(0,0,0,0.30);
+  }
+  .day-table td.tick-head{overflow:visible;}
+  /* Both modes put a 24px-tall block in the row, so heights line up. */
+  .day-table td.act-col,
+  .day-table td.tick-head{line-height:0;}
+  /* Same height as a check cell (22px), centred in the 24px row block. */
+  .tl-bar{
+    position:absolute;
+    top:1px;
+    height:22px;
+    border-radius:1px;
+    cursor:pointer;
+  }
+  .tl-bar.is-overlap{
+    outline:1.5px solid #111;
+    outline-offset:-1.5px;
+  }
+
+  /* ---- Modal ---- */
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.35);
+    display:none;
+    align-items:flex-start;
+    justify-content:center;
+    z-index:1000;
+    padding:40px 16px;
+    overflow-y:auto;
+  }
+  .modal-overlay.show{display:flex;}
+  /* The save-confirm and date picker open from inside other modals, so they
+     need to sit above them. */
+  #swOverlay, #dateOverlay{z-index:1100;}
+  .modal-box{
+    background:#fff;
+    max-width:520px;
+    width:100%;
+    padding:var(--sp-5);
+  }
+  .modal-title{
+    font-family:var(--font-ui);
+    font-size:15px;
+    font-weight:500;
+    margin:0 0 var(--sp-4);
+  }
+  .act-block{
+    padding:var(--sp-3) 0;
+    border-bottom:1px solid rgba(0,0,0,0.08);
+  }
+  .act-block:last-of-type{border-bottom:none;}
+  .act-head{
+    display:flex;
+    align-items:center;
+    gap:var(--sp-2);
+    margin-bottom:6px;
+  }
+  .act-swatch{width:11px; height:11px; flex:0 0 auto;}
+  .act-name{font-size:13px; font-weight:500; flex:1;}
+  .act-sum{font-size:11.5px; color:var(--text-muted);}
+  .seg-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-top:5px;
+    flex-wrap:wrap;
+  }
+  .seg-row .sep{font-size:12px; color:var(--text-muted);}
+  /* A plain text field rather than <input type="time">, which renders as a
+     12-hour AM/PM picker in some locales. This keeps it 24-hour everywhere. */
+  .time-in{
+    width:62px;
+    text-align:center;
+    font-variant-numeric:tabular-nums;
+  }
+  .time-in.bad{border-color:var(--rust);}
+  .seg-warn{
+    font-size:11px;
+    color:var(--rust);
+    margin-top:5px;
+    line-height:1.4;
+  }
+
+  /* ---- Stopwatch ---- */
+  /* The stopwatch reads as one centred block: time, controls, then activities. */
+  .color-row{
+    display:flex;
+    align-items:center;
+    gap:var(--sp-3);
+    padding:5px 0;
+  }
+  /* <input type="color"> draws its own inset swatch with a border. iOS Safari
+     collapses the swatch to a thin bar when appearance is stripped, so the
+     control is kept at its native appearance and sized instead. A wrapper
+     clips it to a square so it reads as a flat block of colour everywhere. */
+  .color-row .swatch-box{
+    width:26px; height:26px; flex:0 0 auto;
+    position:relative; overflow:hidden;
+    border:1px solid var(--line);
+    border-radius:2px;
+  }
+  .color-row input[type="color"]{
+    position:absolute;
+    /* Oversized and offset so only the filled centre of the native control
+       shows through the wrapper — no inset border, no white margin. */
+    top:-6px; left:-6px;
+    width:40px; height:40px;
+    padding:0;
+    border:none;
+    background:none;
+    cursor:pointer;
+  }
+  .color-row input[type="color"]::-webkit-color-swatch-wrapper{padding:0; border:none;}
+  .color-row input[type="color"]::-webkit-color-swatch{border:none;}
+  .color-row input[type="color"]::-moz-color-swatch{border:none;}
+  .color-row input[type="text"]{
+    font-family:var(--font-ui);
+    font-size:12.5px;
+    padding:4px 6px;
+    border:1px solid transparent;
+    background:none;
+  }
+  .color-row input[type="text"]:hover{border-color:var(--paper-line);}
+  .color-row input[type="text"]:focus{border-color:#111; background:#fff;}
+  .act-short{
+    width:44px;
+    text-align:center;
+    text-transform:uppercase;
+    font-variant-numeric:tabular-nums;
+  }
+  .act-group{flex:1; min-width:90px; color:var(--text-muted);}
+  .act-del{opacity:0; transition:opacity .15s;}
+  .color-row:hover .act-del{opacity:1;}
+  .act-del svg{width:14px; height:14px;}
+  .sw-block{margin-top:var(--sp-5);}
+  /* Only one rule inside the stopwatch, separating the controls above from the
+     record below. */
+  .sw-divide{padding-top:var(--sp-4);}
+  #watchOverlay .sw-display,
+  #watchOverlay .sw-actions,
+  #watchOverlay .sw-pick,
+  #watchOverlay .field-label,
+  #watchOverlay #swSegments{text-align:center;}
+  #watchOverlay .sw-actions,
+  #watchOverlay .sw-pick{justify-content:center;}
+  .sw-display{
+    font-family:var(--font-ui);
+    font-size:clamp(40px, 12vw, 56px);
+    font-weight:300;
+    letter-spacing:-0.02em;
+    line-height:1.1;
+    margin:var(--sp-3) 0 var(--sp-5);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* Header in stopwatch mode: the running time replaces the app title, and the
+     bar takes the activity's colour so the current task is obvious. */
+  .hw-row{transition:background .2s;}
+  .hw-left{
+    display:flex;
+    align-items:center;
+    gap:var(--sp-3);
+    min-width:0;
+  }
+  .hw-controls{
+    display:inline-flex;
+    align-items:center;
+    gap:var(--sp-2);
+  }
+  .hw-controls button{
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    color:inherit;
+    line-height:0;
+  }
+  .hw-clock{
+    font-family:var(--font-ui);
+    font-size:34px;
+    font-weight:300;
+    letter-spacing:-0.02em;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+    color:#111;
+  }
+  .hw-act{
+    font-family:var(--font-ui);
+    font-size:12px;
+    font-weight:400;
+    color:#111;
+    opacity:0.75;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  /* Dark activity colours need light text to stay readable. */
+  #topBar.hw-dark .hw-clock,
+  #topBar.hw-dark .hw-act,
+  #topBar.hw-dark .hw-controls button,
+  #topBar.hw-dark nav.tabs button{color:#fff;}
+  .sw-actions{display:flex; gap:var(--sp-3); flex-wrap:wrap; align-items:center;}
+  .icon-btn{
+    background:none;
+    border:none;
+    padding:6px;
+    cursor:pointer;
+    color:#111;
+    line-height:0;
+  }
+  .icon-btn svg{width:22px; height:22px; fill:currentColor;}
+  .icon-btn:hover:not(:disabled){opacity:0.6;}
+  .icon-btn:disabled{opacity:0.22; cursor:not-allowed;}
+  .icon-btn.danger{color:var(--rust);}
+  .icon-x{
+    background:none;
+    border:none;
+    padding:2px;
+    cursor:pointer;
+    color:var(--text-muted);
+    line-height:0;
+  }
+  .icon-x svg{width:18px; height:18px;}
+  .icon-x:hover{color:#111;}
+  .sw-pick{display:flex; gap:6px; flex-wrap:wrap; margin-top:var(--sp-2);}
+  .sw-pick button{
+    font-family:var(--font-ui);
+    font-size:11.5px;
+    font-weight:400;
+    padding:5px 10px;
+    border:1px solid var(--paper-line);
+    background:#fff;
+    cursor:pointer;
+    color:#111;
+  }
+  .sw-pick button.active{border-color:#111; font-weight:500;}
+  /* The browser's focus ring looked like a selection; the .active border is the
+     only thing that should signal which activity is chosen. */
+  .sw-pick button:focus{outline:none;}
+  .sw-pick button:focus-visible{outline:1px dotted var(--text-muted); outline-offset:2px;}
+  .sw-swatch{
+    display:inline-block;
+    width:9px; height:9px;
+    margin-right:5px;
+    vertical-align:-1px;
+  }
+
+  .card-panel{
+    padding-top:var(--sp-4);
+    margin-top:var(--sp-6);
+  }
+  .card-panel:first-of-type{margin-top:var(--sp-4);}
+
+  #cloudBanner{
+    display:none;
+    color:var(--rust);
+    font-family:var(--font-ui);
+    font-size:11.5px;
+    margin:var(--sp-6) 0 0;
+    padding:0 max(16px, calc((var(--vw) - 640px) / 2 + 16px));
+  }
+  textarea{
+    width:100%;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12px;
+    line-height:1.5;
+    padding:8px;
+    border:1px solid var(--paper-line);
+    border-radius:0;
+  }
+</style>
+</head>
+<body>
+
+<div id="topBar">
+  <header class="top" id="mainHeader" style="display:none;">
+    <!-- Idle: the normal app header. -->
+    <div class="header-row" id="headerIdle">
+      <h1 class="brand-header"><span class="app-tab" id="appTabTime" onclick="switchTab('cal')" title="Time">T</span></h1>
+      <nav class="tabs">
+        <button onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="10.8" y="7.5" width="2.4" height="6.5"/><rect x="9" y="1.8" width="6" height="2.4"/></svg>
+        </button>
+        <button onclick="openOptions()" aria-label="Options" title="Options">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19.4" cy="12" r="1.6"/></svg>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Running: the header becomes the stopwatch. Everything else is hidden so
+         the elapsed time is unmistakable at a glance. -->
+    <div class="header-row hw-row" id="headerRunning" style="display:none;">
+      <div class="hw-left">
+        <span class="hw-clock" id="hwClock">0:00:00</span>
+        <span class="hw-controls">
+          <button onclick="swPause()" id="hwPauseBtn" aria-label="Pause" title="Pause">
+            <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7.2" y="3.5" width="2.4" height="17"/><rect x="14.4" y="3.5" width="2.4" height="17"/></svg>
+          </button>
+          <button onclick="swEnd()" aria-label="End" title="End">
+            <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15"/></svg>
+          </button>
+        </span>
+        <span class="hw-act" id="hwAct"></span>
+      </div>
+      <nav class="tabs">
+        <button onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="10.8" y="7.5" width="2.4" height="6.5"/><rect x="9" y="1.8" width="6" height="2.4"/></svg>
+        </button>
+        <button onclick="openOptions()" aria-label="Options" title="Options">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19.4" cy="12" r="1.6"/></svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<!-- ================= Calendar ================= -->
+<section id="view-cal" class="view active">
+  <!-- The clock sits at the very top; the view switch moved below it so
+       nothing pushes the dial down. The filters live under the table so that
+       revealing the second tier can't push the table up and down. -->
+  <div class="clock-wrap" id="clockWrap"></div>
+
+  <div class="table-top">
+    <button class="mode-toggle" onclick="openAddDate()" aria-label="Add a day" title="Add / edit a day">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
+    </button>
+    <button class="mode-toggle" id="modeToggleBtn" onclick="toggleMode()" aria-label="Switch view" title="Check / Time">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6.4 7.2 L2.8 10.8 L6.4 14.4 Z"/>
+        <path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>
+        <rect x="4.6" y="9.6" width="14.8" height="2.4"/>
+      </svg>
+    </button>
+  </div>
+
+  <table class="day-table">
+    <thead id="dayHead"></thead>
+    <tbody id="dayBody"></tbody>
+  </table>
+
+  <div class="filter-bar">
+    <div class="group-row" id="groupRow"></div>
+    <div class="group-row" id="actRow" style="display:none; margin-top:0;"></div>
+  </div>
+</section>
+
+<!-- ================= Stopwatch ================= -->
+<div id="watchOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:flex-end;">
+      <button class="icon-x" onclick="closeStopwatch()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+
+    <div class="sw-display" id="swDisplay">0:00:00</div>
+
+    <div class="sw-actions">
+      <button class="icon-btn" id="swStartBtn" onclick="swStart()" aria-label="Start" title="Start">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5 L18 12 L6 20.5 Z"/></svg>
+      </button>
+      <button class="icon-btn" id="swPauseBtn" onclick="swPause()" disabled aria-label="Pause" title="Pause">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7.2" y="3.5" width="2.4" height="17"/><rect x="14.4" y="3.5" width="2.4" height="17"/></svg>
+      </button>
+      <button class="icon-btn" id="swEndBtn" onclick="swEnd()" disabled aria-label="End" title="End">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15"/></svg>
+      </button>
+      <button class="icon-btn danger" id="swTrashBtn" onclick="swDiscardNow(this)" aria-label="Discard" title="Discard this session">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5 H20 M9.5 6.5 V3.8 H14.5 V6.5 M6.5 6.5 L7.5 20.5 H16.5 L17.5 6.5" stroke="currentColor" stroke-width="1.9" fill="none"/></svg>
+      </button>
+    </div>
+
+    <div class="sw-block">
+      <div class="sw-pick" id="swPick"></div>
+    </div>
+
+    <div class="sw-block sw-divide">
+      <label class="field-label">Recorded so far</label>
+      <div id="swSegments" class="hint">None yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Options ================= -->
+<div id="editOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <p class="modal-title">Options</p>
+      <button class="icon-x" onclick="closeOptions()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+
+  <div class="card-panel">
+    <label class="field-label">Sync across devices</label>
+    <p class="hint" style="margin:6px 0 10px;">This uses the same code as your Voca/Para app, so both stay on the same devices. Anyone with the code can read and change your data — keep it private.</p>
+    <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
+      <input type="text" id="syncIdInput" style="flex:1; min-width:200px; font-size:12.5px;">
+      <button class="btn btn-ghost" onclick="copySyncId()">Copy</button>
+      <button class="btn btn-primary" onclick="applySyncId(this)">Use this code</button>
+    </div>
+    <p class="hint" id="syncMsg" style="margin:8px 0 0;"></p>
+  </div>
+
+  <div class="card-panel">
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-24b</p>
+    <label class="field-label">Activities</label>
+    <p class="hint" style="margin:0 0 10px;">Colour · abbreviation · group. Type a new group name to create one.</p>
+    <div id="colorRows"></div>
+    <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
+      <button class="mini-toggle" onclick="addActivity()">+ Add activity</button>
+      <button class="mini-toggle" onclick="resetColors(this)">Reset to defaults</button>
+    </div>
+  </div>
+
+  <div class="card-panel">
+    <label class="field-label">Backup / export</label>
+    <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="exportTxt()">Export .txt</button>
+      <button class="btn btn-ghost" onclick="openImport()">Edit by txt manually</button>
+    </div>
+    <p class="hint" id="backupStatus" style="margin-top:8px;"></p>
+    <div id="importWrap" style="display:none; margin-top:var(--sp-3);">
+      <textarea id="importArea" rows="12" spellcheck="false"></textarea>
+      <div style="display:flex; gap:var(--sp-2); margin-top:var(--sp-2); flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="applyImport()">Save</button>
+        <button class="btn btn-ghost" onclick="closeImport()">Cancel</button>
+      </div>
+      <p class="hint" id="importMsg" style="margin-top:8px;"></p>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- ================= Stopwatch confirm modal ================= -->
+<div id="swOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <p class="modal-title" id="swModalTitle">Save this session?</p>
+      <button class="icon-x" onclick="swBackToTimer()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+    <p class="hint" style="margin:-8px 0 14px;">Check the times before saving. Edit anything that's off, or discard the whole session.</p>
+
+    <div style="display:flex; gap:var(--sp-2); align-items:center; flex-wrap:wrap; margin-bottom:var(--sp-4);">
+      <label class="field-label" style="margin:0;">Date</label>
+      <button class="date-field" id="swDate" data-code="" onclick="openDatePicker('swDate')">Choose a date</button>
+    </div>
+
+    <div id="swConfirmRows"></div>
+    <button class="mini-toggle" style="margin-top:7px;" onclick="swAddConfirmRow()">+ add</button>
+
+    <div id="swConfirmWarn" class="seg-warn" style="margin-top:12px;"></div>
+
+    <div style="display:flex; gap:var(--sp-2); margin-top:var(--sp-5); flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="swConfirmSave()">Save</button>
+      <button class="btn btn-ghost" onclick="swBackToTimer()">Keep timing</button>
+      <button class="btn btn-danger" onclick="swDiscard(this)">Discard</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Date picker ================= -->
+<div id="dateOverlay" class="modal-overlay">
+  <div class="modal-box" style="max-width:320px;">
+    <div style="display:flex; justify-content:flex-end; margin-bottom:var(--sp-2);">
+      <button class="icon-x" onclick="closeDatePicker()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+    <div class="dp-head">
+      <button class="dp-nav" onclick="dpShift(-1)" aria-label="Previous month">&#8592;</button>
+      <span class="dp-title" id="dpTitle"></span>
+      <button class="dp-nav" onclick="dpShift(1)" aria-label="Next month">&#8594;</button>
+    </div>
+    <div class="dp-grid" id="dpDow"></div>
+    <div class="dp-grid" id="dpDays"></div>
+    <div style="margin-top:var(--sp-4);">
+      <button class="mini-toggle" onclick="dpToday()">Today</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Single-activity editor ================= -->
+<div id="actOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <p class="modal-title" id="actModalTitle">Activity</p>
+      <button class="icon-x" onclick="closeActEditor()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+    <p class="hint" style="margin:-8px 0 14px;">Times for this one activity. Add a row if you paused and came back.</p>
+    <div id="actSegRows"></div>
+    <button class="mini-toggle" style="margin-top:7px;" onclick="addActSegRow()">+ add</button>
+    <div id="actWarn" class="seg-warn" style="margin-top:12px;"></div>
+    <div style="display:flex; gap:var(--sp-2); margin-top:var(--sp-5); flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="saveActEditor()">Save</button>
+      <button class="btn btn-danger" onclick="clearActEditor(this)">Clear this activity</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Day editor modal ================= -->
+<div id="dayOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <p class="modal-title" id="dayModalTitle">Date</p>
+      <button class="icon-x" onclick="closeDayEditor()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+    <p class="hint" style="margin:-8px 0 14px;">Enter start and end times. Add a row if you paused and came back.</p>
+    <div id="dayActList"></div>
+    <div id="dayWarn" class="seg-warn" style="margin-top:12px;"></div>
+    <div style="display:flex; gap:var(--sp-2); margin-top:var(--sp-5); flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="saveDayEditor()">Save</button>
+      <button class="btn btn-danger" onclick="clearDay(this)">Clear this day</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   Activities. Order here drives the order everywhere else.
+   ========================================================================= */
+const DEFAULT_GROUPS = [
+  {id:'ielts',  label:'IELTS'},
+  {id:'eng',    label:'English'},
+  {id:'work',   label:'Work'}
+];
+let GROUPS = DEFAULT_GROUPS.map(g => ({...g}));
+
+const DEFAULT_ACTIVITIES = [
+  {id:'speaking',  label:'IELTS Speaking',  short:'IS', group:'ielts', color:'#FF4029'},
+  {id:'reading',   label:'IELTS Reading',   short:'IR', group:'ielts', color:'#F80000'},
+  {id:'writing',   label:'IELTS Writing',   short:'IW', group:'ielts', color:'#FF8000'},
+  {id:'listening', label:'IELTS Listening', short:'IL', group:'ielts', color:'#FFAA00'},
+  {id:'vocapara',  label:'Para/Voca', short:'PV', group:'eng',   color:'#ACA140'},
+  {id:'portfolio', label:'Portfolio', short:'PF', group:'work',  color:'#A1B4DF'}
+];
+
+/* Editable at runtime. The id is what recorded time is keyed on, so it is
+   generated once and never changes — renaming only touches label/short. */
+let ACTIVITIES = DEFAULT_ACTIVITIES.map(a => ({...a}));
+
+function actById(id){ return ACTIVITIES.find(a => a.id === id); }
+
+/* The whole activity list is stored, not just colours — names, abbreviations,
+   groups and any activities added later all persist together. */
+const ACT_KEY = 'time-activities';
+
+function sanitizeActivities(list){
+  if(!Array.isArray(list) || !list.length) return null;
+  const seen = new Set();
+  const out = [];
+  list.forEach(a => {
+    if(!a || typeof a.id !== 'string' || !a.id || seen.has(a.id)) return;
+    seen.add(a.id);
+    out.push({
+      id: a.id,
+      label: String(a.label || a.id).slice(0, 40) || a.id,
+      short: String(a.short || a.id.slice(0,2)).toUpperCase().slice(0, 3),
+      group: String(a.group || 'other'),
+      color: /^#[0-9a-f]{6}$/i.test(String(a.color||'')) ? a.color : '#999999'
+    });
+  });
+  return out.length ? out : null;
+}
+
+async function loadActivities(){
+  try{
+    const res = await appStorage.get(ACT_KEY);
+    if(res && res.value){
+      const clean = sanitizeActivities(JSON.parse(res.value));
+      if(clean) ACTIVITIES = clean;
+    }
+  }catch(e){ /* defaults already in place */ }
+  syncGroups();
+}
+
+async function saveActivities(){
+  try{ await appStorage.set(ACT_KEY, JSON.stringify(ACTIVITIES)); }
+  catch(e){ console.warn('activity save failed', e); }
+}
+
+/* Groups are derived from the activities, so adding one with a new group name
+   creates that group automatically. */
+function syncGroups(){
+  const seen = [];
+  ACTIVITIES.forEach(a => {
+    if(!seen.some(g => g.id === a.group)){
+      const known = DEFAULT_GROUPS.find(g => g.id === a.group);
+      seen.push(known || {id:a.group, label:a.group});
+    }
+  });
+  GROUPS = seen;
+}
+
+/* Text files name activities by their short code (IS, IR, PV...). Older
+   exports used the internal id (speaking, reading...), so both are accepted —
+   a backup taken before this change must still import cleanly. */
+function actByToken(tok){
+  const t = String(tok||'').trim();
+  return ACTIVITIES.find(a => a.short.toLowerCase() === t.toLowerCase())
+      || ACTIVITIES.find(a => a.id.toLowerCase() === t.toLowerCase())
+      || null;
+}
+
+/* =========================================================================
+   Storage. Mirrors the Voca/Para adapter and deliberately reads the SAME
+   sync-id key, so connecting one app connects both.
+   ========================================================================= */
+const SUPABASE_URL = 'https://nwjrjptiugewhmxixxix.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53anJqcHRpdWdld2hteGl4eGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MTg2MDIsImV4cCI6MjEwMDM5NDYwMn0.Un6oOpn3iKeMXssTNQmOszHiYxaKFxamTp_oPDaZ42I';
+const SYNC_ID_KEY = 'voca-sync-id';   // shared with the Voca/Para app on purpose
+const DATA_KEY = 'time-entries';
+
+function getSyncId(){
+  let id = null;
+  try{ id = localStorage.getItem(SYNC_ID_KEY); }catch(e){}
+  if(!id){
+    id = 'u_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    try{ localStorage.setItem(SYNC_ID_KEY, id); }catch(e){}
+  }
+  return id;
+}
+function setSyncId(id){
+  try{ localStorage.setItem(SYNC_ID_KEY, String(id).trim()); }catch(e){}
+}
+
+async function cloudGet(key){
+  const id = getSyncId() + ':' + key;
+  const url = SUPABASE_URL + '/rest/v1/app_data?id=eq.' + encodeURIComponent(id) + '&select=payload';
+  const res = await fetch(url, {headers:{apikey:SUPABASE_ANON_KEY, Authorization:'Bearer ' + SUPABASE_ANON_KEY}});
+  if(!res.ok) throw new Error('cloud get ' + res.status);
+  const rows = await res.json();
+  if(!rows.length || rows[0].payload === null) return null;
+  const p = rows[0].payload;
+  return {value: typeof p === 'string' ? p : JSON.stringify(p)};
+}
+
+async function cloudSet(key, value){
+  const id = getSyncId() + ':' + key;
+  const res = await fetch(SUPABASE_URL + '/rest/v1/app_data', {
+    method:'POST',
+    headers:{
+      apikey:SUPABASE_ANON_KEY,
+      Authorization:'Bearer ' + SUPABASE_ANON_KEY,
+      'Content-Type':'application/json',
+      Prefer:'resolution=merge-duplicates'
+    },
+    body: JSON.stringify({
+      id,
+      payload: (function(){ try{ return JSON.parse(value); }catch(e){ return value; } })(),
+      updated_at: new Date().toISOString()
+    })
+  });
+  if(!res.ok) throw new Error('cloud set ' + res.status);
+  return {value};
+}
+
+const appStorage = (function(){
+  const localGet = (key) => {
+    const v = localStorage.getItem(key);
+    return v === null ? null : {value:v};
+  };
+  const localSet = (key, value) => { localStorage.setItem(key, value); return {value}; };
+
+  return {
+    async get(key){
+      try{
+        const remote = await cloudGet(key);
+        if(remote){
+          try{ localSet(key, remote.value); }catch(e){}
+          return remote;
+        }
+        const local = localGet(key);
+        if(local) cloudSet(key, local.value).catch(()=>{});
+        return local;
+      }catch(e){
+        console.warn('Cloud read failed, using local copy', e);
+        cloudStatus(false);
+        return localGet(key);
+      }
+    },
+    async set(key, value){
+      let localOk = true;
+      try{ localSet(key, value); }catch(e){ localOk = false; }
+      try{
+        const r = await cloudSet(key, value);
+        cloudStatus(true);
+        return r;
+      }catch(e){
+        console.warn('Cloud write failed, kept locally', e);
+        cloudStatus(false);
+        if(localOk) return {value};
+        throw e;
+      }
+    }
+  };
+})();
+
+let cloudOnline = true;
+function cloudStatus(ok){
+  if(ok === cloudOnline) return;
+  cloudOnline = ok;
+  const el = document.getElementById('cloudBanner');
+  if(el) el.style.display = ok ? 'none' : 'block';
+}
+
+/* =========================================================================
+   Data model
+     days = { '260724': { speaking:[{s:540,e:600}, ...], ... }, ... }
+   Times are MINUTES FROM MIDNIGHT, which keeps comparisons and overlap
+   maths trivial and avoids timezone drift entirely.
+   ========================================================================= */
+let days = {};
+let currentGroup = 'all';
+let currentAct = 'all';   // second tier: a single activity within the group
+let currentMode = 'check';
+let editingCode = null;
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+/* Destructive actions ask before going ahead. Native confirm() is not always
+   available: inside a sandboxed iframe without allow-modals the browser
+   suppresses it and returns false immediately, with no dialog shown. Every
+   caller then takes its "user said no" branch, which makes buttons like
+   Discard and Clear look completely dead.
+
+   The result is checked against a probe: if confirm() returns false in under a
+   few milliseconds, no human could have read the question, so the dialog was
+   blocked. When that happens the confirmation moves onto the button itself —
+   the first press arms it and relabels it, the second press within a few
+   seconds goes ahead. Nothing destructive ever happens unasked. */
+let DIALOGS_BLOCKED = null;   // null = not yet determined
+
+function dialogsBlocked(){
+  if(DIALOGS_BLOCKED !== null) return DIALOGS_BLOCKED;
+  try{
+    const t0 = Date.now();
+    const r = window.confirm('');
+    DIALOGS_BLOCKED = (r === false && Date.now() - t0 < 5);
+  }catch(e){
+    DIALOGS_BLOCKED = true;
+  }
+  return DIALOGS_BLOCKED;
+}
+
+/* Arms a button for a second press. Returns true when the caller should go
+   ahead — that is, on the second press within the timeout. */
+const ARMED = new Map();
+function armButton(el, label){
+  const key = el;
+  const now = Date.now();
+  const prev = ARMED.get(key);
+  if(prev && now - prev.at < 4000){
+    clearTimeout(prev.timer);
+    ARMED.delete(key);
+    el.textContent = prev.original;
+    el.classList.remove('is-armed');
+    return true;                     // second press — proceed
+  }
+  const original = prev ? prev.original : el.textContent;
+  el.textContent = label;
+  el.classList.add('is-armed');
+  const timer = setTimeout(() => {
+    el.textContent = original;
+    el.classList.remove('is-armed');
+    ARMED.delete(key);
+  }, 4000);
+  ARMED.set(key, {at: now, original, timer});
+  return false;                      // first press — armed, wait
+}
+
+/* Returns true to proceed, false to stop. `el` is the button that was pressed;
+   when native dialogs are blocked the confirmation happens on it directly. */
+function askConfirm(message, el, armLabel){
+  if(!dialogsBlocked()) return window.confirm(message);
+  if(el) return armButton(el, armLabel || 'Press again to confirm');
+  return true;
+}
+
+function minToHHMM(m){
+  m = Math.max(0, Math.round(m));
+  return pad2(Math.floor(m/60) % 24) + ':' + pad2(m % 60);
+}
+/* Accepts 9, 900, 9:00, 09:00 and normalises to HH:MM so the field is
+   forgiving to type into but always ends up in one format. */
+function normalizeTimeInput(el){
+  const raw = String(el.value || '').trim();
+  if(!raw){ el.classList.remove('bad'); return; }
+  let h = null, m = null;
+  let mt = /^(\d{1,2})\s*[:.]\s*(\d{1,2})$/.exec(raw);
+  if(mt){ h = +mt[1]; m = +mt[2]; }
+  else if(/^\d{1,2}$/.test(raw)){ h = +raw; m = 0; }
+  else if(/^\d{3}$/.test(raw)){ h = +raw.slice(0,1); m = +raw.slice(1); }
+  else if(/^\d{4}$/.test(raw)){ h = +raw.slice(0,2); m = +raw.slice(2); }
+  if(h === null || h > 23 || m > 59){ el.classList.add('bad'); return; }
+  el.classList.remove('bad');
+  el.value = pad2(h) + ':' + pad2(m);
+}
+
+function hhmmToMin(s){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s).trim());
+  if(!m) return null;
+  const h = parseInt(m[1],10), mi = parseInt(m[2],10);
+  if(h > 23 || mi > 59) return null;
+  return h*60 + mi;
+}
+function fmtDur(mins){
+  if(!mins) return '';
+  const h = Math.floor(mins/60), m = Math.round(mins%60);
+  if(h && m) return h + 'h ' + m + 'm';
+  if(h) return h + 'h';
+  return m + 'm';
+}
+
+function todayCode(){
+  const d = new Date();
+  return String(d.getFullYear()).slice(2) + pad2(d.getMonth()+1) + pad2(d.getDate());
+}
+function dayOfWeekFromCode(code){
+  const s = String(code);
+  if(!/^\d{6}$/.test(s)) return null;
+  const yy = parseInt(s.slice(0,2),10), mm = parseInt(s.slice(2,4),10), dd = parseInt(s.slice(4,6),10);
+  if(!mm || !dd || mm > 12 || dd > 31) return null;
+  const d = new Date(2000+yy, mm-1, dd);
+  if(d.getMonth() !== mm-1 || d.getDate() !== dd) return null;
+  return d.getDay();
+}
+function isWeekendCode(code){
+  const w = dayOfWeekFromCode(code);
+  return w === 0 || w === 6;
+}
+function formatDayLabel(code){
+  const s = String(code);
+  if(!/^\d{6}$/.test(s)) return s;
+  return parseInt(s.slice(2,4),10) + '. ' + parseInt(s.slice(4,6),10);
+}
+
+/* Activities visible under the current group filter. */
+/* Two tiers: the group narrows to a family, then an optional single activity
+   narrows further. Column positions therefore follow whatever is on screen. */
+function groupActivities(){
+  return currentGroup === 'all'
+    ? ACTIVITIES
+    : ACTIVITIES.filter(a => a.group === currentGroup);
+}
+function visibleActivities(){
+  const inGroup = groupActivities();
+  if(currentAct === 'all') return inGroup;
+  const one = inGroup.filter(a => a.id === currentAct);
+  return one.length ? one : inGroup;
+}
+
+function segmentsFor(code, actId){
+  const d = days[code];
+  if(!d || !Array.isArray(d[actId])) return [];
+  return d[actId];
+}
+
+/* Total minutes for a day, limited to the activities currently shown so the
+   figure always matches what the row displays. */
+function dayTotal(code){
+  let t = 0;
+  visibleActivities().forEach(a => {
+    segmentsFor(code, a.id).forEach(seg => { t += Math.max(0, seg.e - seg.s); });
+  });
+  return t;
+}
+
+/* Every day that holds any record, regardless of the active filter. Filtering
+   changes which COLUMNS are filled, not which rows exist — so the table keeps
+   its shape and a group with no time simply shows empty cells. */
+function allCodes(){
+  return Object.keys(days)
+    .filter(c => /^\d{6}$/.test(c))
+    .filter(c => ACTIVITIES.some(a => segmentsFor(c, a.id).length > 0))
+    .sort((a,b) => b.localeCompare(a));
+}
+
+/* -------------------------------------------------------------------------
+   Overlap detection. Two segments clash if they share any minute; touching
+   end-to-start (10:00-11:00 and 11:00-12:00) is fine.
+   ------------------------------------------------------------------------- */
+function findOverlaps(segList){
+  const clashes = [];
+  for(let i=0;i<segList.length;i++){
+    for(let j=i+1;j<segList.length;j++){
+      const A = segList[i], B = segList[j];
+      if(A.s < B.e && B.s < A.e) clashes.push([A,B]);
+    }
+  }
+  return clashes;
+}
+
+/* Every segment of a day, flattened, with its activity attached. */
+function flatSegments(code, onlyVisible){
+  const list = [];
+  const acts = onlyVisible ? visibleActivities() : ACTIVITIES;
+  acts.forEach(a => {
+    segmentsFor(code, a.id).forEach(seg => list.push({...seg, act:a}));
+  });
+  return list;
+}
+
+/* -------------------------------------------------------------------------
+   Timeline range. Starts from the 9-21 default but widens to fit whatever is
+   actually recorded, so an early morning or late night session is never cut off.
+   ------------------------------------------------------------------------- */
+function timelineRange(){
+  let lo = 9*60, hi = 21*60;
+  allCodes().forEach(code => {
+    // Measured across ALL activities so the axis doesn't jump when filtering.
+    flatSegments(code, false).forEach(seg => {
+      if(seg.s < lo) lo = seg.s;
+      if(seg.e > hi) hi = seg.e;
+    });
+  });
+  lo = Math.floor(lo/60)*60;
+  hi = Math.ceil(hi/60)*60;
+  if(hi - lo < 120) hi = lo + 120;
+  return {lo, hi};
+}
+
+/* =========================================================================
+   Rendering
+   ========================================================================= */
+function renderGroupRow(){
+  const row = document.getElementById('groupRow');
+  const btns = [{id:'all', label:'All'}].concat(GROUPS);
+  row.innerHTML = btns.map(g =>
+    `<button class="mini-toggle${currentGroup===g.id?' active':''}" onclick="setGroup('${g.id}')">${g.label}</button>`
+  ).join('');
+
+  // Second tier only earns its space when the group holds more than one thing.
+  const sub = document.getElementById('actRow');
+  const inGroup = groupActivities();
+  if(currentGroup === 'all' || inGroup.length < 2){
+    sub.style.display = 'none';
+    sub.innerHTML = '';
+    return;
+  }
+  sub.style.display = 'flex';
+  sub.innerHTML =
+    `<button class="mini-toggle${currentAct==='all'?' active':''}" onclick="setAct('all')">All</button>` +
+    inGroup.map(a =>
+      `<button class="mini-toggle${currentAct===a.id?' active':''}" onclick="setAct('${a.id}')">
+         <span class="sw-swatch" style="background:${a.color}"></span>${actDisplay(a)}
+       </button>`
+    ).join('');
+}
+
+function setGroup(id){
+  currentGroup = id;
+  currentAct = 'all';   // a new group invalidates the old activity choice
+  renderGroupRow();
+  renderDays();
+}
+
+function setAct(id){
+  currentAct = id;
+  renderGroupRow();
+  renderDays();
+}
+
+function setMode(mode){
+  currentMode = mode;
+  const btn = document.getElementById('modeToggleBtn');
+  if(btn) btn.title = mode === 'check' ? 'Check — tap for Time' : 'Time — tap for Check';
+  renderDays();
+}
+
+/* One arrow toggles between the two views; the calendar tab is the only place
+   either makes sense, so switch there if we're elsewhere. */
+function toggleMode(){
+  setMode(currentMode === 'check' ? 'time' : 'check');
+}
+
+/* Check mode gets one column per activity, with a group band above so the
+   four IELTS columns read as a set. Time mode is a single wide cell, so the
+   group band would have nothing to align to and is skipped. */
+/* Check mode keeps the activity abbreviations and their group band — without
+   them the colour columns have nothing identifying them. The generic
+   Date / Timeline / Total labels are dropped as self-evident. */
+/* The table always shows every activity column. A filter dims the ones it
+   excludes rather than removing them, so the grid never changes width and rows
+   stay comparable as you switch between groups. */
+function isVisibleAct(a){
+  return visibleActivities().some(v => v.id === a.id);
+}
+
+function renderDayHead(range){
+  const head = document.getElementById('dayHead');
+
+  if(currentMode !== 'check'){
+    // Same two-row shell as check mode — an empty band row, then the hour
+    // scale — so switching modes never shifts the table up or down.
+    const span = range.hi - range.lo;
+    let ticks = '';
+    for(let m = range.lo; m <= range.hi; m += 60){
+      const pct = ((m - range.lo) / span) * 100;
+      ticks += `<span class="timeline-tick" style="left:${pct}%">${Math.floor(m/60)}</span>`;
+    }
+    head.innerHTML =
+      `<tr><th style="width:64px;"></th>` +
+      `<th class="tick-head"><span class="tick-wrap">${ticks}</span></th>` +
+      `<th style="width:58px;"></th></tr>`;
+    return;
+  }
+
+  head.innerHTML =
+    `<tr>` +
+    `<th style="width:64px;"></th>` +
+    ACTIVITIES.map((a,i) => {
+      const newGroup = i > 0 && ACTIVITIES[i-1].group !== a.group;
+      const gap = newGroup ? '<th class="group-gap"></th>' : '';
+      return gap + `<th class="act-col${isVisibleAct(a)?'':' dimmed'}" title="${actDisplay(a)}">` +
+        `<span class="tick-wrap"><span class="act-abbr">${a.short}</span></span></th>`;
+    }).join('') +
+    `<th style="width:58px;"></th>` +
+    `</tr>`;
+}
+
+function renderDays(){
+  const body = document.getElementById('dayBody');
+  const codes = allCodes();
+  const range = timelineRange();
+  renderDayHead(range);
+
+  body.innerHTML = '';
+
+  codes.forEach(code => {
+    const tr = document.createElement('tr');
+    if(code === todayCode()) tr.classList.add('is-today');
+    if(isWeekendCode(code)) tr.classList.add('is-weekend');
+
+    const total = dayTotal(code);
+    const mid = currentMode === 'check'
+      ? checkCellsHtml(code)
+      : `<td class="tick-head">${timelineHtml(code, range)}</td>`;
+
+    tr.innerHTML =
+      `<td class="day-date" onclick="openDayEditor('${code}')">${formatDayLabel(code)}</td>` +
+      mid +
+      `<td class="day-total${total?' has-time':''}">${fmtDur(total)}</td>`;
+    body.appendChild(tr);
+  });
+
+  // The clock rides along with the table — same data, same filter, both modes.
+  renderClock();
+}
+
+/* -------------------------------------------------------------------------
+   Daily clock. A 24-hour pie for one day — midnight at the top, running
+   clockwise, so 06:00 is right, 12:00 is bottom, 18:00 is left. Drawn from
+   the same segment data as the table, so it follows the group/activity filter.
+   ------------------------------------------------------------------------- */
+/* Geometry. The date and total are drawn over the dial's upper-left, where the
+   off-hours are shaded and no wedge label sits, so no band is reserved for them
+   and the dial fills the whole viewBox. The SVG scales to the screen width, so
+   these are proportions rather than pixels. */
+const CLOCK_VB_W = 260, CLOCK_VB_H = 260;
+const CLOCK_CX = 130, CLOCK_CY = 130, CLOCK_R = 118;
+
+/* The small hours are left completely blank on the dial — no shading, no hour
+   spokes, no numbers. Nothing is ever recorded there, and drawing it only made
+   the quadrant the date and total sit over look busy. Recorded time in this
+   stretch is still drawn, so a genuine late-night session is not hidden.
+   Clock-only: the table's timeline keeps using OFF_HOURS unchanged. */
+const CLOCK_BLANK = {s: 0, e: 6 * 60};   // 00:00 – 06:00, no shading
+
+/* Hour spokes and numbers start later than the shading does: the 06:00 band is
+   drawn, but its spoke and the "6" are left off so the top-right of the dial —
+   where the date and total sit — stays clear. */
+const CLOCK_MARKS_FROM = 7 * 60;         // first hour to get a spoke + number
+
+
+/* Minutes since midnight -> degrees, with 0 at 12 o'clock. */
+function clockAngle(min){ return (min / 1440) * 360; }
+
+function clockPoint(deg, r){
+  const t = (deg - 90) * Math.PI / 180;
+  return [CLOCK_CX + r * Math.cos(t), CLOCK_CY + r * Math.sin(t)];
+}
+
+/* A full-circle wedge can't be drawn as a single arc (start and end points
+   coincide), so a whole day falls back to a two-arc circle. */
+function clockWedgePath(a0, a1, r){
+  if(a1 - a0 >= 359.99){
+    return `M ${CLOCK_CX} ${CLOCK_CY - r} ` +
+           `A ${r} ${r} 0 1 1 ${(CLOCK_CX - 0.01).toFixed(3)} ${CLOCK_CY - r} Z`;
+  }
+  const [x0,y0] = clockPoint(a0, r);
+  const [x1,y1] = clockPoint(a1, r);
+  const large = (a1 - a0) > 180 ? 1 : 0;
+  return `M ${CLOCK_CX} ${CLOCK_CY} L ${x0.toFixed(2)} ${y0.toFixed(2)} ` +
+         `A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
+}
+
+/* Which day the clock shows: today if it has anything recorded, otherwise the
+   most recent day that does. Keeps the chart from being blank first thing. */
+function clockCode(){
+  const t = todayCode();
+  if(flatSegments(t, false).length) return t;
+  const codes = allCodes();
+  for(const c of codes){ if(flatSegments(c, false).length) return c; }
+  return t;
+}
+
+/* Saved minutes for a day, counting only activities the filter is showing —
+   the same basis the dial's wedges are drawn from. Shared so the once-a-second
+   tick and the full redraw can never disagree about the figure. */
+function dayVisibleMins(code){
+  return flatSegments(code, true)
+    .reduce((t,s) => t + Math.max(0, s.e - s.s), 0);
+}
+
+/* Minutes from a stopwatch that is running right now, for the day shown on the
+   dial. Only the portion since the last resume is counted: anything already
+   paused into sw.segments is written to the day on save, and adding it here as
+   well would show the time twice. Returns 0 unless the timer is actually
+   running and the dial is showing today. */
+function clockLiveMins(code){
+  if(!sw || !sw.startedAt || !sw.actId) return 0;
+  if(code !== todayCode()) return 0;
+  const a = actById(sw.actId);
+  if(a && !isVisibleAct(a)) return 0;   // respect the group/activity filter
+  return Math.floor((Date.now() - sw.startedAt) / 60000);
+}
+
+/* A dot on the rim marking the time right now. Only drawn when the dial is
+   showing today — on any other day "now" has no meaning on that ring. */
+function nowMarkerHtml(code){
+  if(code !== todayCode()) return '';
+  const deg = clockAngle(nowMinutes());
+  const [x,y] = clockPoint(deg, CLOCK_R);
+  return `<circle class="clock-now-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4"/>`;
+}
+
+/* The wedge for a session in progress. It spans from the minute the timer was
+   last resumed to the current minute, so it grows a slice at a time while the
+   stopwatch runs. Returns '' when nothing is running, the dial is not showing
+   today, or the activity is filtered out. */
+function liveWedgeHtml(code){
+  const mins = clockLiveMins(code);
+  if(!mins) return '';
+  const a = actById(sw.actId);
+  if(!a) return '';
+  // sw._segStart is the wall-clock minute the current span began. Fall back to
+  // working backwards from now if it is missing, so a restored timer still draws.
+  const start = (sw._segStart != null) ? sw._segStart : Math.max(0, nowMinutes() - mins);
+  const end = Math.min(1440, start + mins);
+  if(end <= start) return '';
+  return `<path class="clock-wedge is-live" d="${clockWedgePath(clockAngle(start), clockAngle(end), CLOCK_R)}"` +
+         ` fill="${a.color}"><title>${actDisplay(a)} ${minToHHMM(start)}– running</title></path>`;
+}
+
+function renderClock(){
+  const wrap = document.getElementById('clockWrap');
+  if(!wrap) return;
+
+  const code = clockCode();
+  const segs = flatSegments(code, true).slice().sort((a,b) => a.s - b.s);
+  const total = dayVisibleMins(code);
+
+  // Non-study stretches, shaded so the working parts of the day stand out.
+  // Uses the same OFF_HOURS the timeline uses, clipped so nothing is painted
+  // inside the blanked small hours.
+  const offBands = OFF_HOURS.map(b => {
+    const s = Math.max(CLOCK_BLANK.e, b.s), e = Math.min(1440, b.e);
+    if(e <= s) return '';
+    return `<path class="clock-off" d="${clockWedgePath(clockAngle(s), clockAngle(e), CLOCK_R)}"/>`;
+  }).join('');
+
+  // Hour lines run the full radius, cutting the dial into 24 slices. Drawn
+  // over the wedges rather than under them, or the colour would hide them.
+  // Every hour is numbered; all the spokes carry the same weight.
+  let ticks = '';
+  let nums = '';
+  for(let h = 0; h < 24; h++){
+    // The 06:00 band is shaded but carries no hour mark, so marks begin at 07.
+    if(h * 60 < CLOCK_MARKS_FROM) continue;
+    const deg = clockAngle(h * 60);
+    const [ox,oy] = clockPoint(deg, CLOCK_R);
+    ticks += `<line class="clock-tick"` +
+             ` x1="${CLOCK_CX}" y1="${CLOCK_CY}" x2="${ox.toFixed(1)}" y2="${oy.toFixed(1)}"/>`;
+    // The number sits just outside the rim, on the spoke's own angle.
+    const [nx,ny] = clockPoint(deg, CLOCK_R + 6);
+    nums += `<text class="clock-num" x="${nx.toFixed(1)}" y="${ny.toFixed(1)}">${h}</text>`;
+  }
+
+  // One wedge per recorded stretch. No abbreviation is drawn on the slice —
+  // the colour identifies the activity, and the table below spells it out.
+  // The name is still in the tooltip.
+  const wedges = segs.map(seg => {
+    const s = Math.max(0, seg.s), e = Math.min(1440, seg.e);
+    if(e <= s) return '';
+    const a0 = clockAngle(s), a1 = clockAngle(e);
+    const tip = `${actDisplay(seg.act)} ${minToHHMM(s)}–${minToHHMM(e)} (${fmtDur(e - s)})`;
+    return `<path class="clock-wedge" d="${clockWedgePath(a0, a1, CLOCK_R)}"` +
+           ` fill="${seg.act.color}" onclick="openActEditor('${code}','${seg.act.id}')">` +
+           `<title>${tip}</title></path>`;
+  }).join('');
+
+  // A wedge for the session running right now, drawn from where it resumed to
+  // the current minute. Given an id so swTick can regrow it each second
+  // without redrawing the dial. Empty string when nothing is running.
+  const liveWedge = liveWedgeHtml(code);
+  const live = clockLiveMins(code);
+  const heading =
+    `<div class="clock-head">` +
+      `<div class="clock-total${(total+live)?'':' is-zero'}${live?' is-running':''}"` +
+      ` id="clockTotal">${fmtDur(total + live) || '0m'}</div>` +
+    `</div>`;
+
+  // The dial is drawn even with nothing recorded — an empty day still shows
+  // its shape, which is more useful than a line of placeholder text.
+  wrap.innerHTML = heading +
+    `<svg class="clock-svg" viewBox="0 0 ${CLOCK_VB_W} ${CLOCK_VB_H}" xmlns="http://www.w3.org/2000/svg">` +
+      `<circle class="clock-base" cx="${CLOCK_CX}" cy="${CLOCK_CY}" r="${CLOCK_R}"/>` +
+      offBands +
+      wedges +
+      `<g id="clockLive">` + liveWedge + `</g>` +
+      ticks +
+      nums +
+      // Drawn last so the marker sits above the spokes and wedges. In its own
+      // group so the tick can move it without redrawing the dial.
+      `<g id="clockNowMark">` + nowMarkerHtml(code) + `</g>` +
+    `</svg>`;
+}
+
+function checkCellsHtml(code){
+  return ACTIVITIES.map((a,i) => {
+    const shown = isVisibleAct(a);
+    const segs = segmentsFor(code, a.id);
+    // Filtered-out columns read as empty even when time exists underneath.
+    const has = shown && segs.length > 0;
+    const mins = segs.reduce((t,x)=>t+Math.max(0,x.e-x.s),0);
+    const tip = actDisplay(a) + (segs.length ? ' — ' + fmtDur(mins) : ' — none');
+    const newGroup = i > 0 && ACTIVITIES[i-1].group !== a.group;
+    const gap = newGroup ? '<td class="group-gap"></td>' : '';
+    return gap + `<td class="act-col">` +
+      `<span class="check-cell${has?'':' off'}${shown?'':' dimmed'}" style="${has?`background:${a.color}`:''}"` +
+      ` title="${tip}" onclick="openActEditor('${code}','${a.id}')"></span>` +
+      `</td>`;
+  }).join('');
+}
+
+/* Hours that aren't study time — before waking, lunch, and after dinner.
+   Shaded so the working stretches of the day stand out between them. */
+const OFF_HOURS = [
+  {s:0,      e:10*60},   // up to 10:00
+  {s:12*60,  e:13*60},   // 12:00 – 13:00
+  {s:19*60,  e:24*60}    // 19:00 onwards
+];
+
+function offHourBandsHtml(range){
+  const span = range.hi - range.lo;
+  return OFF_HOURS.map(b => {
+    // Clip to whatever the visible range happens to be.
+    const s = Math.max(b.s, range.lo), e = Math.min(b.e, range.hi);
+    if(e <= s) return '';
+    const left = ((s - range.lo) / span) * 100;
+    const w = ((e - s) / span) * 100;
+    return `<span class="tl-off" style="left:${left}%; width:${w}%"></span>`;
+  }).join('');
+}
+
+function timelineHtml(code, range){
+  const span = range.hi - range.lo;
+  const segs = flatSegments(code, true);
+  const clashPairs = findOverlaps(segs);
+  const clashing = new Set();
+  clashPairs.forEach(([A,B]) => { clashing.add(A); clashing.add(B); });
+
+  // One line per hour, all the same weight.
+  let grid = '';
+  for(let m = range.lo; m <= range.hi; m += 60){
+    const pct = ((m - range.lo) / span) * 100;
+    grid += `<span class="tl-grid" style="left:${pct}%"></span>`;
+  }
+
+  const bars = segs.map(seg => {
+    const left = ((seg.s - range.lo) / span) * 100;
+    const w = ((seg.e - seg.s) / span) * 100;
+    const cls = clashing.has(seg) ? ' is-overlap' : '';
+    const t = `${actDisplay(seg.act)} ${minToHHMM(seg.s)}–${minToHHMM(seg.e)}`;
+    return `<span class="tl-bar${cls}" style="left:${left}%; width:${Math.max(w,0.6)}%; background:${seg.act.color}"` +
+           ` title="${t}" onclick="openActEditor('${code}','${seg.act.id}')"></span>`;
+  }).join('');
+
+  return `<div class="tl-wrap">${offHourBandsHtml(range)}${grid}${bars}</div>`;
+}
+
+/* =========================================================================
+   Day editor
+   ========================================================================= */
+/* ---- Date picker -------------------------------------------------------
+   Built in-page rather than using <input type="date">, whose popup is drawn by
+   the browser in the system language and can't be restyled. */
+const DP_MONTHS = ['January','February','March','April','May','June',
+                   'July','August','September','October','November','December'];
+const DP_DOW = ['S','M','T','W','T','F','S'];
+let dpTargetId = null;
+let dpYear = 0, dpMonth = 0;   // month is 0-based
+
+function dateFieldCode(id){
+  if(!id) return '';
+  const el = document.getElementById(id);
+  return el ? (el.dataset.code || '') : '';
+}
+function setDateField(id, code){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.dataset.code = code || '';
+  el.textContent = code ? dpLabel(code) : 'Choose a date';
+}
+function dpLabel(code){
+  const s = String(code);
+  const y = '20' + s.slice(0,2);
+  const mo = DP_MONTHS[parseInt(s.slice(2,4),10) - 1] || '';
+  return mo + ' ' + parseInt(s.slice(4,6),10) + ', ' + y;
+}
+
+function openDatePicker(targetId){
+  dpTargetId = targetId;
+  const cur = dateFieldCode(targetId) || todayCode();
+  dpYear = 2000 + parseInt(cur.slice(0,2),10);
+  dpMonth = parseInt(cur.slice(2,4),10) - 1;
+  renderDatePicker();
+  document.getElementById('dateOverlay').classList.add('show');
+}
+function closeDatePicker(){
+  document.getElementById('dateOverlay').classList.remove('show');
+  dpTargetId = null;
+}
+
+function dpShift(delta){
+  dpMonth += delta;
+  while(dpMonth < 0){ dpMonth += 12; dpYear--; }
+  while(dpMonth > 11){ dpMonth -= 12; dpYear++; }
+  renderDatePicker();
+}
+function dpToday(){
+  const t = todayCode();
+  dpPick(t);
+}
+function dpPick(code){
+  if(dpTargetId){
+    setDateField(dpTargetId, code);
+    closeDatePicker();
+  } else {
+    closeDatePicker();
+    openDayEditor(code);
+  }
+}
+
+function ymdToCode(y, m, d){
+  return String(y).slice(2) + pad2(m+1) + pad2(d);
+}
+
+function renderDatePicker(){
+  document.getElementById('dpTitle').textContent = DP_MONTHS[dpMonth] + ' ' + dpYear;
+  document.getElementById('dpDow').innerHTML =
+    DP_DOW.map(d => `<span class="dp-dow">${d}</span>`).join('');
+
+  const first = new Date(dpYear, dpMonth, 1);
+  const lead = first.getDay();                       // blanks before the 1st
+  const daysInMonth = new Date(dpYear, dpMonth+1, 0).getDate();
+  const prevDays = new Date(dpYear, dpMonth, 0).getDate();
+  const chosen = dateFieldCode(dpTargetId);
+  const today = todayCode();
+
+  let html = '';
+  // Trailing days of the previous month, greyed, so the grid starts flush.
+  for(let i = lead - 1; i >= 0; i--){
+    html += `<button class="dp-cell other" disabled>${prevDays - i}</button>`;
+  }
+  for(let d = 1; d <= daysInMonth; d++){
+    const code = ymdToCode(dpYear, dpMonth, d);
+    const dow = new Date(dpYear, dpMonth, d).getDay();
+    const cls = ['dp-cell'];
+    if(dow === 0 || dow === 6) cls.push('weekend');
+    if(code === today) cls.push('today');
+    if(code === chosen) cls.push('chosen');
+    if(days[code]) cls.push('has-data');
+    html += `<button class="${cls.join(' ')}" onclick="dpPick('${code}')">${d}</button>`;
+  }
+  // Pad the final week so the grid keeps its shape.
+  const used = lead + daysInMonth;
+  const tail = (7 - (used % 7)) % 7;
+  for(let i = 1; i <= tail; i++){
+    html += `<button class="dp-cell other" disabled>${i}</button>`;
+  }
+  document.getElementById('dpDays').innerHTML = html;
+}
+
+/* The header "+" opens the picker in a mode where choosing a day goes
+   straight into that day's editor, instead of filling a field first. */
+function openAddDate(){
+  dpTargetId = null;          // null target = jump to the editor on pick
+  const cur = todayCode();
+  dpYear = 2000 + parseInt(cur.slice(0,2),10);
+  dpMonth = parseInt(cur.slice(2,4),10) - 1;
+  renderDatePicker();
+  document.getElementById('dateOverlay').classList.add('show');
+}
+
+/* Editing a single activity on a single day. Reached by tapping its colour
+   in either mode, which is quicker than opening the whole day. */
+let editingAct = null;
+
+function openActEditor(code, actId){
+  editingCode = code;
+  editingAct = actId;
+  const a = actById(actId);
+  document.getElementById('actModalTitle').innerHTML =
+    `<span class="act-swatch" style="background:${a.color}; display:inline-block; margin-right:7px; vertical-align:0;"></span>` +
+    `${actDisplay(a)} · ${formatDayLabel(code)}`;
+  const segs = segmentsFor(code, actId);
+  document.getElementById('actSegRows').innerHTML =
+    (segs.length ? segs : [null]).map(seg => segRowHtml(actId, 0, seg)).join('');
+  document.getElementById('actWarn').textContent = '';
+  document.getElementById('actOverlay').classList.add('show');
+}
+
+function closeActEditor(){
+  document.getElementById('actOverlay').classList.remove('show');
+  editingAct = null;
+  editingCode = null;
+}
+
+function addActSegRow(){
+  document.getElementById('actSegRows')
+    .insertAdjacentHTML('beforeend', segRowHtml(editingAct, 0, null));
+}
+
+async function saveActEditor(){
+  const warn = document.getElementById('actWarn');
+  const rows = Array.from(document.querySelectorAll('#actSegRows .seg-row'));
+  const list = [];
+  const problems = [];
+  rows.forEach(row => {
+    const sv = row.querySelector('[data-role="start"]').value;
+    const ev = row.querySelector('[data-role="end"]').value;
+    if(!sv && !ev) return;
+    const a = hhmmToMin(sv), b = hhmmToMin(ev);
+    if(a === null || b === null){ problems.push(`"${sv}–${ev}" isn't a valid time.`); return; }
+    if(b <= a){ problems.push(`${sv}–${ev} ends before it starts.`); return; }
+    list.push({s:a, e:b});
+  });
+  if(problems.length){ warn.textContent = problems.join('  '); return; }
+
+  // Compare against the day's OTHER activities, not this one's old values.
+  const others = [];
+  ACTIVITIES.filter(x => x.id !== editingAct).forEach(x => {
+    segmentsFor(editingCode, x.id).forEach(seg => others.push({...seg, act:x}));
+  });
+  const mine = list.map(x => ({...x, act:actById(editingAct)}));
+  const clashes = findOverlaps(others.concat(mine))
+    .filter(([A,B]) => mine.includes(A) || mine.includes(B));
+  if(clashes.length){
+    const lines = clashes.slice(0,4).map(([A,B]) =>
+      `${actDisplay(A.act)} ${minToHHMM(A.s)}–${minToHHMM(A.e)}  ×  ${actDisplay(B.act)} ${minToHHMM(B.s)}–${minToHHMM(B.e)}`
+    ).join('\n');
+    if(dialogsBlocked()){
+      warn.textContent = 'Saved despite an overlap: ' + lines.split('\n')[0];
+    } else if(!confirm('This overlaps other activities that day:\n\n' + lines + '\n\nSave anyway?')) return;
+  }
+
+  if(!days[editingCode]) days[editingCode] = {};
+  if(list.length){
+    list.sort((a,b)=>a.s-b.s);
+    days[editingCode][editingAct] = list;
+  } else {
+    delete days[editingCode][editingAct];
+  }
+  if(!Object.keys(days[editingCode]).length) delete days[editingCode];
+
+  await saveData();
+  closeActEditor();
+  renderDays();
+}
+
+async function clearActEditor(el){
+  const warn = document.getElementById('actWarn');
+  try{
+    // An async onclick swallows exceptions, so a failure here would look like
+    // a dead button. Everything is guarded and reported into the modal.
+    if(!editingCode || !editingAct){
+      warn.textContent = 'Nothing selected — close and reopen this activity.';
+      return;
+    }
+    const a = actById(editingAct);
+    if(!askConfirm('Remove all ' + actDisplay(a) + ' time on this day?',
+                   el, 'Press again to clear')) return;
+
+    // Remember what to redraw before the close handler resets the state.
+    const code = editingCode, actId = editingAct;
+    if(days[code]){
+      delete days[code][actId];
+      if(!Object.keys(days[code]).length) delete days[code];
+    }
+    await saveData();
+    closeActEditor();
+    renderDays();
+  }catch(e){
+    if(warn) warn.textContent = 'Could not clear: ' + (e && e.message ? e.message : e);
+    console.error('clearActEditor failed', e);
+  }
+}
+
+function openDayEditor(code){
+  editingCode = code;
+  document.getElementById('dayModalTitle').textContent =
+    formatDayLabel(code) + '  (' + ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayOfWeekFromCode(code) ?? 0] + ')';
+  renderDayEditor();
+  document.getElementById('dayOverlay').classList.add('show');
+}
+function closeDayEditor(){
+  document.getElementById('dayOverlay').classList.remove('show');
+  editingCode = null;
+}
+
+function renderDayEditor(){
+  const wrap = document.getElementById('dayActList');
+  const code = editingCode;
+  wrap.innerHTML = ACTIVITIES.map(a => {
+    const segs = segmentsFor(code, a.id);
+    const rows = segs.length ? segs.map((seg,i) => segRowHtml(a.id, i, seg)).join('')
+                             : segRowHtml(a.id, 0, null);
+    const sum = segs.reduce((t,s)=>t+Math.max(0,s.e-s.s),0);
+    return `
+      <div class="act-block" data-act="${a.id}">
+        <div class="act-head">
+          <span class="act-swatch" style="background:${a.color}"></span>
+          <span class="act-name">${actDisplay(a)}</span>
+          <span class="act-sum">${sum?fmtDur(sum):''}</span>
+        </div>
+        <div id="segs-${a.id}">${rows}</div>
+        <button class="mini-toggle" style="margin-top:7px;" onclick="addSegRow('${a.id}')">+ add</button>
+      </div>`;
+  }).join('');
+  document.getElementById('dayWarn').textContent = '';
+}
+
+function segRowHtml(actId, idx, seg){
+  const s = seg ? minToHHMM(seg.s) : '';
+  const e = seg ? minToHHMM(seg.e) : '';
+  return `
+    <div class="seg-row">
+      <input type="text" class="time-in" value="${s}" data-act="${actId}" data-role="start"
+             placeholder="09:00" inputmode="numeric" maxlength="5" onblur="normalizeTimeInput(this)">
+      <span class="sep">–</span>
+      <input type="text" class="time-in" value="${e}" data-act="${actId}" data-role="end"
+             placeholder="10:30" inputmode="numeric" maxlength="5" onblur="normalizeTimeInput(this)">
+      <button class="btn btn-danger" style="padding:2px 6px;" onclick="this.parentNode.remove()">×</button>
+    </div>`;
+}
+
+function addSegRow(actId){
+  const holder = document.getElementById('segs-' + actId);
+  holder.insertAdjacentHTML('beforeend', segRowHtml(actId, holder.children.length, null));
+}
+
+/* Reads the modal back into a day object, reporting anything unusable rather
+   than silently dropping it. */
+function collectDayEditor(){
+  const out = {};
+  const problems = [];
+  ACTIVITIES.forEach(a => {
+    const holder = document.getElementById('segs-' + a.id);
+    if(!holder) return;
+    const list = [];
+    Array.from(holder.querySelectorAll('.seg-row')).forEach(row => {
+      const sv = row.querySelector('[data-role="start"]').value;
+      const ev = row.querySelector('[data-role="end"]').value;
+      if(!sv && !ev) return;                       // empty row: ignore
+      const s = hhmmToMin(sv), e = hhmmToMin(ev);
+      if(s === null || e === null){
+        problems.push(`${actDisplay(a)}: fill in both times.`);
+        return;
+      }
+      if(e <= s){
+        problems.push(`${actDisplay(a)}: ${sv}–${ev} ends before it starts.`);
+        return;
+      }
+      list.push({s, e});
+    });
+    if(list.length){
+      list.sort((x,y)=>x.s-y.s);
+      out[a.id] = list;
+    }
+  });
+  return {day:out, problems};
+}
+
+function saveDayEditor(){
+  const {day, problems} = collectDayEditor();
+  const warn = document.getElementById('dayWarn');
+
+  if(problems.length){
+    warn.textContent = problems.join('  ');
+    return;
+  }
+
+  // Overlap is a warning, not a block — sometimes two things really do run at
+  // once. Confirm once, then let it through and mark it on the timeline.
+  const flat = [];
+  Object.keys(day).forEach(id => day[id].forEach(seg => flat.push({...seg, act:actById(id)})));
+  const clashes = findOverlaps(flat);
+  if(clashes.length){
+    const lines = clashes.slice(0,4).map(([A,B]) =>
+      `${actDisplay(A.act)} ${minToHHMM(A.s)}–${minToHHMM(A.e)}  ×  ${actDisplay(B.act)} ${minToHHMM(B.s)}–${minToHHMM(B.e)}`
+    ).join('\n');
+    const more = clashes.length > 4 ? `\n…and ${clashes.length-4} more` : '';
+    if(!dialogsBlocked() &&
+       !confirm('These overlap in time:\n\n' + lines + more + '\n\nSave anyway?')){
+      warn.textContent = 'Overlapping entries — adjust the times or save again to keep them.';
+      return;
+    }
+  }
+
+  if(Object.keys(day).length) days[editingCode] = day;
+  else delete days[editingCode];
+
+  saveData();
+  closeDayEditor();
+  renderDays();
+}
+
+function clearDay(el){
+  if(!askConfirm('Delete every record for this day?',
+                 el, 'Press again to delete')) return;
+  delete days[editingCode];
+  saveData();
+  closeDayEditor();
+  renderDays();
+}
+
+/* =========================================================================
+   Stopwatch
+   Persisted on every state change so closing the tab mid-session doesn't
+   lose the running time — it is restored on next load.
+   ========================================================================= */
+const SW_KEY = 'time-stopwatch';
+let sw = {actId:null, startedAt:null, elapsed:0, segments:[]};
+let swTimer = null;
+
+function swSave(){
+  try{ localStorage.setItem(SW_KEY, JSON.stringify(sw)); }catch(e){}
+}
+function swLoad(){
+  try{
+    const raw = localStorage.getItem(SW_KEY);
+    if(raw) sw = JSON.parse(raw);
+  }catch(e){}
+}
+
+function swElapsedMs(){
+  return sw.elapsed + (sw.startedAt ? Date.now() - sw.startedAt : 0);
+}
+function fmtClock(ms){
+  const t = Math.floor(ms/1000);
+  return Math.floor(t/3600) + ':' + pad2(Math.floor(t/60)%60) + ':' + pad2(t%60);
+}
+
+function openStopwatch(){
+  swRender();
+  document.getElementById('watchOverlay').classList.add('show');
+}
+function closeStopwatch(){
+  document.getElementById('watchOverlay').classList.remove('show');
+}
+
+/* Relative luminance, so the header can pick black or white text against
+   whatever colour the activity uses. */
+function isDarkColor(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex||''));
+  if(!m) return false;
+  const n = parseInt(m[1],16);
+  const r = (n>>16)&255, g = (n>>8)&255, b = n&255;
+  return (0.299*r + 0.587*g + 0.114*b) < 150;
+}
+
+/* The header shows the stopwatch whenever a session is under way — running or
+   merely paused — so an unfinished session can't be forgotten about. */
+function renderHeaderState(){
+  const active = !!sw.actId && (sw.startedAt || sw.elapsed > 0 || sw.segments.length > 0);
+  const idle = document.getElementById('headerIdle');
+  const run = document.getElementById('headerRunning');
+  const bar = document.getElementById('topBar');
+  if(!idle || !run || !bar) return;
+
+  idle.style.display = active ? 'none' : '';
+  run.style.display = active ? '' : 'none';
+
+  if(!active){
+    bar.style.background = '#FFFFFF';
+    bar.classList.remove('hw-dark');
+    syncHeaderOffset();
+    return;
+  }
+
+  const a = actById(sw.actId);
+  document.getElementById('hwClock').textContent = fmtClock(swElapsedMs());
+  document.getElementById('hwAct').textContent =
+    actDisplay(a) + (sw.startedAt ? '' : ' · paused');
+  // The colour marks time actively accumulating. A paused session keeps its
+  // place in the header but drops back to white, so a glance at the bar says
+  // whether the clock is moving.
+  const running = !!sw.startedAt;
+  bar.style.background = running ? a.color : '#FFFFFF';
+  bar.classList.toggle('hw-dark', running && isDarkColor(a.color));
+
+  // Pause icon becomes a play triangle once stopped.
+  const pb = document.getElementById('hwPauseBtn');
+  if(pb){
+    pb.innerHTML = sw.startedAt
+      ? '<svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7.2" y="3.5" width="2.4" height="17"/><rect x="14.4" y="3.5" width="2.4" height="17"/></svg>'
+      : '<svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5 L18 12 L6 20.5 Z"/></svg>';
+    pb.setAttribute('onclick', sw.startedAt ? 'swPause()' : 'swStart()');
+    pb.title = sw.startedAt ? 'Pause' : 'Resume';
+  }
+  syncHeaderOffset();
+}
+
+function swRender(){
+  renderHeaderState();
+  document.getElementById('swDisplay').textContent = fmtClock(swElapsedMs());
+  const startBtn = document.getElementById('swStartBtn');
+  startBtn.disabled = !sw.actId || !!sw.startedAt;
+  startBtn.title = sw.elapsed > 0 ? 'Resume' : 'Start';
+  document.getElementById('swPauseBtn').disabled = !sw.startedAt;
+  const hasSession = !!sw.actId && (sw.startedAt || sw.elapsed > 0 || sw.segments.length > 0);
+  document.getElementById('swEndBtn').disabled = !hasSession;
+  document.getElementById('swTrashBtn').disabled = !hasSession;
+
+  document.getElementById('swPick').innerHTML = ACTIVITIES.map(a2 =>
+    `<button class="${sw.actId===a2.id?'active':''}" onclick="swPick('${a2.id}')">
+       <span class="sw-swatch" style="background:${a2.color}"></span>${actDisplay(a2)}
+     </button>`
+  ).join('');
+
+  const segEl = document.getElementById('swSegments');
+  segEl.innerHTML = sw.segments.length
+    ? sw.segments.map(s => `${minToHHMM(s.s)}–${minToHHMM(s.e)}`).join('<br>')
+    : 'None yet.';
+}
+
+function swTick(){
+  const t = fmtClock(swElapsedMs());
+  const d = document.getElementById('swDisplay');
+  if(d) d.textContent = t;
+  const h = document.getElementById('hwClock');
+  if(h) h.textContent = t;
+  // Keep the dial's headline figure climbing with the timer. Only the text and
+  // the live wedge are touched — redrawing the whole dial every second would
+  // be wasteful and would fight any open tooltip.
+  const code = clockCode();
+  const liveMins = clockLiveMins(code);
+  const c = document.getElementById('clockTotal');
+  if(c){
+    const mins = dayVisibleMins(code) + liveMins;
+    c.textContent = fmtDur(mins) || '0m';
+    c.classList.toggle('is-running', liveMins > 0);
+    c.classList.toggle('is-zero', mins === 0);
+  }
+  const g = document.getElementById('clockLive');
+  if(g) g.innerHTML = liveWedgeHtml(code);
+  moveNowMarker();
+}
+
+/* Advances the current-time dot. Cheap enough to call often — it replaces one
+   circle rather than redrawing the dial. */
+function moveNowMarker(){
+  const m = document.getElementById('clockNowMark');
+  if(m) m.innerHTML = nowMarkerHtml(clockCode());
+}
+
+/* Switching activity RELABELS the session — the elapsed time and every
+   recorded span carry over. Picking the wrong one at the start is the common
+   mistake, and throwing the time away would be the wrong fix for it. */
+/* Relabels the session: the timer, elapsed total and every recorded span stay
+   exactly as they are and simply belong to the new activity. No confirmation —
+   picking the wrong one is easy and undoing it should be just as easy. */
+function swPick(id){
+  if(sw.actId === id) return;
+  sw.actId = id;
+  swSave(); swRender();
+}
+
+function nowMinutes(){
+  const d = new Date();
+  return d.getHours()*60 + d.getMinutes();
+}
+
+function swStart(){
+  if(!sw.actId || sw.startedAt) return;
+  sw.startedAt = Date.now();
+  sw._segStart = nowMinutes();
+  swSave();
+  if(swTimer) clearInterval(swTimer);
+  swTimer = setInterval(swTick, 1000);
+  swRender();
+}
+
+function swPause(){
+  if(!sw.startedAt) return;
+  sw.elapsed += Date.now() - sw.startedAt;
+  sw.startedAt = null;
+  if(swTimer){ clearInterval(swTimer); swTimer = null; }
+  // Record the wall-clock span just completed. A stretch shorter than a minute
+  // still counts — it's rounded up to one so the session isn't silently lost.
+  if(sw._segStart != null){
+    const end = nowMinutes();
+    const seg = {s: sw._segStart, e: Math.max(end, sw._segStart + 1)};
+    const last = sw.segments[sw.segments.length - 1];
+    // Pausing and resuming within the same minute would otherwise leave a trail
+    // of one-minute fragments; merge anything that continues where the last
+    // span ended.
+    if(last && seg.s <= last.e) last.e = Math.max(last.e, seg.e);
+    else sw.segments.push(seg);
+    sw._segStart = null;
+  }
+  swSave(); swRender();
+}
+
+/* End no longer writes straight to the day. It opens a confirmation where the
+   times can be corrected, moved to another date, or thrown away — a stopwatch
+   left running by accident shouldn't silently become a record. */
+function swEnd(){
+  if(sw.startedAt) swPause();
+  if(!sw.actId){
+    alert('Pick an activity first.');
+    return;
+  }
+  if(!sw.segments.length){
+    alert('Nothing recorded yet — press Start first.');
+    return;
+  }
+  // The confirm dialog opens on top of the stopwatch, so close that first.
+  closeStopwatch();
+  document.getElementById('swModalTitle').textContent =
+    'Save this ' + actDisplay(actById(sw.actId)) + ' session?';
+  setDateField('swDate', todayCode());
+  renderSwConfirmRows(sw.segments);
+  document.getElementById('swConfirmWarn').textContent = '';
+  document.getElementById('swOverlay').classList.add('show');
+}
+
+function swConfirmRowHtml(seg){
+  const s = seg ? minToHHMM(seg.s) : '';
+  const e = seg ? minToHHMM(seg.e) : '';
+  return `
+    <div class="seg-row">
+      <input type="text" class="time-in" value="${s}" data-role="start"
+             placeholder="09:00" inputmode="numeric" maxlength="5" onblur="normalizeTimeInput(this)">
+      <span class="sep">–</span>
+      <input type="text" class="time-in" value="${e}" data-role="end"
+             placeholder="10:30" inputmode="numeric" maxlength="5" onblur="normalizeTimeInput(this)">
+      <button class="btn btn-danger" style="padding:2px 6px;" onclick="this.parentNode.remove()">×</button>
+    </div>`;
+}
+function renderSwConfirmRows(segs){
+  document.getElementById('swConfirmRows').innerHTML =
+    (segs.length ? segs : [null]).map(swConfirmRowHtml).join('');
+}
+function swAddConfirmRow(){
+  document.getElementById('swConfirmRows').insertAdjacentHTML('beforeend', swConfirmRowHtml(null));
+}
+
+function swBackToTimer(){
+  document.getElementById('swOverlay').classList.remove('show');
+}
+
+/* Discard straight from the stopwatch, even mid-run. Same clean-up as the
+   confirm dialog's Discard so no fragment of the session survives. */
+function swDiscardNow(el){
+  const hasSession = !!sw.actId && (sw.startedAt || sw.elapsed > 0 || sw.segments.length > 0);
+  if(!hasSession) return;
+  if(!askConfirm('Throw away this session? The time will not be recorded.',
+                 el, '!')) return;
+  if(swTimer){ clearInterval(swTimer); swTimer = null; }
+  sw = {actId:null, startedAt:null, elapsed:0, segments:[], _segStart:null};
+  swSave();
+  swRender();
+  renderDays();   // clear the live wedge and the running total from the dial
+}
+
+function swDiscard(el){
+  const warn = document.getElementById('swConfirmWarn');
+  try{
+    if(!askConfirm('Throw away this session? The time will not be recorded.',
+                   el, 'Press again to discard')) return;
+    // Clear everything, including any in-progress span and the running interval,
+    // so nothing from this session can leak into the next one. _segStart is
+    // named explicitly rather than left to fall away with the old object.
+    if(swTimer){ clearInterval(swTimer); swTimer = null; }
+    sw = {actId:null, startedAt:null, elapsed:0, segments:[], _segStart:null};
+    swSave();
+    swRender();
+    document.getElementById('swOverlay').classList.remove('show');
+    // The dial draws a wedge for the running session and counts it in the
+    // day's total, so both have to be redrawn or the discarded time stays
+    // on screen and the button looks like it did nothing.
+    renderDays();
+  }catch(e){
+    if(warn) warn.textContent = 'Could not discard: ' + (e && e.message ? e.message : e);
+    console.error('swDiscard failed', e);
+  }
+}
+
+async function swConfirmSave(){
+  const warn = document.getElementById('swConfirmWarn');
+  warn.textContent = '';
+  try{
+    await doConfirmSave(warn);
+  }catch(e){
+    // An async onclick swallows exceptions, which made a failure here look
+    // like the button simply wasn't responding.
+    console.error(e);
+    warn.textContent = 'Could not save: ' + (e && e.message ? e.message : String(e));
+  }
+}
+
+async function doConfirmSave(warn){
+  const code = dateFieldCode('swDate');
+  if(!code){ warn.textContent = 'Choose a date.'; return; }
+
+  // The activity can go missing if it was deleted or the session was discarded
+  // while this dialog sat open. Without this the save threw and looked like
+  // nothing happened at all.
+  const act = actById(sw.actId);
+  if(!act){
+    warn.textContent = 'That activity no longer exists. Close this window and start again.';
+    return;
+  }
+
+  const rows = Array.from(document.querySelectorAll('#swConfirmRows .seg-row'));
+  const list = [];
+  const problems = [];
+  rows.forEach(row => {
+    const sv = row.querySelector('[data-role="start"]').value;
+    const ev = row.querySelector('[data-role="end"]').value;
+    if(!sv && !ev) return;
+    const a = hhmmToMin(sv), b = hhmmToMin(ev);
+    if(a === null || b === null){ problems.push(`"${sv}–${ev}" isn't a valid time.`); return; }
+    if(b <= a){ problems.push(`${sv}–${ev} ends before it starts.`); return; }
+    list.push({s:a, e:b});
+  });
+
+  if(problems.length){ warn.textContent = problems.join('  '); return; }
+  if(!list.length){ warn.textContent = 'Nothing to save — add at least one row, or discard.'; return; }
+
+  // Check against what's already on that day, including other activities.
+  const existing = flatSegments(code, false);
+  const candidate = list.map(x => ({...x, act}));
+  const clashes = findOverlaps(existing.concat(candidate))
+    .filter(([A,B]) => candidate.includes(A) || candidate.includes(B));
+  if(clashes.length){
+    const lines = clashes.slice(0,4).map(([A,B]) =>
+      `${actDisplay(A.act)} ${minToHHMM(A.s)}–${minToHHMM(A.e)}  ×  ${actDisplay(B.act)} ${minToHHMM(B.s)}–${minToHHMM(B.e)}`
+    ).join('\n');
+    if(!dialogsBlocked() &&
+       !confirm('This overlaps existing records:\n\n' + lines + '\n\nSave anyway?')) return;
+  }
+
+  try{
+    list.sort((a,b)=>a.s-b.s);
+    if(!days[code]) days[code] = {};
+    if(!days[code][act.id]) days[code][act.id] = [];
+    list.forEach(x => days[code][act.id].push(x));
+    days[code][act.id].sort((a,b)=>a.s-b.s);
+
+    await saveData();
+    if(swTimer){ clearInterval(swTimer); swTimer = null; }
+    sw = {actId:act.id, startedAt:null, elapsed:0, segments:[]};
+    swSave(); swRender(); renderDays();
+    document.getElementById('swOverlay').classList.remove('show');
+  }catch(e){
+    // Surface the reason instead of failing silently.
+    warn.textContent = 'Could not save: ' + (e && e.message ? e.message : e);
+  }
+}
+
+/* =========================================================================
+   Persistence
+   ========================================================================= */
+async function saveData(){
+  try{
+    await appStorage.set(DATA_KEY, JSON.stringify(days));
+  }catch(e){
+    alert('Could not save. Your data is still on this device.');
+  }
+}
+
+async function loadData(){
+  try{
+    const res = await appStorage.get(DATA_KEY);
+    if(res && res.value) days = JSON.parse(res.value) || {};
+  }catch(e){
+    console.warn('load failed', e);
+    days = {};
+  }
+}
+
+/* =========================================================================
+   Sync controls
+   ========================================================================= */
+function renderColorRows(){
+  const wrap = document.getElementById('colorRows');
+  if(!wrap) return;
+  // Colour, abbreviation, group. The long name is no longer shown or edited —
+  // the interface identifies activities as group + abbreviation. a.label is
+  // still kept as data and follows the abbreviation (see setActField), because
+  // the .txt export writes it out.
+  wrap.innerHTML = ACTIVITIES.map(a => `
+    <div class="color-row">
+      <span class="swatch-box"><input type="color" value="${a.color}" onchange="setActField('${a.id}','color',this.value)" aria-label="${escapeAttr(a.short)} colour"></span>
+      <input type="text" class="act-short" value="${escapeAttr(a.short)}" maxlength="3"
+             onchange="setActField('${a.id}','short',this.value)" aria-label="Abbreviation">
+      <input type="text" class="act-group" value="${escapeAttr(groupLabelOf(a.group))}" maxlength="20"
+             onchange="setActField('${a.id}','group',this.value)" aria-label="Group" title="Group">
+      <button class="icon-x act-del" onclick="deleteActivity('${a.id}', this)" aria-label="Delete" title="Delete this activity">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+function escapeAttr(v){
+  return String(v==null?'':v).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function groupLabelOf(id){
+  const g = GROUPS.find(x => x.id === id);
+  return g ? g.label : id;
+}
+
+/* How an activity is named everywhere on screen: the group followed by the
+   abbreviation — "IELTS IS", not "IELTS Speaking". The full a.label is kept
+   as stored data (it is what the options editor edits and what the .txt
+   export carries), but it is never shown in the interface. */
+function actDisplay(a){
+  if(!a) return '';
+  const g = groupLabelOf(a.group);
+  return g ? `${g} ${a.short}` : a.short;
+}
+
+async function setActField(id, field, value){
+  const a = actById(id);
+  if(!a) return;
+  const v = String(value||'').trim();
+  if(field === 'color'){
+    if(!/^#[0-9a-f]{6}$/i.test(v)) return;
+    a.color = v;
+  } else if(field === 'short'){
+    if(!v) return;
+    a.short = v.toUpperCase().slice(0,3);
+    // The name field is gone from the interface, so keep the stored label in
+    // step with what is shown. It only surfaces in the .txt export now.
+    a.label = actDisplay(a);
+  } else if(field === 'label'){
+    if(!v) return;
+    a.label = v.slice(0,40);
+  } else if(field === 'group'){
+    if(!v) return;
+    // Type an existing group's name to join it, or a new one to create it.
+    const hit = GROUPS.find(g => g.label.toLowerCase() === v.toLowerCase());
+    a.group = hit ? hit.id : v.toLowerCase().replace(/\s+/g,'-');
+    if(!hit) DEFAULT_GROUPS.push({id:a.group, label:v});
+    syncGroups();
+    a.label = actDisplay(a);
+  }
+  syncGroups();
+  await saveActivities();
+  refreshAll();
+}
+
+async function addActivity(){
+  // The abbreviation is what appears on screen, so that is what is asked for.
+  const input = prompt('Abbreviation for the new activity? (2-3 letters)');
+  if(!input || !input.trim()) return;
+  const short = input.trim().replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase() || 'XX';
+  const id = 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  ACTIVITIES.push({
+    id,
+    label: short,      // kept in step with the abbreviation; used by .txt export
+    short,
+    group: 'other',
+    color: '#999999'
+  });
+  if(!DEFAULT_GROUPS.some(g => g.id === 'other')) DEFAULT_GROUPS.push({id:'other', label:'Other'});
+  syncGroups();
+  // Now that the group exists, store the full display form as the label.
+  const added = actById(id);
+  if(added) added.label = actDisplay(added);
+  await saveActivities();
+  refreshAll();
+}
+
+async function deleteActivity(id, el){
+  const a = actById(id);
+  if(!a) return;
+  if(ACTIVITIES.length <= 1){ alert('Keep at least one activity.'); return; }
+  // Warn if time is already recorded against it — deleting orphans that time.
+  let used = 0;
+  Object.keys(days).forEach(c => { used += (days[c][id]||[]).length; });
+  const msg = used
+    ? `Delete "${actDisplay(a)}"?\n\n${used} recorded span(s) use it and will be removed too.`
+    : `Delete "${actDisplay(a)}"?`;
+  if(!askConfirm(msg, el, 'Press again to delete')) return;
+
+  ACTIVITIES = ACTIVITIES.filter(x => x.id !== id);
+  Object.keys(days).forEach(c => {
+    if(days[c][id]) delete days[c][id];
+    if(!Object.keys(days[c]).length) delete days[c];
+  });
+  if(currentAct === id) currentAct = 'all';
+  if(sw.actId === id) sw = {actId:null, startedAt:null, elapsed:0, segments:[]};
+  syncGroups();
+  await saveActivities();
+  await saveData();
+  swSave();
+  refreshAll();
+}
+
+async function resetColors(el){
+  if(!askConfirm('Put every activity back to its original name, colour and group?\n\nRecorded time is not affected.',
+                 el, 'Press again to reset')) return;
+  ACTIVITIES = DEFAULT_ACTIVITIES.map(a => ({...a}));
+  GROUPS = DEFAULT_GROUPS.filter(g => ['ielts','eng','work'].includes(g.id)).map(g => ({...g}));
+  currentGroup = 'all'; currentAct = 'all';
+  await saveActivities();
+  refreshAll();
+}
+
+/* Anything that shows an activity's name, colour or grouping. */
+function refreshAll(){
+  renderColorRows();
+  renderGroupRow();
+  renderDays();
+  swRender();
+}
+
+function refreshSyncIdField(){
+  const el = document.getElementById('syncIdInput');
+  if(el) el.value = getSyncId();
+}
+function copySyncId(){
+  const el = document.getElementById('syncIdInput');
+  if(!el) return;
+  el.select();
+  try{ navigator.clipboard.writeText(el.value); }catch(e){ document.execCommand('copy'); }
+  document.getElementById('syncMsg').textContent = 'Copied.';
+}
+async function applySyncId(btn){
+  const el = document.getElementById('syncIdInput');
+  const msg = document.getElementById('syncMsg');
+  const val = el.value.trim();
+  if(!val){ msg.textContent = 'Enter a code first.'; return; }
+  if(val === getSyncId()){ msg.textContent = 'Already using this code.'; return; }
+  if(!askConfirm('Switch to this sync code? This device will then show the data stored under that code — in this app AND in Voca/Para.',
+                 btn, 'Press again to switch')) return;
+  setSyncId(val);
+  msg.textContent = 'Loading…';
+  try{
+    await loadData();
+    renderDays();
+    msg.textContent = 'Now synced to this code.';
+  }catch(e){
+    msg.textContent = 'Could not load that code: ' + e.message;
+  }
+}
+
+/* =========================================================================
+   Export / import as plain text
+   Format, one block per day:
+     [260724]
+     reading 09:00-10:30, 14:00-15:00
+   ========================================================================= */
+/* The file carries the activity definitions as well as the times. Without them
+   a restore would lose custom names and colours, and any activity added by the
+   user would fail to import at all. Definition lines start with '#'. */
+function buildTxt(){
+  const lines = ACTIVITIES.map(a =>
+    ['#', a.short, a.label, groupLabelOf(a.group), a.color.toUpperCase(), a.id].join('\t')
+  );
+  lines.push('');
+  Object.keys(days).sort().forEach(code => {
+    const d = days[code];
+    const body = ACTIVITIES
+      .filter(a => (d[a.id]||[]).length)
+      .map(a => a.short + ' ' + d[a.id].map(s => minToHHMM(s.s)+'-'+minToHHMM(s.e)).join(', '));
+    if(!body.length) return;
+    lines.push('[' + code + ']');
+    lines.push(...body);
+    lines.push('');
+  });
+  return lines.join('\n');
+}
+
+function exportTxt(){
+  const txt = buildTxt();
+  const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'time-' + todayCode() + '.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  try{ localStorage.setItem('time-last-backup', String(Date.now())); }catch(e){}
+  renderBackupStatus();
+}
+
+function openImport(){
+  document.getElementById('importArea').value = buildTxt();
+  document.getElementById('importWrap').style.display = 'block';
+  document.getElementById('importMsg').textContent = '';
+}
+function closeImport(){
+  document.getElementById('importWrap').style.display = 'none';
+}
+
+function parseTxt(raw){
+  const out = {};
+  const errors = [];
+  const defs = [];          // activity definitions found in the file
+  let code = null;
+  raw.split('\n').forEach((line, i) => {
+    const t = line.trim();
+    if(!t) return;
+
+    // '#  SHORT  Name  Group  #RRGGBB  id' — the id is optional; without one a
+    // fresh activity is created rather than overwriting an existing entry.
+    if(t.startsWith('#')){
+      const parts = t.replace(/^#\s*/,'').split('\t').map(x => x.trim()).filter(Boolean);
+      if(parts.length >= 2){
+        defs.push({
+          short: parts[0],
+          label: parts[1],
+          group: parts[2] || 'Other',
+          color: parts[3] || '#999999',
+          id:    parts[4] || null
+        });
+      }
+      return;
+    }
+    const head = /^\[(\d{6})\]$/.exec(t);
+    if(head){ code = head[1]; out[code] = out[code] || {}; return; }
+    if(!code){ errors.push('Line ' + (i+1) + ': no [date] above this.'); return; }
+    const m = /^(\S+)\s+(.*)$/.exec(t);
+    if(!m){ errors.push('Line ' + (i+1) + ': could not read.'); return; }
+    // Definitions in this file take priority, so a file naming an activity the
+    // app doesn't have yet still imports.
+    const fromFile = defs.find(d => d.short.toLowerCase() === m[1].toLowerCase());
+    const act = fromFile ? {id: fromFile.id || ('a_' + fromFile.short.toLowerCase())} : actByToken(m[1]);
+    if(!act){ errors.push('Line ' + (i+1) + ': unknown activity "' + m[1] + '".'); return; }
+    const segs = [];
+    m[2].split(',').forEach(part => {
+      const p = /^\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s*$/.exec(part);
+      if(!p){ errors.push('Line ' + (i+1) + ': bad time "' + part.trim() + '".'); return; }
+      const s = hhmmToMin(p[1]), e = hhmmToMin(p[2]);
+      if(s === null || e === null || e <= s){
+        errors.push('Line ' + (i+1) + ': invalid range "' + part.trim() + '".');
+        return;
+      }
+      segs.push({s,e});
+    });
+    if(segs.length){
+      segs.sort((a,b)=>a.s-b.s);
+      out[code][act.id] = segs;
+    }
+  });
+  return {data:out, errors, defs};
+}
+
+/* Rebuild ACTIVITIES from definition lines, keeping ids stable so the imported
+   times line up with them. */
+function activitiesFromDefs(defs){
+  if(!defs || !defs.length) return null;
+  const seenGroups = {};
+  const list = defs.map(d => {
+    const gid = d.group.toLowerCase().replace(/\s+/g,'-');
+    seenGroups[gid] = d.group;
+    return {
+      id: d.id || ('a_' + d.short.toLowerCase()),
+      label: d.label,
+      short: d.short.toUpperCase().slice(0,3),
+      group: gid,
+      color: /^#[0-9a-f]{6}$/i.test(d.color) ? d.color : '#999999'
+    };
+  });
+  Object.keys(seenGroups).forEach(gid => {
+    if(!DEFAULT_GROUPS.some(g => g.id === gid)) DEFAULT_GROUPS.push({id:gid, label:seenGroups[gid]});
+  });
+  return sanitizeActivities(list);
+}
+
+async function applyImport(){
+  const {data, errors, defs} = parseTxt(document.getElementById('importArea').value);
+  const msg = document.getElementById('importMsg');
+  if(errors.length){
+    msg.textContent = errors.slice(0,5).join('  ') + (errors.length>5 ? ` (+${errors.length-5} more)` : '');
+    return;
+  }
+  const acts = activitiesFromDefs(defs);
+  const warn = acts
+    ? 'Replace all records AND the activity list with this text?'
+    : 'Replace all records with this text?\n\n(No activity definitions found — names and colours stay as they are.)';
+  if(!confirm(warn)) return;
+
+  if(acts){
+    ACTIVITIES = acts;
+    syncGroups();
+    currentGroup = 'all'; currentAct = 'all';
+    await saveActivities();
+  }
+  days = data;
+  await saveData();
+  closeImport();
+  refreshAll();
+  msg.textContent = '';
+}
+
+function renderBackupStatus(){
+  const el = document.getElementById('backupStatus');
+  if(!el) return;
+  let raw = null;
+  try{ raw = localStorage.getItem('time-last-backup'); }catch(e){}
+  if(!raw){ el.textContent = 'No backup taken yet.'; return; }
+  const d = Math.floor((Date.now() - parseInt(raw,10)) / 86400000);
+  el.textContent = d === 0 ? 'Last backup: today.' : `Last backup: ${d} day(s) ago.`;
+}
+
+/* =========================================================================
+   Navigation & boot
+   ========================================================================= */
+/* The calendar is the only page now; everything else opens as a modal on top
+   of it, so there is nothing left to switch between. */
+function switchTab(){
+  renderDays();
+  syncHeaderOffset();
+}
+
+function openOptions(){
+  refreshSyncIdField();
+  renderBackupStatus();
+  renderColorRows();
+  document.getElementById('editOverlay').classList.add('show');
+}
+function closeOptions(){
+  document.getElementById('editOverlay').classList.remove('show');
+}
+
+function syncViewportWidth(){
+  document.documentElement.style.setProperty('--vw', document.documentElement.clientWidth + 'px');
+  syncHeaderOffset();
+}
+function syncHeaderOffset(){
+  const bar = document.getElementById('topBar');
+  if(!bar) return;
+  const h = bar.getBoundingClientRect().height;
+  if(h > 0) document.documentElement.style.setProperty('--header-h', (h + 14) + 'px');
+}
+syncViewportWidth();
+window.addEventListener('resize', syncViewportWidth);
+window.addEventListener('orientationchange', () => setTimeout(syncViewportWidth, 100));
+
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if(e.target === ov) ov.classList.remove('show'); });
+});
+
+swLoad();
+// A timer left running when the tab closed keeps counting from its start time.
+if(sw.startedAt) swTimer = setInterval(swTick, 1000);
+
+// The current-time marker advances whether or not a stopwatch is running.
+setInterval(moveNowMarker, 30000);
+
+Promise.all([loadData(), loadActivities()]).then(() => {
+  document.getElementById('mainHeader').style.display = '';
+  renderGroupRow();
+  setMode('check');
+  swRender();
+  renderBackupStatus();
+  syncHeaderOffset();
+});
+</script>
+<p id="cloudBanner">Offline — changes are saved on this device and will need a reload to sync.</p>
+
+</body>
+</html>
