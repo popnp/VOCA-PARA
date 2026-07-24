@@ -1059,6 +1059,8 @@
      inherited the 16px body default, which is why the same weight looked much
      heavier here than in the grid. */
   .day-table .day-date{font-family:var(--font-ui); font-weight:500; font-size:12.5px; white-space:nowrap;}
+  /* Saturdays and Sundays: the date text greys out so weeks are easy to scan. */
+  .day-table tbody tr.is-weekend .day-date{color:var(--text-muted);}
   .day-table .day-cats{font-family:var(--font-ui); font-size:12.5px; color:var(--text-muted);}
   .day-table .day-perf{width:20px;}
   .day-table .day-perf .status-dot{width:14px; height:14px;}
@@ -4400,6 +4402,26 @@ async function addExampleTo(cardId, value){
 /* YYMMDD is the storage key and stays that way everywhere it's used as an id.
    This is display only: the year is redundant in a list that's already grouped
    by month, so "260714" reads as "7. 14". */
+/* Returns 0 (Sun) - 6 (Sat) for a YYMMDD code, or null if it isn't a real date.
+   The two-digit year is read as 20xx, matching how tags are written. */
+function dayOfWeekFromCode(code){
+  const s = String(code);
+  if(!/^\d{6}$/.test(s)) return null;
+  const yy = parseInt(s.slice(0,2), 10);
+  const mm = parseInt(s.slice(2,4), 10);
+  const dd = parseInt(s.slice(4,6), 10);
+  if(!mm || !dd || mm > 12 || dd > 31) return null;
+  const d = new Date(2000 + yy, mm - 1, dd);
+  // Reject dates that rolled over (e.g. 260231 -> Mar 3).
+  if(d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+  return d.getDay();
+}
+
+function isWeekendCode(code){
+  const w = dayOfWeekFromCode(code);
+  return w === 0 || w === 6;
+}
+
 function formatDayLabel(code){
   const s = String(code);
   if(!/^\d{6}$/.test(s)) return s;
@@ -6476,6 +6498,7 @@ function uniRenderDayTable(tbodyId){
     const vocaHtml = uniVocaTags(vMap[code], 'day');
     const tr = document.createElement('tr');
     if(code === todayCode()) tr.classList.add('is-today');
+    if(isWeekendCode(code)) tr.classList.add('is-weekend');
     tr.innerHTML = `
       <td class="day-date">${formatDayLabel(code)}</td>
       <td class="day-col-para"><span class="uni-chunk para-slots${paraHtml ? '' : ' is-empty'}" data-app="para" data-code="${code}">${paraHtml}</span></td>
