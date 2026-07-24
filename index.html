@@ -92,7 +92,7 @@
     font-family:var(--font-ui);
     min-height:100vh;
     box-sizing:border-box;
-    padding:28px max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 20px;
+    padding:var(--header-h, 28px) max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 20px;
     transition:background-color .40s cubic-bezier(.4,0,.2,1);
   }
   body.is-tinted{
@@ -108,25 +108,29 @@
     --text-muted:#111111;
     --text-light-muted:#111111;
   }
+  /* Pinned so the P/V tabs and the icons stay reachable while scrolling a long
+     paragraph. Fixed positioning takes it out of the flow, so body gets matching
+     top padding below (set from the real height by syncHeaderOffset). */
   #topBar{
-    position:relative;
-    left:calc(-50vw + 50%);
+    position:fixed;
+    top:0;
+    left:0;
     width:var(--vw);
     padding:0 max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 0;
-    margin-top:-28px;
-    margin-bottom:8px;
     box-sizing:border-box;
+    z-index:50;
   }
   #topBar > *{
     max-width:640px;
     margin-left:auto;
     margin-right:auto;
   }
+  /* Opaque now that content scrolls underneath it. */
   #topBar.theme-voca{
-    background:transparent;
+    background:#FFFFFF;
   }
   #topBar.theme-para{
-    background:transparent;
+    background:#FFFFFF;
   }
   .wrap{max-width:640px;margin:0 auto;}
 
@@ -592,6 +596,9 @@
   .stack-focus{
     background:transparent;
     border-radius:0;
+    /* Without this the box shrinks to fit a short sentence and taps below it
+       land outside the element, so nothing is revealed. Matches .flashcard. */
+    min-height:260px;
     padding:var(--sp-5) 0;
     font-family:var(--font-ui);
     font-size:17px;
@@ -623,7 +630,7 @@
     background:transparent;
   }
   #pRandomFlow .hint{ font-weight:400; }
-  .stack-prev .stack-subhead{ font-weight:600; }
+  .stack-prev .stack-subhead{ font-weight:500; }
   .stack-prev .answer-space-holder{
     visibility:hidden;
     font-size:17px;
@@ -1036,7 +1043,12 @@
     border-bottom:none;
   }
   .day-table tbody tr{cursor:pointer; transition:background .1s;}
-  .day-table tbody tr:hover{background:rgba(0,0,0,0.03);}
+  /* Was a one-off rgba(0,0,0,0.03); now the same grey the Para hint uses. */
+  .day-table tbody tr:hover{background:#EFEFEF;}
+  /* Today's row keeps the tint permanently so the current date is findable at a
+     glance; hover still darkens slightly on top of it. */
+  .day-table tbody tr.is-today{background:#EFEFEF;}
+  .day-table tbody tr.is-today:hover{background:#E4E4E4;}
   .day-table tbody td{
     padding:var(--sp-2) var(--sp-2);
     border-bottom:none;
@@ -1183,6 +1195,26 @@
 
   .preview-item.has-warning{border-left:3px solid var(--rust); padding-left:6px;}
   .preview-warning{font-size:11px; color:var(--rust); display:block; margin-top:2px;}
+  /* Same treatment as the red warning, in the app's blue: this one is
+     information (the word already exists), not a problem. */
+  .preview-item.is-dupe{border-left:3px solid #2519FF; padding-left:6px;}
+  .preview-note{font-size:11px; color:#2519FF; display:block; margin-top:2px;}
+  /* Skipped rows stay listed but visibly inert. */
+  .preview-item.is-skipped .pw,
+  .preview-item.is-skipped .pm{opacity:0.4; text-decoration:line-through;}
+  .preview-item.is-skipped{border-left-color:var(--paper-line);}
+  .preview-skip{
+    font-family:var(--font-ui);
+    font-weight:300;
+    font-size:11px;
+    letter-spacing:0.05em;
+    color:#111;
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    text-decoration:underline;
+  }
 
   .back-target{
     font-family:var(--font-ui);
@@ -1461,7 +1493,7 @@
       </p>
       <nav class="tabs" id="mainNav">
         <button id="speechControlBtn" onclick="toggleSpeechPlayback()" aria-label="Pause reading" title="Playing — tap to pause" style="display:none;">
-          <svg class="tab-icon" id="speechControlIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 3.2 L20.5 12 L5.5 20.8 Z"/></svg>
+          <svg class="tab-icon" id="speechControlIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5 L18 12 L6 20.5 Z"/></svg>
         </button>
         <button id="unified-tab-add" class="active" onclick="switchTab('add')" aria-label="Add" title="Add">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
@@ -1744,7 +1776,10 @@
       <div class="divider-bleed"></div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <p id="dayDetailTitle" style="margin:0; font-family:var(--font-ui); font-weight:500; font-size:15px; color:var(--text-dark);"></p>
-        <button class="mini-toggle" id="showAllBtn" onclick="toggleShowAll()">All</button>
+        <span style="display:flex; gap:var(--sp-2);">
+          <button class="mini-toggle" id="showAllBtn" onclick="toggleShowAll()">All</button>
+          <button class="mini-toggle" id="showSimilarBtn" onclick="toggleShowSimilar()">Similar</button>
+        </span>
       </div>
       <div class="check-row small" id="dayFilterCatRow" style="margin-bottom:var(--sp-1);">
         <label><input type="checkbox" id="dayFilterV" onchange="dayFilterChanged()"> V (Voca)</label>
@@ -2571,27 +2606,61 @@ async function unifiedConfirmAdd(){
   clearUnifiedAdd();
 }
 
+// Toggling re-renders the list, which is also what refreshes the button count.
+function togglePreviewSkip(idx){
+  const item = parsedPreview[idx];
+  if(!item) return;
+  item.skip = !item.skip;
+  renderPastePreview();
+}
+
 function parsePaste(){
   const raw = document.getElementById('unifiedPasteArea').value;
   const entries = parseBlockText(raw);
   parsedPreview = groupParsedEntries(entries);
+  renderPastePreview();
+}
+
+/* Split out from parsePaste so toggling "skip" can redraw the list without
+   re-parsing, which would discard the choices just made. */
+function renderPastePreview(){
   const previewEl = document.getElementById('unifiedPreviewList');
   previewEl.innerHTML = '';
 
-  parsedPreview.forEach(item=>{
+  parsedPreview.forEach((item, idx)=>{
     const div = document.createElement('div');
     const badExamples = (item.examples||[]).filter(ex => !parseExampleBlank(ex, item.word).ok);
-    div.className = 'preview-item' + (badExamples.length>0 ? ' has-warning' : '');
+    const dupe = !!findCardByWord(item.word);
+    item.isDupe = dupe;
+    // Re-parsing rebuilds the list, so a previous choice can't carry over.
+    if(item.skip === undefined) item.skip = false;
+
+    div.className = 'preview-item'
+      + (badExamples.length>0 ? ' has-warning' : '')
+      + (dupe ? ' is-dupe' : '')
+      + (item.skip ? ' is-skipped' : '');
+
     let html = `<span class="pw">${escapeHtml(item.word)}</span><span class="pm">${escapeHtml(item.meaning)} ${item.tag ? '· '+escapeHtml(item.tag) : ''}</span>`;
     if(badExamples.length>0){
       html += `<span class="preview-warning">⚠ ${badExamples.length} example(s) don't match the word — use [brackets] to mark the actual form used (it will still save)</span>`;
+    }
+    if(dupe){
+      html += `<span class="preview-note">Already saved — examples will be added to the existing card.`
+        + ` <button class="preview-skip" onclick="togglePreviewSkip(${idx})">`
+        + (item.skip ? "Don't skip" : 'Skip this one')
+        + `</button></span>`;
     }
     div.innerHTML = html;
     previewEl.appendChild(div);
   });
 
   const confirmBtn = document.getElementById('unifiedConfirmAddBtn');
-  confirmBtn.textContent = 'Add Cards';
+  const active = parsedPreview.filter(it=>!it.skip).length;
+  const dupes = parsedPreview.filter(it=>it.isDupe && !it.skip).length;
+  confirmBtn.textContent = dupes > 0
+    ? `Add Cards (${active}, ${dupes} merged)`
+    : `Add Cards (${active})`;
+  confirmBtn.disabled = active === 0;
   confirmBtn.style.display = parsedPreview.length>0 ? 'inline-block' : 'none';
   if(parsedPreview.length === 0){
     previewEl.innerHTML = '<p class="hint">No words recognized. Please check the format.</p>';
@@ -2600,6 +2669,7 @@ function parsePaste(){
 
 async function confirmAdd(){
   parsedPreview.forEach(item=>{
+    if(item.skip) return; // deselected in the preview
     const existing = findCardByWord(item.word);
     if(existing){
       if(!existing.meaning && item.meaning) existing.meaning = item.meaning;
@@ -2814,8 +2884,10 @@ let speakingParaId = null;
    Reading continues while you move between pages, so there needs to be a way to
    stop it from anywhere. The button only appears while something is playing:
    showing a dead control at all times would be noise. */
-const ICON_PAUSE = '<rect x="5" y="3.5" width="4.6" height="17"/><rect x="14.4" y="3.5" width="4.6" height="17"/>';
-const ICON_PLAY  = '<path d="M5.5 3.2 L20.5 12 L5.5 20.8 Z"/>';
+// Stroke width matches the + and hamburger icons (2.4) so the header reads as
+// one set; the pair still spans the same 18px width as the others.
+const ICON_PAUSE = '<rect x="7.2" y="3.5" width="2.4" height="17"/><rect x="14.4" y="3.5" width="2.4" height="17"/>';
+const ICON_PLAY  = '<path d="M6 3.5 L18 12 L6 20.5 Z"/>';
 
 function updateSpeechControl(){
   const btn = document.getElementById('speechControlBtn');
@@ -2834,6 +2906,7 @@ function updateSpeechControl(){
       .forEach(b => b.classList.remove('is-playing'));
     const hasReplay = lastSpokenParts.length > 0;
     btn.style.display = hasReplay ? 'inline-flex' : 'none';
+    syncHeaderOffset();
     if(hasReplay){
       icon.innerHTML = ICON_PLAY;
       btn.setAttribute('aria-label', 'Play again');
@@ -3840,10 +3913,102 @@ function clearWordSearch(){
   wordSearchChanged();
 }
 
+let showSimilarOnly = false;
+
+/* Finds words that are probably the same entry typed twice — "image" vs
+   "images", "analyse" vs "analyze". Exact duplicates can't happen (the paste
+   step merges them), so this is about near-misses.
+
+   A plain "differs by N letters" rule is unusable on short words: site/cite,
+   cat/car and the/she are all one letter apart but unrelated. So this matches on
+   the stem first, and only falls back to edit distance with a threshold that
+   scales with length. */
+function normWord(w){
+  return String(w||'').toLowerCase().trim()
+    .replace(/[~\-–—.,;:!?"'()\[\]]/g,'')
+    .replace(/\s+/g,' ').trim();
+}
+
+function stemWord(w){
+  let x = normWord(w).replace(/\s+/g,'');
+  x = x.replace(/(ies)$/,'y')
+       .replace(/(ses|xes|zes|ches|shes)$/,'')
+       .replace(/(s)$/,'')
+       .replace(/(ed|ing)$/,'')
+       .replace(/(er|est|ly)$/,'');
+  return x;
+}
+
+function editDistance(a, b){
+  const m = a.length, n = b.length;
+  let prev = Array.from({length:n+1}, (_,j)=>j);
+  for(let i=1;i<=m;i++){
+    const cur = [i];
+    for(let j=1;j<=n;j++){
+      cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1]===b[j-1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+function wordsAreSimilar(a, b){
+  const na = normWord(a), nb = normWord(b);
+  if(!na || !nb) return false;
+  if(na === nb) return true;
+  const sa = stemWord(na), sb = stemWord(nb);
+  if(sa && sa === sb) return true;
+  const len = Math.max(na.length, nb.length);
+  // Longer words tolerate more drift; short ones must be a single letter apart.
+  const allow = len >= 8 ? 2 : 1;
+  return editDistance(na, nb) <= allow;
+}
+
+/* Returns only the cards that have at least one look-alike, grouped so related
+   words sit next to each other instead of being scattered by date. */
+function findSimilarCards(list){
+  const groups = [];
+  const seen = new Set();
+  for(let i=0;i<list.length;i++){
+    if(seen.has(list[i].id)) continue;
+    const group = [list[i]];
+    for(let j=i+1;j<list.length;j++){
+      if(seen.has(list[j].id)) continue;
+      if(wordsAreSimilar(list[i].word, list[j].word)){
+        group.push(list[j]);
+        seen.add(list[j].id);
+      }
+    }
+    if(group.length > 1){
+      seen.add(list[i].id);
+      groups.push(group);
+    }
+  }
+  return groups.reduce((acc,g)=>acc.concat(g), []);
+}
+
+function toggleShowSimilar(){
+  showSimilarOnly = !showSimilarOnly;
+  // Look-alikes are only meaningful across the whole set, not within one day.
+  if(showSimilarOnly && !showAllWords) showAllWords = true;
+  dayListPage = 1;
+  const btn = document.getElementById('showSimilarBtn');
+  if(btn) btn.classList.toggle('active', showSimilarOnly);
+  const allBtn = document.getElementById('showAllBtn');
+  if(allBtn) allBtn.classList.toggle('active', showAllWords);
+  showDayDetail(currentDayCode);
+}
+
 function toggleShowAll(){
   // Stays in place as a toggle: tap to widen to every date, tap again to go
   // back to the day you opened.
   showAllWords = !showAllWords;
+  // Similar needs the full set; narrowing back to one day retires it.
+  if(!showAllWords && showSimilarOnly){
+    showSimilarOnly = false;
+    const sb = document.getElementById('showSimilarBtn');
+    if(sb) sb.classList.remove('active');
+  }
   dayListPage = 1;
   const btn = document.getElementById('showAllBtn');
   if(btn) btn.classList.toggle('active', showAllWords);
@@ -3920,16 +4085,21 @@ function resetDayFilters(){
 
 function showDayDetail(code){
   currentDayCode = code;
-  const totalList = showAllWords ? cards.slice() : cards.filter(c => parseTag(c.tag).date === code);
+  let totalList = showAllWords ? cards.slice() : cards.filter(c => parseTag(c.tag).date === code);
+  if(showSimilarOnly) totalList = findSimilarCards(totalList);
   document.getElementById('dayDetail').style.display = 'block';
-  document.getElementById('dayDetailTitle').textContent = showAllWords
-    ? `ALL — ${totalList.length} word(s)`
-    : `${formatDayLabel(code)} — ${totalList.length} word(s)`;
+  document.getElementById('dayDetailTitle').textContent = showSimilarOnly
+    ? `SIMILAR — ${totalList.length} word(s)`
+    : (showAllWords
+        ? `ALL — ${totalList.length} word(s)`
+        : `${formatDayLabel(code)} — ${totalList.length} word(s)`);
   const showAllBtnEl = document.getElementById('showAllBtn');
   if(showAllBtnEl){
     showAllBtnEl.style.display = 'inline-block';
     showAllBtnEl.classList.toggle('active', showAllWords);
   }
+  const showSimBtnEl = document.getElementById('showSimilarBtn');
+  if(showSimBtnEl) showSimBtnEl.classList.toggle('active', showSimilarOnly);
 
   const catV = document.getElementById('dayFilterV').checked;
   const catW = document.getElementById('dayFilterW').checked;
@@ -4032,6 +4202,10 @@ function showDayDetail(code){
 
         detail.innerHTML = `
           <div style="margin-bottom:14px;">
+            <div class="lbl">Word</div>
+            <input type="text" id="word-${c.id}" value="${escapeAttr(c.word||'')}">
+          </div>
+          <div style="margin-bottom:14px;">
             <div class="lbl">Tag</div>
             <input type="text" id="tag-${c.id}" value="${escapeAttr(c.tag||'')}" placeholder="e.g. 260710-R" style="max-width:160px;">
           </div>
@@ -4112,6 +4286,31 @@ async function saveWordCard(cardId){
   const meaningEl = document.getElementById('meaning-'+cardId);
   const phonEl = document.getElementById('phon-'+cardId);
   const tagEl = document.getElementById('tag-'+cardId);
+  const wordEl = document.getElementById('word-'+cardId);
+
+  if(wordEl){
+    const nextWord = wordEl.value.trim();
+    const prevWord = (c.word||'').trim();
+    if(!nextWord){
+      alert('The word cannot be empty.');
+      return;
+    }
+    if(nextWord !== prevWord){
+      // Paragraph [links] find a card by its word text, not its id, so a rename
+      // would quietly orphan them. Count them first and offer to update.
+      const affected = countParaLinks(prevWord);
+      if(affected > 0){
+        const ok = confirm(
+          'This word is linked from ' + affected + ' sentence(s).\n\n' +
+          'OK: rename it there too.\n' +
+          'Cancel: keep the old links (they will stop matching this word).'
+        );
+        if(ok) renameParaLinks(prevWord, nextWord);
+      }
+      c.word = nextWord;
+    }
+  }
+
   if(meaningEl) c.meaning = meaningEl.value.trim();
   if(phonEl) c.phonetics = phonEl.value.trim();
   if(tagEl) c.tag = tagEl.value.trim() ? normalizeTag(tagEl.value.trim()) : '';
@@ -4122,6 +4321,40 @@ async function saveWordCard(cardId){
   await saveCards();
   editWordId = null;
   showDayDetail(currentDayCode);
+}
+
+// How many paragraph sentences link to this word (case-insensitive, same rule
+// the lookup itself uses).
+function countParaLinks(word){
+  const key = String(word||'').trim().toLowerCase();
+  if(!key) return 0;
+  let n = 0;
+  (paras||[]).forEach(p=>{
+    (p.sentences||[]).forEach(sen=>{
+      const links = sen.vocabLinks || [];
+      if(links.some(w => String(w).trim().toLowerCase() === key)) n++;
+    });
+  });
+  return n;
+}
+
+function renameParaLinks(oldWord, newWord){
+  const key = String(oldWord||'').trim().toLowerCase();
+  if(!key) return;
+  let touched = false;
+  (paras||[]).forEach(p=>{
+    (p.sentences||[]).forEach(sen=>{
+      const links = sen.vocabLinks;
+      if(!Array.isArray(links)) return;
+      links.forEach((w,i)=>{
+        if(String(w).trim().toLowerCase() === key){
+          links[i] = newWord;
+          touched = true;
+        }
+      });
+    });
+  });
+  if(touched) pSaveEntries();
 }
 
 async function updatePhonetics(cardId, value){
@@ -4492,17 +4725,16 @@ async function pPerformSave(payload){
 }
 
 // ---- Parsing ----
+/* Delegates to splitSentencesWithMeta so there is exactly ONE definition of what
+   a sentence boundary is. These used to be two separate implementations, and the
+   simpler one here missed two cases the other handled:
+     - a trailing tag with no space, e.g.  한다.[manifesto] 다음 문장
+     - a period inside closing quotes, e.g.  reactionary cinema." The next
+   That made the same paragraph count differently depending on which function ran,
+   which surfaced as a bogus "English and Korean sentence counts don't match". */
 function splitSentences(text){
   if(!text) return [];
-  // First split on newlines (each line is at least one sentence)
-  const lines = text.split(/\n/).map(l=>l.trim()).filter(l=>l.length>0);
-  // Then split each line further on sentence-ending punctuation
-  const result = [];
-  lines.forEach(line=>{
-    const sents = line.split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(s=>s.length>0);
-    result.push(...sents);
-  });
-  return result;
+  return splitSentencesWithMeta(text).map(s => s.text);
 }
 
 // Like getParagraphBreakIndices but keyed on ANY line break, not just blank-line
@@ -4516,7 +4748,9 @@ function getLineBreakIndices(content){
   let count = 0;
   lines.forEach((line, idx)=>{
     if(idx > 0) breaks.add(count);
-    const sents = line.split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(s=>s.length>0);
+    // Same rule as splitSentences, or the break indices land on the wrong
+    // sentences whenever a line contains tags or quoted periods.
+    const sents = splitSentences(line);
     count += sents.length;
   });
   return breaks;
@@ -6241,6 +6475,7 @@ function uniRenderDayTable(tbodyId){
     const paraHtml = uniParaTags(pMap[code], 'day');
     const vocaHtml = uniVocaTags(vMap[code], 'day');
     const tr = document.createElement('tr');
+    if(code === todayCode()) tr.classList.add('is-today');
     tr.innerHTML = `
       <td class="day-date">${formatDayLabel(code)}</td>
       <td class="day-col-para"><span class="uni-chunk para-slots${paraHtml ? '' : ' is-empty'}" data-app="para" data-code="${code}">${paraHtml}</span></td>
@@ -7200,7 +7435,19 @@ function renderCalendarIfParaListOpen(){
 function syncViewportWidth(){
   const w = document.documentElement.clientWidth;
   document.documentElement.style.setProperty('--vw', w + 'px');
+  syncHeaderOffset();
 }
+
+/* The pinned header is out of the document flow, so body has to reserve its
+   height or the first line of content hides behind it. Measured rather than
+   hard-coded because the header grows when the playback control appears. */
+function syncHeaderOffset(){
+  const bar = document.getElementById('topBar');
+  if(!bar) return;
+  const h = bar.getBoundingClientRect().height;
+  if(h > 0) document.documentElement.style.setProperty('--header-h', h + 'px');
+}
+
 syncViewportWidth();
 window.addEventListener('resize', syncViewportWidth);
 // Rotating a phone reports the old width for a frame or two, so re-measure after.
@@ -7215,6 +7462,7 @@ document.getElementById('app-voca').style.display = 'none';
 document.getElementById('app-para').style.display = 'none';
 Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs()]).then(()=>{
   document.getElementById('mainHeader').style.display = '';
+  syncHeaderOffset();
   switchApp('para');
   switchTab('quiz');
   // Content is now in place; re-measure in case the first pass ran before the
