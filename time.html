@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TIME</title>
 <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="%23111"/><text x="32" y="33" fill="%23fff" font-family="Helvetica,Arial,sans-serif" font-size="30" font-weight="500" letter-spacing="-0.5" text-anchor="middle" dominant-baseline="central">T</text></svg>'>
-<link href="https://api.fontshare.com/v2/css?f[]=switzer@300,400,500,600&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=switzer@300,400,500&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 <style>
   :root{
@@ -13,7 +13,6 @@
               'Helvetica Neue',Helvetica,Arial,
               'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
     --paper:#FFFFFF;
-    --paper-line:#D8D8D8;
     --rust:#FF4602;
     --text-dark:#111111;
     --text-muted:#6B6B6B;
@@ -23,16 +22,15 @@
     --sp-4:16px;
     --sp-5:24px;
     --sp-6:32px;
-
-    /* Activity colours, supplied by the user. IELTS sits in the red-orange
-       range so the four read as one family; the other two stay clearly apart. */
-    --c-vocapara:#ACA140;
-    --c-portfolio:#A1B4DF;
-    --c-speaking:#FF4029;
-    --c-reading:#F80000;
-    --c-writing:#FF8000;
-    --c-listening:#FFAA00;
+    --sp-7:48px;
+    --gap-block:24px;
+    /* The gap between the header and the start of a screen. One number, used
+       in exactly one place: body's padding-top. Both apps share it. */
+    --gap-top:16px;
   }
+  /* Activity colours live in the JS DEFAULT_ACTIVITIES array (single source of
+     truth, keyed by id). The former --c-* CSS vars were unused and had drifted
+     out of sync with the real values, so they were removed. */
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   html{scrollbar-gutter:stable; overflow-y:scroll;}
@@ -41,7 +39,9 @@
     color:var(--text-dark);
     font-family:var(--font-ui);
     min-height:100vh;
-    padding:var(--header-h, 60px) max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 40px;
+    /* Body owns the gap under the header — one number for every screen, the
+       same one Voca/Para uses. */
+    padding:calc(var(--header-h, 60px) + var(--gap-top)) max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 40px;
   }
 
   /* ---- Header: mirrors the Voca/Para app so the two feel like one system ---- */
@@ -115,44 +115,59 @@
   }
   .btn-primary{background:transparent; color:var(--text-dark); border:1px solid #111;}
   .btn-primary:hover{background:rgba(0,0,0,0.05);}
-  .btn-ghost{background:transparent; border:1px solid var(--paper-line); color:var(--text-dark);}
-  .btn-ghost:hover{background:rgba(0,0,0,0.04);}
+  .btn-ghost{background:transparent; border:1px solid #111; color:var(--text-dark);}
+  .btn-ghost:hover{background:rgba(0,0,0,0.05);}
   .btn-danger{background:transparent; color:var(--rust); border:none; font-size:12.5px; padding:6px 10px;}
+  .btn-danger:hover{text-decoration:underline;}
   /* A button waiting for its second press, used when the browser suppresses
      native confirm dialogs. */
+  /* Waiting for the second press. A dotted red rule along the bottom of the
+     button, drawn as a background so it adds no height — a border here would
+     push every neighbour in the row down by 1px. Fading was tried first and
+     read as "disabled". Works on icon buttons too, which have no text to
+     underline. */
   .is-armed{
-    background:var(--rust) !important;
-    color:#fff !important;
-    border-color:var(--rust) !important;
+    background-image:repeating-linear-gradient(to right,
+        var(--rust) 0 2px, transparent 2px 4px) !important;
+    background-repeat:repeat-x !important;
+    background-position:left bottom !important;
+    background-size:100% 1px !important;
+    /* Under the text, not along the button's bottom edge: both the width
+       and the baseline come from the content box, so the button's own
+       padding is left out. Icon buttons still get a line under the icon. */
+    background-origin:content-box !important;
+    background-clip:content-box !important;
   }
   .btn:disabled{opacity:0.35; cursor:not-allowed;}
   .mini-toggle{
     font-family:var(--font-ui);
     font-weight:300;
     font-size:11px;
-    letter-spacing:0.06em;
-    color:#111;
-    background:none;
-    border:1px solid var(--paper-line);
-    padding:3px 9px;
+    letter-spacing:0.02em;
+    padding:3px var(--sp-2);
+    border:0.5px solid #6B6B6B;
+    background:transparent;
+    color:var(--text-muted);
+    border-radius:0;
     cursor:pointer;
   }
-  .mini-toggle.active{border-color:#111; font-weight:400;}
+  .mini-toggle.active{border-color:#111; color:#111; font-weight:300;}
+  .mini-toggle:focus-visible{outline:none; border-color:#111;}
+  /* One grey text style, shared with index.html: 12.5px, weight 300, no
+     letter-spacing. Headings are the same type in black, the notes under them
+     grey. Only the colour separates them. */
   .field-label{
     display:block;
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
-    color:var(--text-muted);
-    letter-spacing:0.06em;
+    font-size:12.5px;
+    color:var(--text-dark);
     margin-bottom:6px;
   }
-  /* Same family and weight as .field-label, so the headings and the notes
-     under them read as one set rather than two. */
   .hint{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11.5px;
+    font-size:12.5px;
     color:var(--text-muted);
     line-height:1.5;
   }
@@ -160,7 +175,7 @@
     font-family:var(--font-ui);
     font-size:13px;
     padding:5px 7px;
-    border:1px solid var(--paper-line);
+    border:0.5px solid #6B6B6B;
     border-radius:0;
     background:#fff;
     color:#111;
@@ -303,9 +318,9 @@
   .day-table thead th{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    /* Matches index.html's table head exactly. */
+    font-size:12.5px;
     color:var(--text-muted);
-    letter-spacing:0.08em;
     text-align:left;
     padding:6px var(--sp-1);
   }
@@ -343,12 +358,15 @@
   /* ---- Mode 1: check marks ---- */
   /* One narrow column per activity, so columns line up down the table and the
      group band above can span them. */
+  /* Sized to the widest label rather than fixed, so a full word like
+     "Speaking" fits without the columns overlapping. */
   .day-table th.act-col,
   .day-table td.act-col{
-    width:34px;
+    min-width:34px;
     text-align:center;
-    padding-left:0;
-    padding-right:0;
+    padding-left:3px;
+    padding-right:3px;
+    white-space:nowrap;
   }
   /* A rule where one group ends and the next begins. Drawn as a border on the
      first column of each group — using padding here would clash with the header
@@ -370,8 +388,8 @@
     position:absolute;
     left:50%;
     top:0; bottom:0;
-    width:1px;
-    background:#111;
+    width:0.5px;
+    background:#6B6B6B;
   }
   .day-table th.act-col{
     font-family:var(--font-ui);
@@ -386,16 +404,19 @@
   /* Both modes now put the same thing in the header: a 12px .tick-wrap with an
      absolutely positioned label inside. Identical structure means identical
      height, so the table can't shift when the mode is toggled. */
+  /* Unlike the hour scale — where many ticks share one wide cell and must be
+     placed absolutely — each activity label has its own column, so it is left
+     in normal flow and the column widens to fit it. The 12px line box is kept
+     so both modes' headers stay exactly the same height. */
   .act-abbr{
-    position:absolute;
-    top:0; left:50%;
+    display:block;
     font-size:10px;
     line-height:12px;
     height:12px;
+    white-space:nowrap;
     /* Letter-spacing also lands after the last character, which pushes the
        text left of true centre. Half of it is added back here. */
-    transform:translateX(calc(-50% + 0.03em));
-    white-space:nowrap;
+    padding-left:0.06em;
   }
   .check-cells{display:flex; gap:6px; align-items:center; flex-wrap:wrap;}
   .check-cell{
@@ -412,7 +433,7 @@
     font-size:13px;
     font-weight:400;
     padding:5px 9px;
-    border:1px solid var(--paper-line);
+    border:0.5px solid #6B6B6B;
     background:#fff;
     color:#111;
     cursor:pointer;
@@ -432,10 +453,18 @@
     font-weight:500;
     letter-spacing:0.01em;
   }
+  /* Same drawn chevron as every arrow in Voca/Para. These two were the last
+     text arrows left in either app. */
+  .nav-chev{
+    display:inline-block;
+    vertical-align:-0.08em;
+    flex:0 0 auto;
+  }
+  .nav-chev.flip{transform:scaleX(-1);}
   .dp-nav{
     font-family:var(--font-ui);
     font-size:15px;
-    line-height:1;
+    line-height:0;
     background:none;
     border:none;
     padding:2px 6px;
@@ -538,8 +567,8 @@
   .tl-grid{
     position:absolute;
     top:-7px; bottom:-7px;
-    width:1px;
-    background:rgba(0,0,0,0.30);
+    width:0.5px;
+    background:#6B6B6B;
   }
   .day-table td.tick-head{overflow:visible;}
   /* Both modes put a 24px-tall block in the row, so heights line up. */
@@ -550,7 +579,6 @@
     position:absolute;
     top:1px;
     height:22px;
-    border-radius:1px;
     cursor:pointer;
   }
   .tl-bar.is-overlap{
@@ -561,12 +589,12 @@
   /* ---- Modal ---- */
   .modal-overlay{
     position:fixed; inset:0;
-    background:rgba(0,0,0,0.35);
+    background:rgba(0,0,0,0.45);
     display:none;
     align-items:flex-start;
     justify-content:center;
     z-index:1000;
-    padding:40px 16px;
+    padding:20px;
     overflow-y:auto;
   }
   .modal-overlay.show{display:flex;}
@@ -574,9 +602,13 @@
      need to sit above them. */
   #swOverlay, #dateOverlay{z-index:1100;}
   .modal-box{
-    background:#fff;
+    position:relative;
+    background:#FFFFFF;
+    border:0.5px solid #6B6B6B;
+    border-radius:0;
     max-width:520px;
     width:100%;
+    margin:auto;
     padding:var(--sp-5);
   }
   .modal-title{
@@ -587,9 +619,7 @@
   }
   .act-block{
     padding:var(--sp-3) 0;
-    border-bottom:1px solid rgba(0,0,0,0.08);
   }
-  .act-block:last-of-type{border-bottom:none;}
   .act-head{
     display:flex;
     align-items:center;
@@ -637,8 +667,6 @@
   .color-row .swatch-box{
     width:26px; height:26px; flex:0 0 auto;
     position:relative; overflow:hidden;
-    border:1px solid var(--line);
-    border-radius:2px;
   }
   .color-row input[type="color"]{
     position:absolute;
@@ -658,15 +686,14 @@
     font-family:var(--font-ui);
     font-size:12.5px;
     padding:4px 6px;
-    border:1px solid transparent;
+    border:0.5px solid transparent;
     background:none;
   }
-  .color-row input[type="text"]:hover{border-color:var(--paper-line);}
+  .color-row input[type="text"]:hover{border-color:#6B6B6B;}
   .color-row input[type="text"]:focus{border-color:#111; background:#fff;}
   .act-short{
-    width:44px;
+    width:104px;
     text-align:center;
-    text-transform:uppercase;
     font-variant-numeric:tabular-nums;
   }
   .act-group{flex:1; min-width:90px; color:var(--text-muted);}
@@ -752,18 +779,18 @@
     border:none;
     padding:2px;
     cursor:pointer;
-    color:var(--text-muted);
+    color:var(--rust);
     line-height:0;
   }
   .icon-x svg{width:18px; height:18px;}
-  .icon-x:hover{color:#111;}
+  .icon-x:hover{opacity:0.6;}
   .sw-pick{display:flex; gap:6px; flex-wrap:wrap; margin-top:var(--sp-2);}
   .sw-pick button{
     font-family:var(--font-ui);
     font-size:11.5px;
     font-weight:400;
     padding:5px 10px;
-    border:1px solid var(--paper-line);
+    border:0.5px solid #6B6B6B;
     background:#fff;
     cursor:pointer;
     color:#111;
@@ -800,7 +827,7 @@
     font-size:12px;
     line-height:1.5;
     padding:8px;
-    border:1px solid var(--paper-line);
+    border:0.5px solid #6B6B6B;
     border-radius:0;
   }
 </style>
@@ -905,7 +932,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15"/></svg>
       </button>
       <button class="icon-btn danger" id="swTrashBtn" onclick="swDiscardNow(this)" aria-label="Discard" title="Discard this session">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5 H20 M9.5 6.5 V3.8 H14.5 V6.5 M6.5 6.5 L7.5 20.5 H16.5 L17.5 6.5" stroke="currentColor" stroke-width="1.9" fill="none"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
       </button>
     </div>
 
@@ -942,7 +969,7 @@
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-24b</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-26r</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -1008,9 +1035,9 @@
       </button>
     </div>
     <div class="dp-head">
-      <button class="dp-nav" onclick="dpShift(-1)" aria-label="Previous month">&#8592;</button>
+      <button class="dp-nav" onclick="dpShift(-1)" aria-label="Previous month"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
       <span class="dp-title" id="dpTitle"></span>
-      <button class="dp-nav" onclick="dpShift(1)" aria-label="Next month">&#8594;</button>
+      <button class="dp-nav" onclick="dpShift(1)" aria-label="Next month"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
     </div>
     <div class="dp-grid" id="dpDow"></div>
     <div class="dp-grid" id="dpDays"></div>
@@ -1100,7 +1127,7 @@ function sanitizeActivities(list){
     seen.add(a.id);
     out.push({
       id: a.id,
-      short: String(a.short || a.id.slice(0,2)).toUpperCase().slice(0, 3),
+      short: String(a.short || a.id.slice(0,2)).slice(0, 16),
       group: String(a.group || 'other'),
       color: /^#[0-9a-f]{6}$/i.test(String(a.color||'')) ? a.color : '#999999'
     });
@@ -1298,15 +1325,18 @@ function armButton(el, label){
   if(prev && now - prev.at < 4000){
     clearTimeout(prev.timer);
     ARMED.delete(key);
-    el.textContent = prev.original;
+    if(prev.original !== null) el.textContent = prev.original;
     el.classList.remove('is-armed');
     return true;                     // second press — proceed
   }
-  const original = prev ? prev.original : el.textContent;
-  el.textContent = label;
+  /* No label means "state only": the button keeps its wording and just fades.
+     Delete buttons use this, and so must every icon button — writing
+     textContent would wipe out the child icon element and it never comes back. */
+  const original = prev ? prev.original : (label ? el.textContent : null);
+  if(label) el.textContent = label;
   el.classList.add('is-armed');
   const timer = setTimeout(() => {
-    el.textContent = original;
+    if(original !== null) el.textContent = original;
     el.classList.remove('is-armed');
     ARMED.delete(key);
   }, 4000);
@@ -1318,7 +1348,7 @@ function armButton(el, label){
    when native dialogs are blocked the confirmation happens on it directly. */
 function askConfirm(message, el, armLabel){
   if(!dialogsBlocked()) return window.confirm(message);
-  if(el) return armButton(el, armLabel || 'Press again to confirm');
+  if(el) return armButton(el, armLabel === false ? null : (armLabel || 'Press again to confirm'));
   return true;
 }
 
@@ -2070,7 +2100,7 @@ async function clearActEditor(el){
     }
     const a = actById(editingAct);
     if(!askConfirm('Remove all ' + actDisplay(a) + ' time on this day?',
-                   el, 'Press again to clear')) return;
+                   el, false)) return;
 
     // Remember what to redraw before the close handler resets the state.
     const code = editingCode, actId = editingAct;
@@ -2208,7 +2238,7 @@ function saveDayEditor(){
 
 function clearDay(el){
   if(!askConfirm('Delete every record for this day?',
-                 el, 'Press again to delete')) return;
+                 el, false)) return;
   delete days[editingCode];
   saveData();
   closeDayEditor();
@@ -2455,7 +2485,7 @@ function swDiscardNow(el){
   const hasSession = !!sw.actId && (sw.startedAt || sw.elapsed > 0 || sw.segments.length > 0);
   if(!hasSession) return;
   if(!askConfirm('Throw away this session? The time will not be recorded.',
-                 el, '!')) return;
+                 el, false)) return;
   if(swTimer){ clearInterval(swTimer); swTimer = null; }
   sw = {actId:null, startedAt:null, elapsed:0, segments:[], _segStart:null};
   swSave();
@@ -2467,7 +2497,7 @@ function swDiscard(el){
   const warn = document.getElementById('swConfirmWarn');
   try{
     if(!askConfirm('Throw away this session? The time will not be recorded.',
-                   el, 'Press again to discard')) return;
+                   el, false)) return;
     // Clear everything, including any in-progress span and the running interval,
     // so nothing from this session can leak into the next one. _segStart is
     // named explicitly rather than left to fall away with the old object.
@@ -2591,8 +2621,8 @@ function renderColorRows(){
   wrap.innerHTML = ACTIVITIES.map(a => `
     <div class="color-row">
       <span class="swatch-box"><input type="color" value="${a.color}" onchange="setActField('${a.id}','color',this.value)" aria-label="${escapeAttr(a.short)} colour"></span>
-      <input type="text" class="act-short" value="${escapeAttr(a.short)}" maxlength="3"
-             onchange="setActField('${a.id}','short',this.value)" aria-label="Abbreviation">
+      <input type="text" class="act-short" value="${escapeAttr(a.short)}" maxlength="16"
+             onchange="setActField('${a.id}','short',this.value)" aria-label="Name">
       <input type="text" class="act-group" value="${escapeAttr(groupLabelOf(a.group))}" maxlength="20"
              onchange="setActField('${a.id}','group',this.value)" aria-label="Group" title="Group">
       <button class="icon-x act-del" onclick="deleteActivity('${a.id}', this)" aria-label="Delete" title="Delete this activity">
@@ -2627,7 +2657,7 @@ async function setActField(id, field, value){
     a.color = v;
   } else if(field === 'short'){
     if(!v) return;
-    a.short = v.toUpperCase().slice(0,3);
+    a.short = v.slice(0,16);
   } else if(field === 'group'){
     if(!v) return;
     // Type an existing group's name to join it, or a new one to create it.
@@ -2642,10 +2672,10 @@ async function setActField(id, field, value){
 }
 
 async function addActivity(){
-  // The abbreviation is what appears on screen, so that is what is asked for.
-  const input = prompt('Abbreviation for the new activity? (2-3 letters)');
+  // This name is what appears on screen, so that is what is asked for.
+  const input = prompt('Name for the new activity?');
   if(!input || !input.trim()) return;
-  const short = input.trim().replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase() || 'XX';
+  const short = input.trim().replace(/[^A-Za-z0-9 _-]/g,'').slice(0,16) || 'New';
   const id = 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   ACTIVITIES.push({id, short, group: 'other', color: '#999999'});
   if(!DEFAULT_GROUPS.some(g => g.id === 'other')) DEFAULT_GROUPS.push({id:'other', label:'Other'});
@@ -2664,7 +2694,7 @@ async function deleteActivity(id, el){
   const msg = used
     ? `Delete "${actDisplay(a)}"?\n\n${used} recorded span(s) use it and will be removed too.`
     : `Delete "${actDisplay(a)}"?`;
-  if(!askConfirm(msg, el, 'Press again to delete')) return;
+  if(!askConfirm(msg, el, false)) return;
 
   ACTIVITIES = ACTIVITIES.filter(x => x.id !== id);
   Object.keys(days).forEach(c => {
@@ -2844,7 +2874,7 @@ function activitiesFromDefs(defs){
     return {
       id: d.id || ('a_' + d.short.toLowerCase()),
 
-      short: d.short.toUpperCase().slice(0,3),
+      short: d.short.slice(0,16),
       group: gid,
       color: /^#[0-9a-f]{6}$/i.test(d.color) ? d.color : '#999999'
     };
@@ -2919,7 +2949,8 @@ function syncHeaderOffset(){
   const bar = document.getElementById('topBar');
   if(!bar) return;
   const h = bar.getBoundingClientRect().height;
-  if(h > 0) document.documentElement.style.setProperty('--header-h', (h + 14) + 'px');
+  // Height only. The gap below it belongs to body's padding, in the stylesheet.
+  if(h > 0) document.documentElement.style.setProperty('--header-h', h + 'px');
 }
 syncViewportWidth();
 window.addEventListener('resize', syncViewportWidth);

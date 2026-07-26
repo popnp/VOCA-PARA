@@ -39,13 +39,9 @@
     --font-serif:'Gentium Plus','Newsreader',
                  'Pretendard Variable','Pretendard',
                  'Apple SD Gothic Neo','Malgun Gothic',serif;
-    --ink:#EAEAEA;
-    --ink-deep:#F2F2F2;
-    --grid-line:rgba(0,0,0,0.08);
     --grid-line-strong:rgba(0,0,0,0.5);
     --blueprint-blue:#111111;
     --paper:#FFFFFF;
-    --paper-back:#F5F5F5;
     --paper-line:#D8D8D8;
     --brass:#111111;
     --rust:#FF4602;
@@ -64,7 +60,12 @@
     --sp-7:48px;
     /* Section rhythm: the standard gap between stacked blocks / settings groups. */
     --gap-block:24px;
-    --gap-section:32px;
+    /* The gap between the header and the start of a screen. One number, used
+       in exactly one place: body's padding-top. Both apps share it. */
+    --gap-top:16px;
+    /* Screens that open with a back/next arrow row. Arrow buttons carry their
+       own space above the glyph, so the same number reads as a wider gap. */
+    --gap-top-nav:8px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -92,7 +93,9 @@
     font-family:var(--font-ui);
     min-height:100vh;
     box-sizing:border-box;
-    padding:var(--header-h, 28px) max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 20px;
+    /* Body owns the gap under the header — one number for every screen. What
+       starts a screen must not add its own on top of it. */
+    padding:calc(var(--header-h, 28px) + var(--gap-top)) max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 20px;
     transition:background-color .40s cubic-bezier(.4,0,.2,1);
   }
   body.is-tinted{
@@ -140,11 +143,12 @@
     padding-top:0;
     padding-bottom:0;
   }
+  /* The results popup's title. Same rule as a section heading: black, 12.5px,
+     no letter-spacing. --blueprint-blue is #111 despite the name. */
   .eyebrow{
     font-family:var(--font-ui);
-    font-size:11px;
+    font-size:12.5px;
     font-weight:300;
-    letter-spacing:0.08em;
     color:var(--blueprint-blue);
     margin:0 0 var(--sp-2);
   }
@@ -253,6 +257,12 @@
   section.view{display:none;}
   section.view.active{display:block;}
 
+  /* Only between panels — the first one on a screen sits on body's gap. */
+  .view > .card-panel:first-child,
+  #quizSettings > .card-panel,
+  #pQuizSettings > .card-panel{
+    padding-top:0;
+  }
   .card-panel{
     background:transparent;
     color:var(--text-dark);
@@ -276,8 +286,9 @@
     position:fixed; inset:0;
     background:rgba(0,0,0,0.45);
     z-index:1000;
-    align-items:center; justify-content:center;
+    align-items:flex-start; justify-content:center;
     padding:20px;
+    overflow-y:auto;
   }
   .modal-overlay.show{display:flex;}
   .modal-box{
@@ -287,6 +298,7 @@
     border-radius:0;
     max-width:360px;
     width:100%;
+    margin:auto;
     padding:var(--sp-5);
     box-sizing:border-box;
   }
@@ -317,13 +329,17 @@
     padding-right:28px;
   }
 
+  /* One grey text style for the whole app, in both files: 12.5px, weight 300,
+     no letter-spacing. Headings and the notes under them are the same thing;
+     what separates them is the space around them, not the type. Don't split
+     this back into a smaller label size — that put headings below the text they
+     were heading. */
   label.field-label{
     display:block;
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
-    letter-spacing:0.08em;
-    color:var(--text-muted);
+    font-size:12.5px;
+    color:var(--text-dark);
     margin-bottom:6px;
   }
   textarea, input[type=text]{
@@ -342,7 +358,7 @@
   textarea{min-height:110px; line-height:1.45;}
   /* Muted grey at weight 400 read as heavy for what is secondary text; 300
      is where Switzer's lighter cut sits without becoming faint. */
-  .hint{font-size:12.5px; font-weight:300; color:var(--text-muted); margin:6px 0 0;}
+  .hint{font-size:12.5px; font-weight:300; color:var(--text-muted); line-height:1.5; margin:6px 0 0;}
 
   /* Range inputs render with the OS accent colour by default — bright blue here,
      which is the only saturated blue in an otherwise black-and-white UI. The
@@ -448,7 +464,6 @@
   .list-card{
     background:var(--paper);
     color:var(--text-dark);
-    border-radius:3px;
     padding:14px 16px;
     margin-bottom:8px;
     display:flex;
@@ -466,10 +481,18 @@
     font-size:13.5px;
     padding:40px 20px;
     border:1px dashed var(--grid-line-strong);
-    border-radius:3px;
   }
 
   /* Quiz view */
+  /* The four screens whose first row is arrows. Written as the difference
+     between the two tokens so changing --gap-top carries this along — the
+     hard-coded version of this idea (#memoPanel -22px) went stale and broke. */
+  #quizBody,
+  #pQuizBody,
+  #pStackQuizBody,
+  #memoDetailWrap{
+    margin-top:calc(var(--gap-top-nav) - var(--gap-top));
+  }
   .quiz-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
   /* The two chevrons line up under the P and V in the header. Both offsets are
      measured from the live elements at runtime (see alignNavArrows) rather than
@@ -709,7 +732,8 @@
      already been bitten by once. */
   #quizBody.rate-open,
   #pStackQuizBody.rate-open,
-  #pQuizBody.rate-open{
+  #pQuizBody.rate-open,
+  #memoDetailWrap.rate-open{
     padding-bottom:var(--rate-bar-space);
   }
   #skipRow, #skipRowBack, #pSkipRow, #pSkipRowBack, #pStackSkipRow{display:none !important;}
@@ -1033,8 +1057,9 @@
   .day-table thead th{
     text-align:left;
     font-family:var(--font-ui);
-    font-size:11px;
-    letter-spacing:0.08em;
+    /* Same size and spacing as every other label; grey because the rows under
+       it are black and the head should stay behind them. */
+    font-size:12.5px;
     color:var(--text-muted);
     /* 300 sat noticeably lighter than the PARA/VOCA heads next to it, which
        read as a different typeface rather than a different emphasis. */
@@ -1150,6 +1175,14 @@
     flex:0 0 auto;
   }
   .nav-chev.flip{transform:scaleX(-1);}
+  /* Month arrows. Same glyph and same bare button as every other arrow;
+     the padding is kept only so the tap target stays finger-sized. */
+  .cal-nav{padding:var(--sp-1) var(--sp-4); line-height:0;}
+
+  /* Hiding for the memo page. A class, not a style wipe: clearing an
+     element's inline display also throws away whatever else was written
+     beside it (the toggle row lost its right alignment that way). */
+  .memo-hidden{display:none !important;}
 
   /* ---- Unified calendar grid cell: Para row on top, Voca row below ---- */
   .cal-side{
@@ -1181,19 +1214,6 @@
     top:-2px;
     background:transparent;
   }
-
-  .cal-legend{
-    display:flex; gap:14px; flex-wrap:wrap;
-    margin-top:12px;
-    font-size:11px;
-    color:var(--text-muted);
-  }
-  .cal-legend span{display:flex; align-items:center; gap:5px;}
-  .cal-swatch{width:10px; height:10px; border-radius:2px; display:inline-block;}
-  .cal-swatch.cal-red{background:#FF4602;}
-  .cal-swatch.cal-yellow{background:#F2FF00;}
-  .cal-swatch.cal-green{background:#2CE17A;}
-  .cal-swatch.cal-blue{background:#00E5FF;}
 
   .preview-item.has-warning{border-left:3px solid var(--rust); padding-left:6px;}
   .preview-warning{font-size:11px; color:var(--rust); display:block; margin-top:2px;}
@@ -1302,7 +1322,7 @@
   .status-dot{
     width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0;
   }
-  .day-word-header .chevron{
+  .day-word-header .chevron, .memo-row .chevron{
     font-size:11px; color:var(--text-muted); font-weight:400;
   }
   .status-dot.cal-red{background:#FF4602;}
@@ -1314,7 +1334,6 @@
   .day-word-detail{
     background:var(--paper);
     color:var(--text-dark);
-    border-radius:0 0 3px 3px;
     padding:16px;
     margin-top:-4px;
     box-shadow:none;
@@ -1330,7 +1349,7 @@
     border:0.5px solid #6B6B6B;
   }
   .quiz-edit-form .qe-example{margin-bottom:6px;}
-  .day-word-detail .lbl{
+  .day-word-detail .lbl, .memo-tag-wrap .lbl{
     font-family:var(--font-ui);
     font-weight:300; font-size:11px; color:var(--text-muted);
     letter-spacing:0.06em; margin-bottom:4px;
@@ -1397,13 +1416,168 @@
     gap:0;
     justify-content:center;
     margin-top:12px;
-    border-radius:4px;
     overflow:hidden;
   }
   .result-square{width:26px; height:26px;}
 
   #vocabPopup{
     max-width:340px;
+  }
+  /* ---- Memo ------------------------------------------------------------- */
+  /* One line per memo, laid out like a word row in the list. */
+  .memo-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    padding:var(--sp-3) var(--sp-1);
+    border-bottom:1px solid #111;
+    cursor:pointer;
+    font-weight:500;
+  }
+  .memo-row:last-child{border-bottom:none;}
+  .memo-row:hover{opacity:0.9;}
+  .memo-row-title{
+    /* No font-size of its own: the word rows don't set one either, so both
+       inherit the same body size and stay matched. */
+    font-family:var(--font-ui); color:#111;
+    display:flex; align-items:center; gap:10px;
+    min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .memo-title{
+    font-family:var(--font-ui); font-weight:600; font-size:19px; color:#111;
+    margin:0 0 var(--sp-3);
+  }
+  /* A sub-heading inside the memo, written with an arrow. */
+  .memo-head{
+    font-family:var(--font-ui); font-weight:600; font-size:14.5px; color:#111;
+    margin:var(--sp-4) 0 var(--sp-1);
+  }
+  .memo-line{font-size:14px; line-height:1.75; color:#111;}
+  /* The headword of an entry, set on its own line above its description.
+     Uses .memo-head's size and weight (14.5px / 600) so the memo keeps one
+     type scale rather than gaining a new one. */
+  .memo-word{
+    font-family:var(--font-ui);
+    font-size:14.5px; line-height:1.75;
+    margin-top:var(--sp-3);
+  }
+  .memo-word .memo-link, .memo-word .memo-missing{font-weight:600;}
+  /* A blank line in the source becomes real breathing room. */
+  .memo-gap{height:var(--sp-2);}
+  /* Matches the Tag field in the word editor: a small grey label over a
+     bordered box, so a memo's date is presented the way every other tag is. */
+  /* The tag itself is drawn with .tagbadge, the same class the word list uses,
+     so there is nothing here to fall out of step. Only the space beneath is
+     memo-specific. */
+  .memo-tag-wrap{margin-bottom:14px;}
+  .memo-body{color:#111;}
+  /* Linked words are underlined rather than coloured, so a memo dense with
+     links still reads as continuous prose. */
+  /* Blue where the word has a card behind it, grey where it hasn't — the
+     colour carries the distinction, so no underline is needed. */
+  .memo-link{
+    color:#1B4FD8;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .memo-link:hover{opacity:0.6;}
+  /* A bracketed word with no saved card. Dotted rather than solid, and grey
+     rather than black, so it reads as "not linked" at a glance. */
+  .memo-missing{
+    color:var(--text-muted, #6B6B6B);
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .memo-missing:hover{opacity:0.6;}
+  #memoMissingBox{
+    border:0.5px solid var(--paper-line, #D8D8D8);
+    padding:var(--sp-3) var(--sp-4);
+    margin-top:var(--sp-4);
+  }
+  .memo-missing-title{
+    font-family:var(--font-ui); font-weight:600; font-size:13.5px;
+    color:#111; margin-bottom:var(--sp-2);
+  }
+  .memo-missing-body{font-size:12.5px; color:#111; line-height:1.9;}
+
+  /* ---- Memo quiz --------------------------------------------------------- */
+  /* Cards size themselves to the column, so a memo of five entries and one of
+     thirty both stay readable without a fixed column count. */
+  /* One entry per row. No frames — the words sit on the page the way the
+     flashcard's word does, separated by space rather than boxes. */
+  /* The entries divide the available height between them, so every slot keeps
+     its place no matter how long its description turns out to be. Without this
+     the whole column shifts each time a card is turned. */
+  /* Names the memo being tested, in the same key as the other tests' counters. */
+  .memo-quiz-title{
+    font-family:var(--font-ui);
+    font-weight:300; font-size:11px; color:#111; letter-spacing:0.05em;
+    margin-left:var(--sp-2);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:55%;
+  }
+
+  .memo-quiz-grid{
+    display:flex;
+    flex-direction:column;
+    /* The entries divide this height between them, so two words sit far apart
+       and eight sit close. border-box keeps the bottom padding — the room the
+       fixed rating bar needs — from eating into that shared height. */
+    box-sizing:border-box;
+    min-height:calc(100vh - var(--header-h, 60px) - 90px);
+    /* The rating bar only appears once every card has been seen, so its height
+       is reserved then rather than from the start — the words get the whole
+       screen during the part that matters. */
+    padding:var(--sp-2) 0 var(--sp-5);
+    text-align:center;
+  }
+  .memo-quiz-card{
+    cursor:pointer;
+    /* At least an equal share of the column, but free to grow — a description
+       running to several lines must not be cut off. */
+    flex:1 0 auto;
+    /* Content sits in the middle of its own slot, so turning a card over
+       changes what is written without moving where it is written. */
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:var(--sp-2) 0;
+  }
+  /* Same scale as the flashcard prompt, so a memo entry reads like a test word. */
+  .memo-quiz-word{
+    font-family:var(--font-ui);
+    font-size:clamp(26px, 7.5vw, 32px);
+    font-weight:500;
+    letter-spacing:-0.01em;
+    line-height:1.4;
+    color:#111;
+  }
+  /* Turned over, the word gives way entirely to its description. */
+  .memo-quiz-desc{
+    font-size:17px;
+    line-height:1.6;
+    color:#111;
+  }
+  /* A button waiting for its second press, used where the browser suppresses
+     native confirm dialogs. */
+  /* Waiting for the second press. A dotted red rule along the bottom of the
+     button, drawn as a background so it adds no height — a border here would
+     push every neighbour in the row down by 1px. Fading was tried first and
+     read as "disabled". Works on icon buttons too, which have no text to
+     underline. */
+  .is-armed{
+    background-image:repeating-linear-gradient(to right,
+        var(--rust) 0 2px, transparent 2px 4px) !important;
+    background-repeat:repeat-x !important;
+    background-position:left bottom !important;
+    background-size:100% 1px !important;
+    /* Under the text, not along the button's bottom edge: both the width
+       and the baseline come from the content box, so the button's own
+       padding is left out. Icon buttons still get a line under the icon. */
+    background-origin:content-box !important;
+    background-clip:content-box !important;
   }
   .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:17px; color:#111; margin-bottom:4px; padding-right:28px;}
   .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:13.5px; color:#111; margin-bottom:6px;}
@@ -1454,8 +1628,9 @@
     <button class="modal-close" onclick="hideResultsModal()" aria-label="Close">✕</button>
     <p class="eyebrow" id="resultsTitle" style="text-align:center;">Session complete</p>
     <div class="result-grid" id="resultsGrid"></div>
-    <div class="actions" style="margin-top:18px; justify-content:center; flex-wrap:wrap;">
+    <div class="actions" style="margin-top:var(--sp-4); justify-content:center; flex-wrap:wrap;">
       <button class="btn btn-primary" id="resultsNextBtn" style="display:none;" onclick="triggerResultsNextPara()">Continue</button>
+      <button class="btn btn-primary" id="resultsParaBtn" style="display:none;" onclick="triggerResultsParaTest()">Test this text</button>
       <button class="btn btn-primary" id="resultsVocaBtn" style="display:none;" onclick="triggerResultsVocaTest()">Test this text's words</button>
       <button class="btn btn-primary" id="resultsRetryBtn" style="display:none;" onclick="triggerResultsRetry()">Retry Unsure + Blank</button>
       <button class="btn btn-ghost" id="resultsDoneBtn" onclick="hideResultsModal()">Done</button>
@@ -1491,7 +1666,7 @@
   <header class="top" id="mainHeader">
     <div class="header-row">
       <p class="brand-header">
-        <span class="app-tab" id="appTabPara" onclick="onAppTabClick('para')" aria-label="Para" title="Para">P</span><span class="app-tab active" id="appTabVoca" onclick="onAppTabClick('voca')" aria-label="Voca" title="Voca">V</span>
+        <span class="app-tab" id="appTabPara" onclick="onAppTabClick('para')" aria-label="Para" title="Para">P</span><span class="app-tab active" id="appTabVoca" onclick="onAppTabClick('voca')" aria-label="Voca" title="Voca">V</span><span class="app-tab" id="appTabMemo" onclick="openMemoSection()" aria-label="Memo" title="Memo">M</span>
       </p>
       <nav class="tabs" id="mainNav">
         <button id="speechControlBtn" onclick="toggleSpeechPlayback()" aria-label="Pause reading" title="Playing — tap to pause" style="display:none;">
@@ -1531,6 +1706,7 @@
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-26r</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -1574,7 +1750,19 @@
           <div class="btn-group" id="editScopeRow" style="margin-bottom:var(--sp-3);">
             <button class="opt-btn selected" id="editScopePara" onclick="setEditScope('para')">Para</button>
             <button class="opt-btn" id="editScopeVoca" onclick="setEditScope('voca')">Voca</button>
+            <button class="opt-btn" id="editScopeMemo" onclick="setEditScope('memo')">Memo</button>
           </div>
+
+<div id="memoManualEditPanel" style="display:none; margin-top:16px;">
+          <label class="field-label">Edit memos (raw text)</label>
+          <textarea id="memoManualEditArea" style="min-height:320px; font-family:var(--font-ui); font-weight:300; font-size:12.5px;"></textarea>
+          <p class="hint">Each memo starts with its rating line <code>&#10214;3,1,0&#10215;</code>. Leave the brackets empty for a memo that has never been rated. Everything under that line is the memo itself. Saving replaces all memos with what is written here.</p>
+          <div class="actions" style="margin-top:8px;">
+            <button class="btn btn-primary" onclick="saveMemoManualEdit(this)">Save &amp; Update App</button>
+            <button class="btn btn-ghost" onclick="copyMemoManualEdit()">Copy</button>
+            <button class="btn btn-ghost" onclick="cancelManualEdit()">Cancel</button>
+          </div>
+        </div>
 
 <div id="pManualEditPanel" style="display:none; margin-top:16px;">
           <label class="field-label">Edit paragraphs (raw text)</label>
@@ -1746,12 +1934,8 @@
 
   <!-- LIST/DAY-TABLE VIEW -->
   <section id="view-cal" class="view">
-    <div class="card-panel">
+    <div class="card-panel" id="calListPanel">
       <div class="panel-inner">
-        <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
-          <button class="mini-toggle" id="calViewToggleBtn" onclick="toggleCalView()">Calendar</button>
-        </div>
-
         <table class="day-table" id="calTable">
           <thead>
             <tr>
@@ -1765,11 +1949,15 @@
 
         <div id="calGridWrap" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <button class="btn btn-ghost" style="border:none;" onclick="shiftCalMonth(-1)" aria-label="Previous month" title="Previous month"><svg class="nav-chev flip" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+            <button class="shuffle-btn cal-nav" onclick="shiftCalMonth(-1)" aria-label="Previous month" title="Previous month"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
             <span id="calLabel" style="font-family:var(--font-ui); font-weight:500; font-size:18px; letter-spacing:0.01em;"></span>
-            <button class="btn btn-ghost" style="border:none;" onclick="shiftCalMonth(1)" aria-label="Next month" title="Next month"><svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+            <button class="shuffle-btn cal-nav" onclick="shiftCalMonth(1)" aria-label="Next month" title="Next month"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
           </div>
           <div id="calGrid" class="cal-grid"></div>
+        </div>
+
+        <div id="calToggleRow" style="display:flex; justify-content:flex-end; gap:6px; margin-top:var(--sp-3);">
+          <button class="mini-toggle" id="calViewToggleBtn" onclick="toggleCalView()">Calendar</button>
         </div>
       </div>
     </div>
@@ -1813,6 +2001,84 @@
       <div id="dayPagination" class="day-pagination"></div>
     </div>
 
+    <!-- MEMO SUB-PAGE (inside Voca's list view) ------------------------------
+         A list of memos, or one open memo. Words written as [word] in the body
+         become links to their card. -->
+    <div class="panel-inner" id="memoPanel" style="display:none;">
+      <div id="memoListWrap">
+        <div class="check-row small" id="memoFilterProfRow" style="margin-bottom:var(--sp-1);">
+          <label><input type="checkbox" id="memoFilterEasy" onchange="renderMemoList()"> <span class="status-dot cal-blue"></span> Easy</label>
+          <label><input type="checkbox" id="memoFilterGood" onchange="renderMemoList()"> <span class="status-dot cal-green"></span> Good</label>
+          <label><input type="checkbox" id="memoFilterUnsure" onchange="renderMemoList()"> <span class="status-dot cal-yellow"></span> Unsure</label>
+          <label><input type="checkbox" id="memoFilterBlank" onchange="renderMemoList()"> <span class="status-dot cal-red"></span> Blank</label>
+          <label><input type="checkbox" id="memoFilterUndertested" onchange="renderMemoList()"> Under-tested</label>
+        </div>
+        <div class="check-row small" id="memoSortRow" style="margin-bottom:var(--sp-1);">
+          <button class="mini-toggle" id="memoSortRecentBtn" onclick="setMemoSort('recent')">Recent first</button>
+          <button class="mini-toggle" id="memoSortOldBtn" onclick="setMemoSort('old')">Oldest first</button>
+          <button class="mini-toggle" id="memoSortAlphaBtn" onclick="setMemoSort('alpha')">A–Z</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; margin:0 0 var(--sp-3);">
+          <input type="text" id="memoSearchInput" placeholder="Search memos…" oninput="renderMemoList()"
+            style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:13.5px; border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
+          <button class="btn btn-ghost" onclick="newMemo()">+ New</button>
+        </div>
+        <div id="memoList"></div>
+      </div>
+
+      <div id="memoDetailWrap" style="display:none;">
+        <div class="nav-arrows" id="memoDetailBar" style="display:flex; align-items:center; gap:6px; margin:0 0 var(--sp-3);">
+          <button class="shuffle-btn" onclick="closeMemo()" aria-label="Back to memo list" title="Back">
+            <svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+          </button>
+          <span style="flex:1;"></span>
+          <button class="mini-toggle" id="memoAddWordBtn" onclick="addMissingWordsFromMemo(this)">Add word</button>
+          <button class="mini-toggle" id="memoEditBtn" onclick="toggleMemoEdit()">Edit</button>
+        </div>
+
+        <!-- MEMO QUIZ — every word in the memo laid out at once. Tap a card to
+             turn it over; the buttons appear once they are all turned. -->
+        <div id="memoQuizWrap" style="display:none;">
+          <div class="nav-arrows" style="display:flex; align-items:center; gap:6px; margin:0 0 var(--sp-3);">
+            <button class="shuffle-btn" onclick="endMemoQuiz()" aria-label="Back to memo" title="Back">
+              <svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+            </button>
+            <span class="memo-quiz-title" id="memoQuizTitle"></span>
+            <span style="flex:1;"></span>
+            <span class="hint" id="memoQuizProgress"></span>
+          </div>
+          <div id="memoQuizGrid" class="memo-quiz-grid"></div>
+        </div>
+        <div id="memoView"></div>
+
+        <!-- Same pinned bar as every other test mode, but showing from the
+             moment the memo opens rather than waiting to be earned. -->
+        <div id="memoRateRow" class="rate-row" style="display:none;">
+          <button class="rate-btn rate-easy" onclick="rateMemo(0)" aria-label="Easy">Easy</button>
+          <button class="rate-btn rate-medium" onclick="rateMemo(1)" aria-label="Good">Good</button>
+          <button class="rate-btn rate-unsure" onclick="rateMemo(2)" aria-label="Unsure">Unsure</button>
+          <button class="rate-btn rate-unknown" onclick="rateMemo(3)" aria-label="Blank">Blank</button>
+        </div>
+        <!-- Explains why a dotted word is not linked, and offers the nearest
+             saved word when the difference is only a spelling one. -->
+        <div id="memoMissingBox" class="memo-missing-box" style="display:none;"></div>
+        <div id="memoMissingBox" style="display:none;"></div>
+        <div id="memoEditWrap" style="display:none;">
+          <textarea id="memoBodyInput" rows="18" placeholder="[260718 M]&#10;&lt;착수하다&gt;&#10;&#10;→ 격식의 차이&#10;[commence]는 공식 절차의 개시…"
+            style="width:100%; box-sizing:border-box; font-size:13.5px; line-height:1.7; padding:var(--sp-2) var(--sp-4); border:0.5px solid #6B6B6B; border-radius:0; background:transparent;"></textarea>
+          <p class="hint" style="margin:var(--sp-1) 0 var(--sp-3);">
+            <code>&lt;제목&gt;</code> 제목 · <code>→</code> 굵은 소제목 · <code>[단어]</code> 단어 링크 · <code>[260718 M]</code> 날짜 구분
+          </p>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn btn-ghost" onclick="saveMemoEdit()">Save</button>
+            <button class="mini-toggle" onclick="cancelMemoEdit()">Cancel</button>
+            <span style="flex:1;"></span>
+            <button class="btn btn-danger" onclick="deleteMemo(this)">Delete memo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </section>
   </div>
 
@@ -1828,7 +2094,8 @@
             <label class="field-label">Quiz mode</label>
             <div class="btn-group" id="pTestModeButtons">
               <button class="opt-btn" data-testmode="pick">Choose a Paragraph</button>
-              <button class="opt-btn" data-testmode="random">Random Sentence Study</button>
+              <button class="opt-btn" data-testmode="random">Random</button>
+              <button class="opt-btn" data-testmode="reading">Reading</button>
             </div>
           </div>
 
@@ -1927,11 +2194,11 @@
         <button class="mini-toggle" onclick="event.stopPropagation(); toggleRandomAddWord();">+ Add word</button>
       </div>
       <div id="pRandomEditWrap" style="display:none; margin-top:8px;" onclick="event.stopPropagation();">
-        <label style="display:block; font-size:12.5px; color:#666; margin-bottom:2px;">English</label>
+        <label class="field-label" style="margin-bottom:2px;">English</label>
         <textarea rows="2" id="pRandomEditEn" style="width:100%; box-sizing:border-box;"></textarea>
-        <label style="display:block; font-size:12.5px; color:#666; margin:6px 0 2px;">한국어</label>
+        <label class="field-label" style="margin:6px 0 2px;">한국어</label>
         <textarea rows="2" id="pRandomEditKo" style="width:100%; box-sizing:border-box;"></textarea>
-        <label style="display:block; font-size:12.5px; color:#666; margin:6px 0 2px;">Linked words (comma-separated)</label>
+        <label class="field-label" style="margin:6px 0 2px;">Linked words (comma-separated)</label>
         <input type="text" id="pRandomEditLinks" style="width:100%; box-sizing:border-box;" placeholder="e.g. hybrid, access">
         <button class="btn btn-primary" style="margin-top:6px;" onclick="saveRandomEditSentence()">Save</button>
       </div>
@@ -1975,11 +2242,11 @@
         <button class="mini-toggle" onclick="event.stopPropagation(); toggleStackAddWord();">+ Add word</button>
       </div>
       <div id="pStackEditWrap" style="display:none; margin-top:8px;" onclick="event.stopPropagation();">
-        <label style="display:block; font-size:12.5px; color:#666; margin-bottom:2px;">English</label>
+        <label class="field-label" style="margin-bottom:2px;">English</label>
         <textarea rows="2" id="pStackEditEn" style="width:100%; box-sizing:border-box;"></textarea>
-        <label style="display:block; font-size:12.5px; color:#666; margin:6px 0 2px;">한국어</label>
+        <label class="field-label" style="margin:6px 0 2px;">한국어</label>
         <textarea rows="2" id="pStackEditKo" style="width:100%; box-sizing:border-box;"></textarea>
-        <label style="display:block; font-size:12.5px; color:#666; margin:6px 0 2px;">Linked words (comma-separated)</label>
+        <label class="field-label" style="margin:6px 0 2px;">Linked words (comma-separated)</label>
         <input type="text" id="pStackEditLinks" style="width:100%; box-sizing:border-box;" placeholder="e.g. hybrid, access">
         <button class="btn btn-primary" style="margin-top:6px;" onclick="saveStackEditSentence()">Save</button>
       </div>
@@ -2006,10 +2273,6 @@
   <section id="pview-cal" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
-          <button class="mini-toggle" id="pCalViewToggleBtn" onclick="pToggleCalView()">Calendar</button>
-        </div>
-
         <table class="day-table" id="pCalTable">
           <thead>
             <tr>
@@ -2023,11 +2286,15 @@
 
         <div id="pCalGridWrap" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <button class="btn btn-ghost" style="border:none;" onclick="pShiftCalMonth(-1)" aria-label="Previous month" title="Previous month"><svg class="nav-chev flip" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+            <button class="shuffle-btn cal-nav" onclick="pShiftCalMonth(-1)" aria-label="Previous month" title="Previous month"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
             <span id="pCalLabel" style="font-family:var(--font-ui); font-weight:500; font-size:18px; letter-spacing:0.01em;"></span>
-            <button class="btn btn-ghost" style="border:none;" onclick="pShiftCalMonth(1)" aria-label="Next month" title="Next month"><svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+            <button class="shuffle-btn cal-nav" onclick="pShiftCalMonth(1)" aria-label="Next month" title="Next month"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
           </div>
           <div id="pCalGrid" class="cal-grid"></div>
+        </div>
+
+        <div id="pCalToggleRow" style="display:flex; justify-content:flex-end; margin-top:var(--sp-3);">
+          <button class="mini-toggle" id="pCalViewToggleBtn" onclick="pToggleCalView()">Calendar</button>
         </div>
       </div>
     </div>
@@ -2245,6 +2512,71 @@ async function loadCards(){
   });
 }
 
+/* -------------------------------------------------------------------------
+   Memos — short notes that group words by shared meaning. A memo titled
+   "착수하다" gathers the words that share that sense, so the comparisons
+   scattered across individual cards can be read in one place.
+
+   Words are linked the way Para links them: write [word] in the body and it
+   becomes a tappable link to that card. Nothing is duplicated — the memo
+   stores only the title and the text, and the link is resolved against the
+   card list when the memo is displayed.
+   ------------------------------------------------------------------------- */
+let memos = [];
+
+async function loadMemos(){
+  try{
+    const res = await appStorage.get('voca-memos', SHARED);
+    memos = res ? JSON.parse(res.value) : [];
+  }catch(e){
+    memos = [];
+  }
+  if(!Array.isArray(memos)) memos = [];
+  // Guard against a partially written record from an interrupted save.
+  memos = memos.filter(m => m && typeof m === 'object').map(m => ({
+    id: m.id || (Date.now() + Math.random()),
+    // One text field. The title lives inside it as <title> on the first line,
+    // the same way Para keeps its structure in the text rather than in separate
+    // inputs — so a memo can be pasted in whole.
+    body: String(m.body != null ? m.body : ''),
+    tag: m.tag ? normalizeTag(String(m.tag)) : '',
+    // Quiz results for this memo, kept separate from the word cards' own history.
+    history: Array.isArray(m.history)
+      ? m.history.filter(n => typeof n === 'number').slice(-5)
+      : [],
+    updated: m.updated || Date.now()
+  }));
+}
+
+/* The <angle-bracket> title on the first line that has one. Everything else is
+   the memo's text. */
+function memoTitleOf(memo){
+  const m = String(memo && memo.body || '').match(/<([^>]+)>/);
+  return m ? m[1].trim() : '';
+}
+
+let memoSaveQueue = Promise.resolve();
+
+function saveMemos(){
+  const payload = JSON.stringify(memos);
+  memoSaveQueue = memoSaveQueue.then(async () => {
+    for(let attempt = 1; attempt <= 3; attempt++){
+      try{
+        const result = await appStorage.set('voca-memos', payload, SHARED);
+        if(result) return true;
+      }catch(e){
+        console.error('Memo save attempt ' + attempt + ' failed', e);
+        if(attempt === 3){
+          alert('Could not save the memo. Your other data is unaffected.');
+          return false;
+        }
+        await new Promise(r => setTimeout(r, 500 * attempt));
+      }
+    }
+  });
+  return memoSaveQueue;
+}
+
 let saveQueue = Promise.resolve();
 
 function saveCards(){
@@ -2307,7 +2639,31 @@ function resumeQuizView(isPara){
 // test state independently).
 let pendingResetApp = null;
 
+/* The M tab. Unlike P and V it isn't a whole app, just a section of Voca, so
+   it switches there and opens the memo list in one step. */
+function openMemoSection(){
+  switchApp('voca');
+  switchTab('cal');
+  if(!memoViewOpen) toggleMemoView();
+  markMemoTab();
+}
+
+/* Keeps the P / V / M tabs' selected state in step. */
+function markMemoTab(){
+  const m = document.getElementById('appTabMemo');
+  const v = document.getElementById('appTabVoca');
+  const p = document.getElementById('appTabPara');
+  if(!m) return;
+  m.classList.toggle('active', !!memoViewOpen);
+  if(memoViewOpen){
+    if(v) v.classList.remove('active');
+    if(p) p.classList.remove('active');
+  }
+}
+
 function onAppTabClick(name){
+  // Picking P or V leaves the memo section, so M gives up its selected state.
+  if(memoViewOpen) toggleMemoView();
   const isPara = document.getElementById('appTabPara').classList.contains('active');
   const currentApp = isPara ? 'para' : 'voca';
   const sameApp = (name === currentApp);
@@ -2338,6 +2694,9 @@ function confirmResetTest(){
 }
 
 function switchTab(name){
+  // The tab bar belongs to the word/paragraph apps, so any of its buttons
+  // leaves the memo section — otherwise the icons appear to do nothing.
+  if(memoViewOpen) toggleMemoView();
   const wasOnEdit = (currentTab === 'edit');
   // Leaving a test mid-wobble would otherwise leave the class attached.
   clearRateJelly();
@@ -2372,7 +2731,7 @@ function switchTab(name){
     // Arriving fresh: collapse the raw-text editor and pre-select the app you
     // came from, but don't open the editor until the button is clicked.
     editScope = isPara ? 'para' : 'voca';
-    editLoaded = {para:false, voca:false};
+    editLoaded = {para:false, voca:false, memo:false};
     populateVoiceSelect();
     const wrap = document.getElementById('editByTxtWrap');
     if(wrap) wrap.style.display = 'none';
@@ -2387,7 +2746,7 @@ function switchTab(name){
 // meanings vs. paragraphs with sentences), so each keeps its own filters,
 // textarea and save function — only one is visible at a time.
 let editScope = 'para';
-let editLoaded = {para:false, voca:false};
+let editLoaded = {para:false, voca:false, memo:false};
 
 function openEditByTxt(){
   document.getElementById('editByTxtWrap').style.display = 'block';
@@ -2397,14 +2756,19 @@ function openEditByTxt(){
 function setEditScope(scope){
   editScope = scope;
   const isPara = (scope === 'para');
+  const isVoca = (scope === 'voca');
+  const isMemo = (scope === 'memo');
   document.getElementById('editScopePara').classList.toggle('selected', isPara);
-  document.getElementById('editScopeVoca').classList.toggle('selected', !isPara);
+  document.getElementById('editScopeVoca').classList.toggle('selected', isVoca);
+  document.getElementById('editScopeMemo').classList.toggle('selected', isMemo);
   // Populate a side only the first time it's opened. Re-loading on every
   // toggle would reset the filters and wipe unsaved edits in that textarea.
   if(isPara && !editLoaded.para){ pOpenManualEdit(); editLoaded.para = true; }
-  if(!isPara && !editLoaded.voca){ openManualEdit(); editLoaded.voca = true; }
+  if(isVoca && !editLoaded.voca){ openManualEdit(); editLoaded.voca = true; }
+  if(isMemo && !editLoaded.memo){ openMemoManualEdit(); editLoaded.memo = true; }
   document.getElementById('pManualEditPanel').style.display = isPara ? 'block' : 'none';
-  document.getElementById('manualEditPanel').style.display = isPara ? 'none' : 'block';
+  document.getElementById('manualEditPanel').style.display = isVoca ? 'block' : 'none';
+  document.getElementById('memoManualEditPanel').style.display = isMemo ? 'block' : 'none';
 }
 
 function splitLine(line){
@@ -2509,15 +2873,19 @@ function normalizeTag(t){
 // Priority: explicit [bracket] annotation > literal word-boundary match of the head word.
 function parseExampleBlank(example, headWord){
   if(!example) return {ok:false};
-  const bracketMatch = example.match(/\[([^\]]+)\]/);
-  if(bracketMatch){
-    return {ok:true, surface: bracketMatch[1].trim(), source:'bracket'};
+  // Every bracketed piece becomes a blank. A separable phrase like
+  // "put together" is split across the sentence — "He [put] the whole
+  // exhibition [together]." — so one blank per part is needed; blanking only
+  // the last one would leave the first word on show.
+  const parts = [...example.matchAll(/\[([^\]]+)\]/g)].map(m => m[1].trim());
+  if(parts.length){
+    return {ok:true, surface: parts.join(' '), parts, source:'bracket'};
   }
   try{
     const escaped = headWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp('\\b'+escaped+'\\b','i');
     if(re.test(example)){
-      return {ok:true, surface: headWord, source:'literal'};
+      return {ok:true, surface: headWord, parts:[headWord], source:'literal'};
     }
   }catch(e){}
   return {ok:false};
@@ -2584,6 +2952,15 @@ function unifiedParsePaste(){
     return;
   }
 
+  // A memo carries a [YYMMDD M] tag. Paragraphs use the same <title> line but
+  // never an M tag, so that is what tells the two apart — the check has to come
+  // first, or a memo would be read as a paragraph.
+  if(/^\[\d{6}[\s-]M\]$/m.test(raw)){
+    unifiedDetectedType = 'memo';
+    parseMemoPaste();
+    return;
+  }
+
   const isPara = /^<[^\n]+>$/m.test(raw.trim());
   unifiedDetectedType = isPara ? 'para' : 'voca';
   if(isPara){
@@ -2593,13 +2970,153 @@ function unifiedParsePaste(){
   }
 }
 
+/* -------------------------------------------------------------------------
+   Pasting memos. Several memos at once are separated by their [YYMMDD M] tag
+   lines: each tag opens a new memo and everything up to the next tag belongs
+   to it. A single memo pasted on its own works the same way.
+   ------------------------------------------------------------------------- */
+let parsedMemoPreview = [];
+
+function splitPastedMemos(raw){
+  const lines = String(raw || '').replace(/\r/g, '').split('\n');
+  const blocks = [];
+  let current = null;
+  let pendingTag = null;   // a tag line waiting for the title it belongs to
+
+  const isTag   = l => /^\[\d{6}[\s-]M\]$/.test(l);
+  const isTitle = l => /^<[^>]*>$/.test(l);
+
+  lines.forEach(raw => {
+    const line = raw.trim();
+
+    // A tag opens a memo, but the title may be on the next line — hold it until
+    // we know whether one follows.
+    if(isTag(line)){
+      if(current) blocks.push(current);
+      current = null;
+      pendingTag = line;
+      return;
+    }
+
+    // A title always starts a new memo. Several memos can therefore be pasted
+    // with only the first carrying a date tag, or with none at all.
+    if(isTitle(line)){
+      if(current) blocks.push(current);
+      current = pendingTag ? [pendingTag, line] : [line];
+      pendingTag = null;
+      return;
+    }
+
+    // Blank lines between the tag and its title are common, so they must not
+    // close the tag out — that produced an empty untitled memo.
+    if(!line && pendingTag) return;
+
+    // Actual content with no title after the tag: the tag opens a memo anyway.
+    if(pendingTag){
+      current = [pendingTag];
+      pendingTag = null;
+    }
+    if(current) current.push(raw);
+  });
+
+  if(pendingTag && !current) current = [pendingTag];
+  if(current) blocks.push(current);
+
+  return blocks
+    .map(b => b.join('\n').replace(/\n+$/, ''))
+    .filter(b => b.trim());
+}
+
+function parseMemoPaste(){
+  const raw = document.getElementById('unifiedPasteArea').value;
+  // A group pasted together usually shares one date, written once at the top.
+  // Blocks without their own tag take that one, so they still file correctly.
+  let carriedTag = '';
+  parsedMemoPreview = splitPastedMemos(raw).map(body => {
+    const own = memoTagOf({body});
+    if(own) carriedTag = own;
+    const tag = own || carriedTag;
+    // Give an untagged block the carried tag in its own text, so the memo
+    // still shows it and a later export round-trips.
+    const withTag = own || !tag ? body : '[' + tag.replace('-', ' ') + ']\n' + body;
+    return {
+    body: withTag,
+    title: memoTitleOf({body: withTag}),
+    tag,
+    entries: memoPairs({body: withTag}).length,
+    // A memo whose title already exists is treated as a replacement, so pasting
+    // a corrected copy updates rather than duplicates.
+    replaces: memos.find(m => memoTitleOf(m) &&
+                              memoTitleOf(m) === memoTitleOf({body: withTag})) || null
+    };
+  });
+
+  const previewEl = document.getElementById('unifiedPreviewList');
+  if(!parsedMemoPreview.length){
+    previewEl.innerHTML = '<div class="hint" style="padding:8px 0;">No memos found. ' +
+      'Each memo starts with a line like [260718 M].</div>';
+    document.getElementById('unifiedConfirmAddBtn').style.display = 'none';
+    return;
+  }
+
+  previewEl.innerHTML = parsedMemoPreview.map(it =>
+    '<div class="preview-item">' +
+      '<span class="pw">' + escapeHtml(it.title || '(untitled)') + '</span>' +
+      '<span class="pm">' + (it.tag ? escapeHtml(it.tag) + ' · ' : '') +
+        it.entries + (it.entries === 1 ? ' entry' : ' entries') +
+        (it.replaces ? ' · replaces existing' : '') +
+      '</span>' +
+    '</div>').join('');
+
+  const btn = document.getElementById('unifiedConfirmAddBtn');
+  const replacing = parsedMemoPreview.filter(it => it.replaces).length;
+  btn.textContent = 'Add ' + parsedMemoPreview.length +
+    (parsedMemoPreview.length === 1 ? ' Memo' : ' Memos') +
+    (replacing ? ' (' + replacing + ' replaced)' : '');
+  btn.style.display = 'inline-block';
+}
+
+async function confirmMemoAdd(){
+  if(!parsedMemoPreview.length) return;
+
+  parsedMemoPreview.forEach(it => {
+    if(it.replaces){
+      // Keep the quiz history — it belongs to the memo, not to this text.
+      it.replaces.body = it.body;
+      it.replaces.tag = it.tag;
+      it.replaces.updated = Date.now();
+    } else {
+      memos.push({
+        id: Date.now() + Math.random(),
+        body: it.body,
+        tag: it.tag,
+        history: [],
+        updated: Date.now()
+      });
+    }
+  });
+
+  const n = parsedMemoPreview.length;
+  await saveMemos();
+  clearUnifiedAdd();
+  alert('Added ' + n + (n === 1 ? ' memo.' : ' memos.'));
+  openMemoSection();
+}
+
 function clearUnifiedAdd(){
+  parsedMemoPreview = [];
   document.getElementById('unifiedPasteArea').value = '';
   document.getElementById('unifiedPreviewList').innerHTML = '';
   document.getElementById('unifiedConfirmAddBtn').style.display = 'none';
 }
 
 async function unifiedConfirmAdd(){
+  if(unifiedDetectedType === 'memo'){
+    // Clears and navigates on its own, so it returns rather than falling
+    // through to the shared clear below.
+    await confirmMemoAdd();
+    return;
+  }
   if(unifiedDetectedType === 'para'){
     await pConfirmAdd();
   } else {
@@ -2689,6 +3206,15 @@ async function confirmAdd(){
   parsedPreview = [];
 }
 
+/* The example X used to delete on the first press — the only delete in the app
+   that did. Kept separate from deleteExample so callers that have already
+   confirmed can still use the plain one. */
+async function deleteExampleConfirm(cardId, exIndex, code, el){
+  if(!askConfirmVoca('Delete this example?', el, false)) return;
+  await deleteExample(cardId, exIndex);
+  showDayDetail(code);
+}
+
 async function deleteExample(cardId, exIndex){
   const c = cards.find(c=>c.id===cardId);
   if(!c) return;
@@ -2699,6 +3225,14 @@ async function deleteExample(cardId, exIndex){
 async function deleteCard(id){
   cards = cards.filter(c=>c.id !== id);
   await saveCards();
+}
+
+/* Delete needs the second press. Kept separate from deleteCard so the plain
+   version stays available to callers that have already confirmed. */
+async function deleteCardConfirm(id, code, el){
+  if(!askConfirmVoca('Delete this word? Its examples go with it.', el, false)) return;
+  await deleteCard(id);
+  showDayDetail(code);
 }
 
 function escapeHtml(str){
@@ -3339,24 +3873,25 @@ function alignNavArrows(){
   const vr = v.getBoundingClientRect();
   if(!pr.width || !vr.width) return; // header not laid out yet
 
-  const rows = document.querySelectorAll('.nav-arrows');
-  rows.forEach(row => {
-    const rowLeft = row.getBoundingClientRect().left;
-    const first = row.querySelector('.shuffle-btn');
-    if(!first) return;
-    const btnW = first.getBoundingClientRect().width || 11;
+  /* Every arrow row starts at the content column's left edge, which is where
+     the header row starts too. Measuring once here and sharing the result
+     keeps all rows identical. Measuring each row separately looked equivalent
+     but was not: a row that happened to be hidden reported a left edge of 0
+     and got a wrong offset, so the arrows landed differently on each screen. */
+  const bar = document.querySelector('#topBar .header-row');
+  if(!bar) return;
+  const rowLeft = bar.getBoundingClientRect().left;
+  const btnW = 11;                    // the chevron svg's fixed width
 
-    // Centre of each letter, relative to where the arrow row starts.
-    const pMid = pr.left + pr.width / 2 - rowLeft;
-    const vMid = vr.left + vr.width / 2 - rowLeft;
+  // Centre of each letter, relative to where an arrow row starts.
+  const pMid = pr.left + pr.width / 2 - rowLeft;
+  const vMid = vr.left + vr.width / 2 - rowLeft;
 
-    // padding can't go negative, so fall back to 0 if the row already starts to
-    // the right of P's centre — better a small offset than a broken layout.
-    const left = Math.max(0, pMid - btnW / 2);
-    const gap  = Math.max(0, vMid - pMid - btnW);
-    row.style.setProperty('--chev-left', left + 'px');
-    row.style.setProperty('--chev-gap', gap + 'px');
-  });
+  // padding can't go negative, so fall back to 0 rather than break the layout.
+  const left = Math.max(0, pMid - btnW / 2);
+  const gap  = Math.max(0, vMid - pMid - btnW);
+  document.documentElement.style.setProperty('--chev-left', left + 'px');
+  document.documentElement.style.setProperty('--chev-gap', gap + 'px');
 }
 window.addEventListener('resize', alignNavArrows);
 if(document.fonts && document.fonts.ready){
@@ -3391,7 +3926,7 @@ async function applySyncId(){
   try{
     // Same load sequence the app boots with, so the swapped-in data lands in
     // every view rather than only the one currently on screen.
-    await Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs()]);
+    await Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs(), loadMemos()]);
     switchApp('para');
     switchTab('quiz');
     if(msg) msg.textContent = 'Now synced to this code.';
@@ -3401,6 +3936,9 @@ async function applySyncId(){
 }
 
 let currentBlankAnswer = '';
+// One entry per blank in the current sentence, so a separable phrase fills
+// each of its blanks with the right word.
+let currentBlankParts = [];
 
 // Examples are STORED with [brackets] marking the blank target, and the paste /
 // export format depends on them. These are stripped for DISPLAY only — never in
@@ -3409,42 +3947,63 @@ function stripBrackets(text){
   return String(text).replace(/\[([^\]]*)\]/g, '$1');
 }
 
-function buildBlankedText(example, target){
-  // target.surface may be a bracketed annotation or literal head word
-  // The blank is wrapped in a span so flipping can drop the answer straight into
-  // the sentence instead of showing it on a separate line below.
-  // The blank reserves the ANSWER's width so flipping doesn't reflow the
-  // sentence. A transparent copy of the answer sets the width; the underscores
-  // are overlaid on top of it and centred.
-  const ans = target.ok ? target.surface : '';
-  const BLANK =
-    '<span class="blank-slot" id="blankSlot">' +
-      '<span class="blank-sizer" aria-hidden="true">' + escapeHtml(ans) + '</span>' +
-      '<span class="blank-face" id="blankFace">_____</span>' +
-    '</span>';
-  if(target.source === 'bracket'){
-    return escapeHtml(example).replace(/\[([^\]]+)\]/, BLANK);
-  }
-  const escaped = target.surface.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp('\\b'+escaped+'\\b','i');
-  return escapeHtml(example).replace(re, BLANK);
+/* One blank. Each reserves the width of the word that will land in it, so
+   flipping the card drops the answer in without the sentence reflowing. The
+   first blank carries the ids the flip handler looks for. */
+function blankSpan(answer, index){
+  const idSlot = index === 0 ? ' id="blankSlot"' : '';
+  const idFace = index === 0 ? ' id="blankFace"' : '';
+  return '<span class="blank-slot"' + idSlot + ' data-blank="' + index + '">' +
+           '<span class="blank-sizer" aria-hidden="true">' + escapeHtml(answer) + '</span>' +
+           '<span class="blank-face"' + idFace + '>_____</span>' +
+         '</span>';
 }
 
-// Drop the answer word into the blank (or restore the underscores when the card
-// flips back). The word keeps the answer colour so it still reads as the answer.
+function buildBlankedText(example, target){
+  if(!target.ok) return escapeHtml(example);
+  const parts = target.parts || [target.surface];
+
+  if(target.source === 'bracket'){
+    // Replace each bracketed piece with its own blank, in order, so a phrase
+    // split across the sentence is fully hidden.
+    let i = 0;
+    return escapeHtml(example).replace(/\[([^\]]+)\]/g, (m, inner) => {
+      const span = blankSpan(inner.trim(), i);
+      i++;
+      return span;
+    });
+  }
+
+  const escaped = target.surface.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('\\b'+escaped+'\\b','i');
+  return escapeHtml(example).replace(re, blankSpan(target.surface, 0));
+}
+
+// Drop the answers into the blanks (or restore the underscores when the card
+// flips back). A separable phrase has one blank per part, each filled with its
+// own word; the answer keeps its colour so it still reads as the answer.
 function fillBlankSlot(word){
-  const slot = document.getElementById('blankSlot');
-  const face = document.getElementById('blankFace');
-  if(!slot || !face) return;
-  face.textContent = word;
-  slot.classList.add('filled');
+  const slots = document.querySelectorAll('.blank-slot');
+  if(!slots.length) return;
+  // currentBlankParts holds one word per blank. Falling back to the whole
+  // string keeps single-blank cards working unchanged.
+  const parts = (currentBlankParts && currentBlankParts.length === slots.length)
+    ? currentBlankParts
+    : [word];
+  slots.forEach((slot, i) => {
+    const face = slot.querySelector('.blank-face');
+    if(!face) return;
+    face.textContent = parts[i] !== undefined ? parts[i] : word;
+    slot.classList.add('filled');
+  });
 }
 function clearBlankSlot(){
-  const slot = document.getElementById('blankSlot');
-  const face = document.getElementById('blankFace');
-  if(!slot || !face) return;
-  face.textContent = '_____';
-  slot.classList.remove('filled');
+  document.querySelectorAll('.blank-slot').forEach(slot => {
+    const face = slot.querySelector('.blank-face');
+    if(!face) return;
+    face.textContent = '_____';
+    slot.classList.remove('filled');
+  });
 }
 
 function renderQuizCard(){
@@ -3486,6 +4045,7 @@ function renderQuizCard(){
 
   if(currentMode === 'word'){
     currentBlankAnswer = '';
+    currentBlankParts = [];
     front.innerHTML = escapeHtml(card.word) + speakerBtn(card.word, SPK_CARD);
   } else {
     front.classList.add('example-mode');
@@ -3499,10 +4059,12 @@ function renderQuizCard(){
     if(target.ok){
       // Kept hidden: the answer now appears inside the blank on flip.
       currentBlankAnswer = target.surface;
+      currentBlankParts = target.parts || [target.surface];
       backTarget.style.display = 'none';
       backTarget.textContent = `${target.surface}`;
     } else {
       currentBlankAnswer = '';
+      currentBlankParts = [];
     }
   }
 
@@ -3677,7 +4239,9 @@ function retryVocaWeakOnly(){
     if((a.value===2 || a.value===3) && weakCards.indexOf(a.card)===-1) weakCards.push(a.card);
   });
   if(weakCards.length === 0){ showSettings(); return; }
-  quizQueue = weakCards.map(card => ({card, mode: assignModeForCard(card)}));
+  // Shuffled like any other round — replaying them in the order they were
+  // answered would drill the same sequence every time.
+  quizQueue = shuffle(weakCards).map(card => ({card, mode: assignModeForCard(card)}));
   quizIndex = 0;
   vocaSessionAnswers = [];
   document.getElementById('quizSettings').style.display = 'none';
@@ -3722,6 +4286,664 @@ function toggleCalView(){
   document.getElementById('calGridWrap').style.display = (calViewMode === 'calendar') ? 'block' : 'none';
   document.getElementById('calViewToggleBtn').textContent = (calViewMode === 'calendar') ? 'List' : 'Calendar';
   renderCalendar();
+}
+
+/* -------------------------------------------------------------------------
+   Memo view. Lives inside Voca's list tab: the Memo button swaps the day list
+   for the memo list, and everything else on the page hides.
+   ------------------------------------------------------------------------- */
+/* Native confirm() is suppressed inside sandboxed frames, where it returns
+   false instantly and the caller silently does nothing. When that is detected
+   the confirmation moves onto the button itself: press once to arm, again
+   within a few seconds to go ahead. */
+let VOCA_DIALOGS_BLOCKED = null;
+
+function vocaDialogsBlocked(){
+  if(VOCA_DIALOGS_BLOCKED !== null) return VOCA_DIALOGS_BLOCKED;
+  try{
+    const t0 = Date.now();
+    const r = window.confirm('');
+    VOCA_DIALOGS_BLOCKED = (r === false && Date.now() - t0 < 5);
+  }catch(e){
+    VOCA_DIALOGS_BLOCKED = true;
+  }
+  return VOCA_DIALOGS_BLOCKED;
+}
+
+const VOCA_ARMED = new Map();
+
+function askConfirmVoca(message, el, armLabel){
+  if(!vocaDialogsBlocked()) return window.confirm(message);
+  if(!el) return true;
+  const now = Date.now();
+  const prev = VOCA_ARMED.get(el);
+  if(prev && now - prev.at < 4000){
+    clearTimeout(prev.timer);
+    VOCA_ARMED.delete(el);
+    if(prev.original !== null) el.textContent = prev.original;
+    el.classList.remove('is-armed');
+    return true;
+  }
+  /* armLabel === false means "state only": the button keeps its wording and
+     just fades. Delete buttons use this, and so must every icon button —
+     writing textContent would wipe out the child icon element for good. */
+  const label = armLabel === false ? null : (armLabel || 'Press again to confirm');
+  const original = prev ? prev.original : (label ? el.textContent : null);
+  if(label) el.textContent = label;
+  el.classList.add('is-armed');
+  const timer = setTimeout(() => {
+    if(original !== null) el.textContent = original;
+    el.classList.remove('is-armed');
+    VOCA_ARMED.delete(el);
+  }, 4000);
+  VOCA_ARMED.set(el, {at: now, original, timer});
+  return false;
+}
+
+let memoViewOpen = false;
+let openMemoId = null;
+let memoEditing = false;
+
+/* The parts of the list view that the memo page replaces. Collected in one
+   place so showing and hiding can't drift apart. */
+/* Two outer boxes only. The table, the calendar grid and the toggle row all sit
+   inside calListPanel, so hiding it hides them too. Listing them separately used
+   to wipe their own display values on the way back. */
+const MEMO_HIDDEN_IDS = ['calListPanel','dayDetail'];
+
+function toggleMemoView(){
+  memoViewOpen = !memoViewOpen;
+  markMemoTab();
+
+  document.getElementById('memoPanel').style.display = memoViewOpen ? 'block' : 'none';
+  if(!memoViewOpen) setMemoRateVisible(false);
+  MEMO_HIDDEN_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle('memo-hidden', memoViewOpen);
+  });
+
+  if(memoViewOpen){
+    // Reopen whatever was last on screen here. closeMemo clears the marker, so
+    // it has to be read first.
+    const resume = lastMemoId;
+    closeMemo();
+    if(resume !== null && memos.some(m => m.id === resume)) openMemo(resume);
+  } else {
+    // Let the normal list logic decide what should be visible again.
+    renderCalendar();
+  }
+}
+
+/* Renders a memo's text. Three marks, all of which survive being typed
+   straight into the box or pasted in from elsewhere:
+     <title>   the memo's heading, on its own line
+     → text    a bold sub-heading within the memo
+     [word]    a link to that word's card, if it exists
+   A bracketed word with no matching card stays plain text rather than becoming
+   a dead link; adding the word later makes the link work by itself, since only
+   the text is stored and links are resolved at display time. */
+function memoBodyToHtml(body, afterTitle){
+  const lines = String(body || '').split('\n');
+  const out = [];
+  let headPlaced = false;
+
+  lines.forEach(raw => {
+    const line = raw.trim();
+    if(!line){ out.push('<div class="memo-gap"></div>'); return; }
+
+    // A tag line like [260718 M] labels the memo; it isn't part of the text.
+    if(/^\[\d{6}[\s-][A-Za-z]\]$/.test(line)) return;
+
+    const titleMatch = line.match(/^<([^>]+)>$/);
+    if(titleMatch){
+      out.push('<div class="memo-title">' + escapeHtml(titleMatch[1].trim()) + '</div>');
+      // The tag and test history belong directly under the title.
+      if(afterTitle && !headPlaced){ out.push(afterTitle); headPlaced = true; }
+      return;
+    }
+
+    const headMatch = line.match(/^(?:→|->)\s*(.+)$/);
+    if(headMatch){
+      out.push('<div class="memo-head">' + memoInline(headMatch[1]) + '</div>');
+      return;
+    }
+
+    // A line that is only [word] heads its own entry, so it is set on its own
+    // line rather than run into the sentence that follows.
+    const wordOnly = line.match(/^\[([^\]]+)\]$/);
+    if(wordOnly){
+      out.push('<div class="memo-word">' + memoInline(line) + '</div>');
+      return;
+    }
+
+    out.push('<div class="memo-line">' + memoInline(line) + '</div>');
+  });
+
+  // A memo without a title still shows its tag and history, at the top.
+  if(afterTitle && !headPlaced) out.unshift(afterTitle);
+  return out.join('');
+}
+
+/* Word links within a single line. */
+function memoInline(text){
+  return escapeHtml(text).replace(/\[([^\]]+)\]/g, (whole, inner) => {
+    const name = inner.trim();
+    const card = cards.find(c => (c.word || '').trim().toLowerCase() === name.toLowerCase());
+    const safe = JSON.stringify(name).replace(/"/g, '&quot;');
+    if(card){
+      return '<a href="#" class="memo-link" onclick="showVocabPopup(' + safe +
+             '); return false;">' + escapeHtml(name) + '</a>';
+    }
+    // No card of that name. Marked with a dotted underline rather than left as
+    // bare brackets, so it is obvious which words are missing — often a spelling
+    // difference (commence vs commenced) rather than a genuinely absent word.
+    return '<a href="#" class="memo-missing" title="No word saved under this name"' +
+           ' onclick="memoMissingTapped(' + safe + '); return false;">' +
+           escapeHtml(name) + '</a>';
+  });
+}
+
+/* Tapping a missing word offers the nearest saved word, if one is close enough
+   to be the same entry under a different form, and otherwise says plainly that
+   nothing is saved under that name. */
+function memoMissingTapped(name){
+  const target = String(name || '').trim().toLowerCase();
+  if(!target) return;
+
+  // A saved word counts as a near match if one contains the other — enough to
+  // catch commence/commenced or undertake/undertaken without guessing wildly.
+  const near = cards.filter(c => {
+    const w = (c.word || '').trim().toLowerCase();
+    if(!w || w === target) return false;
+    return w.startsWith(target) || target.startsWith(w);
+  }).sort((a,b) => (a.word || '').length - (b.word || '').length);
+
+  const box = document.getElementById('memoMissingBox');
+  if(!box) return;
+
+  if(near.length){
+    box.innerHTML =
+      '<div class="memo-missing-title">No word saved as “' + escapeHtml(name) + '”.</div>' +
+      '<div class="memo-missing-body">Did you mean ' +
+        near.slice(0, 4).map(c =>
+          '<button class="mini-toggle" onclick="showVocabPopup(' +
+          JSON.stringify(c.word).replace(/"/g, '&quot;') + '); hideMemoMissing();">' +
+          escapeHtml(c.word) + '</button>').join(' ') +
+      '</div>';
+  } else {
+    box.innerHTML =
+      '<div class="memo-missing-title">No word saved as “' + escapeHtml(name) + '”.</div>' +
+      '<div class="memo-missing-body hint">Add it from the Add tab, and this link will start working on its own.</div>';
+  }
+  box.innerHTML += '<button class="mini-toggle" style="margin-top:8px;" onclick="hideMemoMissing()">Close</button>';
+  box.style.display = 'block';
+}
+
+function hideMemoMissing(){
+  const box = document.getElementById('memoMissingBox');
+  if(box){ box.style.display = 'none'; box.innerHTML = ''; }
+}
+
+/* The [260718 M] tag written anywhere in the text, if there is one. */
+function memoTagOf(memo){
+  const m = String(memo && memo.body || '').match(/^\[(\d{6}[\s-][A-Za-z])\]$/m);
+  return m ? normalizeTag(m[1]) : (memo && memo.tag) || '';
+}
+
+/* How many bracketed words in this memo actually resolve to a card. Shown in
+   the list so a memo whose links have gone stale is visible at a glance. */
+/* Splits a memo into word/description pairs.
+
+   A line that is nothing but [word] opens a pair; the lines under it are its
+   description, until the next [word] or a blank line. Anything before the first
+   [word] — the tag, the title, a heading — is not part of any pair.
+
+   This is what makes a memo quizzable: each pair is one card. */
+function memoPairs(memo){
+  const lines = String(memo && memo.body || '').split('\n');
+  const pairs = [];
+  let current = null;
+
+  const flush = () => {
+    if(current){
+      current.desc = current.descLines.join(' ').replace(/\s+/g, ' ').trim();
+      delete current.descLines;
+      pairs.push(current);
+    }
+    current = null;
+  };
+
+  lines.forEach(raw => {
+    const line = raw.trim();
+    if(!line){ flush(); return; }
+
+    // A whole line that is just [word].
+    const m = line.match(/^\[([^\]]+)\]$/);
+    if(m){
+      flush();
+      current = {word: m[1].trim(), descLines: []};
+      return;
+    }
+
+    // Headings and the title never belong to a description.
+    if(/^<[^>]+>$/.test(line)) { flush(); return; }
+    if(/^(?:→|->)/.test(line)) { flush(); return; }
+    if(/^\[\d{6}[\s-][A-Za-z]\]$/.test(line)) { flush(); return; }
+
+    if(current) current.descLines.push(line);
+  });
+  flush();
+
+  return pairs.filter(p => p.word && p.desc);
+}
+
+function memoLinkCount(memo){
+  const found = String(memo.body || '').match(/\[([^\]]+)\]/g) || [];
+  let n = 0;
+  found.forEach(tok => {
+    const name = tok.slice(1, -1).trim().toLowerCase();
+    if(cards.some(c => (c.word || '').trim().toLowerCase() === name)) n++;
+  });
+  return n;
+}
+
+/* Sorting for the memo list. 'none' keeps the newest-first default, so the
+   chips are an override rather than the only thing deciding order. */
+let memoSortMode = 'none';
+
+function setMemoSort(mode){
+  memoSortMode = (memoSortMode === mode) ? 'none' : mode;
+  ['recent','old','alpha'].forEach(k=>{
+    const el = document.getElementById('memoSort' + k.charAt(0).toUpperCase() + k.slice(1) + 'Btn');
+    if(el) el.classList.toggle('active', memoSortMode === k);
+  });
+  renderMemoList();
+}
+
+/* A memo counts as under-tested on the same rule words use: fewer than three
+   ratings so far. The number lives in one place across the app. */
+function memoUnderTested(m){
+  return ((m && m.history) || []).length < 3;
+}
+
+function renderMemoList(){
+  const wrap = document.getElementById('memoList');
+  if(!wrap) return;
+  const q = (document.getElementById('memoSearchInput') || {}).value || '';
+  const query = q.trim().toLowerCase();
+
+  const on = id => { const el = document.getElementById(id); return !!(el && el.checked); };
+  const want = {0:on('memoFilterEasy'), 1:on('memoFilterGood'),
+                2:on('memoFilterUnsure'), 3:on('memoFilterBlank')};
+  const wantUt = on('memoFilterUndertested');
+  // Nothing ticked means everything, the same rule the word filters follow.
+  const anyTicked = want[0] || want[1] || want[2] || want[3] || wantUt;
+
+  let list = memos.slice().sort((a,b) => (b.updated || 0) - (a.updated || 0));
+  if(query){
+    list = list.filter(m => (m.body || '').toLowerCase().includes(query));
+  }
+  if(anyTicked){
+    list = list.filter(m => {
+      if(wantUt && memoUnderTested(m)) return true;
+      const s = memoScore(m);
+      return s !== null && want[s];
+    });
+  }
+  if(memoSortMode === 'recent'){
+    list.sort((a,b) => (b.updated || 0) - (a.updated || 0));
+  } else if(memoSortMode === 'old'){
+    list.sort((a,b) => (a.updated || 0) - (b.updated || 0));
+  } else if(memoSortMode === 'alpha'){
+    list.sort((a,b) => (memoTitleOf(a) || '').localeCompare(memoTitleOf(b) || ''));
+  }
+
+  if(!list.length){
+    wrap.innerHTML = '<p class="hint">' +
+      (query || anyTicked ? 'No memos match that.' : 'No memos yet. Tap + New to group words by meaning.') +
+      '</p>';
+    return;
+  }
+
+  wrap.innerHTML = list.map(m => {
+    const n = memoLinkCount(m);
+    // A one-line taste of the body, with the brackets stripped.
+    // Title only. The tag and entry count sit on the right so the row reads as
+    // one line, the way a word row does.
+    const tag = memoTagOf(m);
+    const score = memoScore(m);
+    // Easy is blue and Good is green everywhere else in the app; this list had
+    // the first two swapped, so the same rating showed a different colour here.
+    const dot = (score === null) ? '' :
+      '<span class="status-dot ' + ['cal-blue','cal-green','cal-yellow','cal-red'][score] + '"></span>';
+    return '<div class="memo-row" onclick="openMemo(' + m.id + ')">' +
+             '<span class="memo-row-title">' + dot + escapeHtml(memoTitleOf(m) || '(untitled)') + '</span>' +
+             '<span class="chevron">\u25BC</span>' +
+           '</div>';
+  }).join('');
+}
+
+function newMemo(){
+  // Pre-filled with the shape of a memo so the marks are self-explanatory.
+  const today = todayCode();
+  const starter = '[' + today + ' M]\n<>\n';
+  const m = {id: Date.now() + Math.random(), body: starter, tag: '', history: [], updated: Date.now()};
+  memos.push(m);
+  openMemoId = m.id;
+  showMemoDetail();
+  toggleMemoEdit(true);
+}
+
+/* Which memo the section was last showing. Leaving to V or P and coming back
+   lands where you left rather than at the top of the list. Null means the list
+   itself was what you were looking at. */
+let lastMemoId = null;
+
+function openMemo(id){
+  openMemoId = id;
+  lastMemoId = id;
+  memoEditing = false;
+  showMemoDetail();
+}
+
+function closeMemo(){
+  openMemoId = null;
+  lastMemoId = null;
+  memoEditing = false;
+  setMemoRateVisible(false);
+  // A quiz left open would otherwise still be showing when the next memo opens.
+  memoQuizPairs = [];
+  memoQuizFlipped = new Set();
+  memoQuizSeen = new Set();
+  const qw = document.getElementById('memoQuizWrap');
+  if(qw) qw.style.display = 'none';
+  const bar = document.getElementById('memoDetailBar');
+  if(bar) bar.style.display = 'flex';
+  hideMemoMissing();
+  document.getElementById('memoDetailWrap').style.display = 'none';
+  document.getElementById('memoListWrap').style.display = 'block';
+  renderMemoList();
+}
+
+/* -------------------------------------------------------------------------
+   Memo quiz. Every word in the memo is laid out at once, face down. Tapping a
+   card turns it over. Once all of them are turned, the rating buttons appear.
+
+   The score is kept on the memo itself and never touches the word cards — a
+   memo is about the relationships between words, so grading it as if each word
+   had been tested individually would distort the Voca history.
+   ------------------------------------------------------------------------- */
+let memoQuizPairs = [];
+let memoQuizFlipped = new Set();
+/* Cards turned over at least once. Kept apart from memoQuizFlipped so that
+   turning one back doesn't take the rating buttons away again — once a word
+   has been seen, it has been answered. */
+let memoQuizSeen = new Set();
+
+function startMemoQuiz(){
+  const m = currentMemo();
+  if(!m) return;
+  const pairs = memoPairs(m);
+  if(!pairs.length){
+    alert('No entries to quiz yet.\n\nWrite [word] on its own line with the ' +
+          'description underneath, and each one becomes a card.');
+    return;
+  }
+  memoQuizPairs = shuffle(pairs);
+  memoQuizFlipped = new Set();
+  memoQuizSeen = new Set();
+  const titleEl = document.getElementById('memoQuizTitle');
+  if(titleEl) titleEl.textContent = memoTitleOf(m) || '';
+  document.getElementById('memoQuizWrap').style.display = 'block';
+  document.getElementById('memoView').style.display = 'none';
+  setMemoRateVisible(false);
+  // The quiz has its own back arrow, so the memo's header row steps aside —
+  // two back buttons at once was the confusion.
+  document.getElementById('memoDetailBar').style.display = 'none';
+  const box = document.getElementById('memoMissingBox');
+  if(box) box.style.display = 'none';
+  renderMemoQuiz();
+}
+
+function endMemoQuiz(){
+  document.getElementById('memoQuizWrap').style.display = 'none';
+  document.getElementById('memoDetailBar').style.display = 'flex';
+  memoQuizPairs = [];
+  memoQuizFlipped = new Set();
+  memoQuizSeen = new Set();
+  showMemoDetail();
+}
+
+function renderMemoQuiz(){
+  const grid = document.getElementById('memoQuizGrid');
+  if(!grid) return;
+
+  grid.innerHTML = memoQuizPairs.map((p, i) => {
+    const flipped = memoQuizFlipped.has(i);
+    // Turned over, the card shows the description alone — the word is what is
+    // being recalled, so leaving it on screen would give the answer away.
+    return '<div class="memo-quiz-card' + (flipped ? ' is-flipped' : '') + '"' +
+             ' onclick="flipMemoQuizCard(' + i + ')">' +
+             (flipped
+               ? '<div class="memo-quiz-desc">' + escapeHtml(p.desc) + '</div>'
+               : '<div class="memo-quiz-word">' + escapeHtml(p.word) + '</div>') +
+           '</div>';
+  }).join('');
+
+  const seen = memoQuizSeen.size;
+  const total = memoQuizPairs.length;
+  document.getElementById('memoQuizProgress').textContent = seen + ' / ' + total;
+}
+
+function flipMemoQuizCard(i){
+  // A card can be turned back to re-read the word; the fact that it was seen
+  // is remembered separately.
+  if(memoQuizFlipped.has(i)) memoQuizFlipped.delete(i);
+  else memoQuizFlipped.add(i);
+  memoQuizSeen.add(i);
+  renderMemoQuiz();
+}
+
+async function rateMemo(value){
+  const m = currentMemo();
+  if(!m) return;
+  if(!Array.isArray(m.history)) m.history = [];
+  m.history.push(value);
+  // Only the last five results are kept, which is also the window memoScore
+  // averages over.
+  if(m.history.length > 5) m.history = m.history.slice(-5);
+  m.updated = Date.now();
+  await saveMemos();
+  // Stay on the memo. The history line at the top redraws with the new result.
+  showMemoDetail();
+}
+
+/* Every bracketed word in this memo that has no card behind it. */
+function memoMissingWords(memo){
+  const found = String(memo && memo.body || '').match(/\[([^\]]+)\]/g) || [];
+  const out = [];
+  found.forEach(tok => {
+    // The date tag is bracketed too, but it is not a word.
+    if(/^\[\d{6}[\s-][A-Za-z]\]$/.test(tok)) return;
+    const name = tok.slice(1, -1).trim();
+    if(!name || findCardByWord(name)) return;
+    if(!out.some(w => w.toLowerCase() === name.toLowerCase())) out.push(name);
+  });
+  return out;
+}
+
+/* Turns the memo's unlinked words into cards. The memo already holds a
+   description for each one, so that becomes the meaning and nothing has to be
+   typed twice — the link then works on its own, since links are resolved
+   against the card list every time the memo is drawn. */
+async function addMissingWordsFromMemo(el){
+  const m = currentMemo();
+  if(!m) return;
+
+  const missing = memoMissingWords(m);
+  if(!missing.length){
+    alert('Every word in this memo already has a card.');
+    return;
+  }
+
+  // Descriptions written under a [word] line come across as the meaning.
+  const descOf = {};
+  memoPairs(m).forEach(p => { descOf[p.word.toLowerCase()] = p.desc; });
+
+  const tag = memoTagOf(m);
+  const withDesc = missing.filter(w => descOf[w.toLowerCase()]);
+  const bare = missing.filter(w => !descOf[w.toLowerCase()]);
+
+  let msg = 'Add ' + missing.length + (missing.length === 1 ? ' word' : ' words') +
+            ' to Voca?\n\n' + missing.join(', ');
+  if(bare.length){
+    msg += '\n\n' + bare.length + ' of them have no description in this memo ' +
+           'and will be added with an empty meaning.';
+  }
+  if(!askConfirmVoca(msg, el, 'Press again to add')) return;
+
+  missing.forEach(word => {
+    cards.push({
+      id: Date.now() + Math.random(),
+      word,
+      meaning: descOf[word.toLowerCase()] || '',
+      examples: [],
+      tag: tag || '',
+      testHistory: [],
+      phonetics: ''
+    });
+  });
+
+  await saveCards();
+  showMemoDetail();   // the links resolve now that the cards exist
+  alert('Added ' + missing.length + (missing.length === 1 ? ' word.' : ' words.'));
+}
+
+/* Reads like a word card's test history: the scores in order, or Untested. */
+function memoHistoryLabel(memo){
+  const h = (memo && memo.history) || [];
+  if(!h.length) return 'Untested';
+  return h.join(' / ');
+}
+
+/* The memo's recent standing, on the same 0-3 scale the word cards use, or
+   null when it has never been quizzed. */
+function memoScore(memo){
+  const h = (memo && memo.history) || [];
+  if(!h.length) return null;
+  const recent = h.slice(-5);
+  const avg = recent.reduce((a,b) => a + b, 0) / recent.length;
+  if(avg <= 0.5) return 0;
+  if(avg <= 1.5) return 1;
+  if(avg <= 2.5) return 2;
+  return 3;
+}
+
+function currentMemo(){
+  return memos.find(m => m.id === openMemoId) || null;
+}
+
+/* The bar is position:fixed, so it escapes its wrapper and has to be switched
+   off by hand on every way out of the memo. One place decides, so the exits
+   can't drift apart. */
+function setMemoRateVisible(on){
+  const row = document.getElementById('memoRateRow');
+  if(row) row.style.display = on ? 'flex' : 'none';
+  const wrap = document.getElementById('memoDetailWrap');
+  if(wrap) wrap.classList.toggle('rate-open', !!on);
+}
+
+function showMemoDetail(){
+  const m = currentMemo();
+  if(!m){ closeMemo(); return; }
+  hideMemoMissing();
+  document.getElementById('memoListWrap').style.display = 'none';
+  document.getElementById('memoDetailWrap').style.display = 'block';
+  document.getElementById('memoEditWrap').style.display = memoEditing ? 'block' : 'none';
+  document.getElementById('memoView').style.display = memoEditing ? 'none' : 'block';
+  setMemoRateVisible(!memoEditing && !!String(m.body || '').trim());
+  document.getElementById('memoEditBtn').style.display = memoEditing ? 'none' : '';
+  // Only worth offering when the memo names a word that has no card yet.
+  const addBtn = document.getElementById('memoAddWordBtn');
+  if(addBtn){
+    addBtn.style.display = (memoEditing || !memoMissingWords(m).length) ? 'none' : '';
+  }
+
+  if(!memoEditing){
+    // Title first, then the tag and the test history — the same order and the
+    // same classes the word cards use.
+    // Title, then tag, then test history. The title comes from the body's
+    // <title> line, so it is rendered there; the tag and history are slotted in
+    // just after it rather than being drawn twice.
+    const tag = memoTagOf(m);
+    const head =
+      (tag ? '<div class="memo-tag-wrap">' +
+               '<div class="lbl">Tag</div>' +
+               '<div class="tagbadge">' + escapeHtml(tag) + '</div>' +
+             '</div>' : '') +
+      '<div class="dwc-history" style="text-align:left; margin-bottom:10px;">' +
+        'Test history<br>' + memoHistoryLabel(m) +
+      '</div>' +
+      // Only worth offering when there is something to be tested on.
+      (memoPairs(m).length
+        ? '<div style="margin-bottom:14px;">' +
+            '<button class="btn btn-ghost" onclick="startMemoQuiz()">Test</button>' +
+          '</div>'
+        : '');
+
+    const bodyHtml = String(m.body || '').trim()
+      ? memoBodyToHtml(m.body, head)
+      : head + '<span class="hint">Empty. Tap Edit to write.</span>';
+
+    // Slot the tag and history in after the title block, or at the top when
+    // the memo has no title.
+    document.getElementById('memoView').innerHTML =
+      '<div class="memo-body">' + bodyHtml + '</div>';
+  }
+}
+
+function toggleMemoEdit(forceOn){
+  const m = currentMemo();
+  if(!m) return;
+  memoEditing = (forceOn === true) ? true : !memoEditing;
+  if(memoEditing){
+    document.getElementById('memoBodyInput').value = m.body || '';
+  }
+  showMemoDetail();
+}
+
+async function saveMemoEdit(){
+  const m = currentMemo();
+  if(!m) return;
+  m.body = document.getElementById('memoBodyInput').value;
+  m.tag = memoTagOf(m);
+  m.updated = Date.now();
+  memoEditing = false;
+  showMemoDetail();
+  await saveMemos();
+}
+
+function cancelMemoEdit(){
+  const m = currentMemo();
+  // A memo created and then abandoned without a title or body leaves nothing
+  // useful behind, so it is dropped rather than cluttering the list.
+  if(m && !String(m.body || '').replace(/<>|\[\d{6}[\s-][A-Za-z]\]/g, '').trim()){
+    memos = memos.filter(x => x.id !== m.id);
+    closeMemo();
+    return;
+  }
+  memoEditing = false;
+  showMemoDetail();
+}
+
+async function deleteMemo(el){
+  const m = currentMemo();
+  if(!m) return;
+  if(!askConfirmVoca('Delete this memo? The words themselves are not affected.',
+                     el, false)) return;
+  memos = memos.filter(x => x.id !== m.id);
+  closeMemo();
+  await saveMemos();
 }
 
 let currentDayCode = null;
@@ -4199,7 +5421,7 @@ function showDayDetail(code){
         const exampleRows = (c.examples||[]).map((ex,i)=>`
           <div class="ex-edit-row">
             <input type="text" value="${escapeAttr(ex)}" id="ex-${c.id}-${i}">
-            <button class="btn btn-danger" onclick="deleteExample(${c.id},${i}); showDayDetail('${code}')">✕</button>
+            <button class="btn btn-danger" onclick="deleteExampleConfirm(${c.id},${i},'${code}',this)">✕</button>
           </div>`).join('');
 
         detail.innerHTML = `
@@ -4231,7 +5453,7 @@ function showDayDetail(code){
           <div class="dwc-bottom">
             <div class="actions">
               <button class="btn btn-primary" onclick="saveWordCard(${c.id})">Save</button>
-              <button class="btn btn-danger" onclick="deleteCard(${c.id}); showDayDetail('${code}')">Delete Word</button>
+              <button class="btn btn-danger" onclick="deleteCardConfirm(${c.id}, '${code}', this)">Delete Word</button>
             </div>
             <div class="dwc-history">Test history<br>${testHistoryLabel(c)}</div>
           </div>
@@ -4606,13 +5828,97 @@ function downloadFullExport(){
   downloadText('All_Voca.txt', buildExportText(cards));
 }
 
+/* Memos as text, one block each, ready to be read back.
+
+   A memo's body is already its storage format, so it goes out verbatim. The
+   only thing that isn't in the text is the rating history, which gets a line of
+   its own above each memo:  \u27E63,1,0\u27E7  (empty brackets = never rated).
+   A whole line of nothing but those brackets is what separates one memo from
+   the next, and a memo body never contains one.
+
+   What is not carried: the "last edited" timestamp. Restored memos sort as if
+   edited today. The date that matters is the [YYMMDD M] tag inside the body. */
+function buildMemoExportText(list){
+  return (list || []).map(m => {
+    const hist = ((m && m.history) || []).slice(-5);
+    let body = String((m && m.body) || '').trim();
+    // A memo whose date lives only in the record, not in its text, would lose
+    // it on the way out. Write it into the text first.
+    if(!/^\[\d{6}[\s-][A-Za-z]\]$/m.test(body) && m && m.tag){
+      body = '[' + String(m.tag).replace('-', ' ') + ']\n' + body;
+    }
+    return '\u27E6' + hist.join(',') + '\u27E7\n' + body;
+  }).join('\n\n');
+}
+
+function parseMemoExportText(raw){
+  const lines = String(raw || '').replace(/\r/g, '').split('\n');
+  const isMark = l => /^\u27E6[^\u27E7]*\u27E7$/.test(l.trim());
+  const blocks = [];
+  let cur = null;
+  lines.forEach(line => {
+    if(isMark(line)){
+      if(cur) blocks.push(cur);
+      const inner = line.trim().replace(/[\u27E6\u27E7]/g, '').trim();
+      const hist = inner ? inner.split(',')
+        .map(s => parseInt(s.trim(), 10))
+        .filter(n => !isNaN(n) && n >= 0 && n <= 3) : [];
+      cur = {hist: hist.slice(-5), lines: []};
+      return;
+    }
+    // Anything before the first marker is ignored, so pasting a whole backup
+    // file (headings and all) still works.
+    if(cur) cur.lines.push(line);
+  });
+  if(cur) blocks.push(cur);
+  return blocks.map(b => ({
+    id: Date.now() + Math.random(),
+    body: b.lines.join('\n').trim(),
+    tag: '',
+    history: b.hist,
+    updated: Date.now()
+  })).filter(m => m.body);
+}
+
 function backupAll(){
   const dateSuffix = todayCode();
   const vocaText = buildExportText(cards);
   const paraText = pBuildExportText(paras);
-  const combined = `===== VOCA =====\n\n${vocaText}\n\n\n===== PARA =====\n\n${paraText}`;
+  const memoText = buildMemoExportText(memos);
+  const combined = `===== VOCA =====\n\n${vocaText}\n\n\n===== PARA =====\n\n${paraText}` +
+                   `\n\n\n===== MEMO =====\n\n${memoText}`;
   downloadText(`Backup_${dateSuffix}.txt`, combined);
   markBackupDone();
+}
+
+// ---- Memo: raw text editing ----
+function openMemoManualEdit(){
+  refreshMemoManualEditArea();
+  document.getElementById('memoManualEditPanel').style.display = 'block';
+}
+
+function refreshMemoManualEditArea(){
+  document.getElementById('memoManualEditArea').value = buildMemoExportText(memos);
+}
+
+function copyMemoManualEdit(){
+  const ta = document.getElementById('memoManualEditArea');
+  ta.select();
+  try{
+    navigator.clipboard.writeText(ta.value);
+  }catch(e){
+    document.execCommand('copy');
+  }
+}
+
+async function saveMemoManualEdit(el){
+  // Unlike the word and paragraph panels this one has no date filter, so saving
+  // replaces every memo at once. Worth a second press.
+  if(!askConfirmVoca('Replace all memos with this text?', el, 'Press again to replace')) return;
+  memos = parseMemoExportText(document.getElementById('memoManualEditArea').value);
+  await saveMemos();
+  renderMemoList();
+  refreshMemoManualEditArea();
 }
 
 /* On a static host the data lives in localStorage, which is wiped by "clear
@@ -5047,6 +6353,7 @@ function pGetUniqueCats(){
 let pTestMode = 'pick';
 
 function pShowSettings(){
+  pStackReading = false;
   if(paras.length === 0){
     document.getElementById('pQuizEmpty').style.display = 'block';
     document.getElementById('pQuizSettings').style.display = 'none';
@@ -5113,11 +6420,17 @@ function pHighlightTestModeButtons(){
   document.querySelectorAll('#pTestModeButtons .opt-btn').forEach(b=>{
     b.classList.toggle('selected', b.dataset.testmode === pTestMode);
   });
-  document.getElementById('pPickModeBlock').style.display = pTestMode === 'pick' ? 'block' : 'none';
+  // Reading picks a paragraph the same way, so it borrows the same block.
+  document.getElementById('pPickModeBlock').style.display =
+    (pTestMode === 'pick' || pTestMode === 'reading') ? 'block' : 'none';
   document.getElementById('pRandomModeBlock').style.display = pTestMode === 'random' ? 'block' : 'none';
 }
 
 let pStackPara = null;
+/* Reading: the same stacked screen with nothing hidden and nothing recorded.
+   Korean sits under the English of the sentence you are on, the English piles
+   up above it, and there is no rating — so no underline colours either. */
+let pStackReading = false;
 let pStackPointer = 0;
 let pStackFlipped = false;
 let pStackRevealStage = 0; // 0 = hint only; each tap reveals one more comma/word chunk until fully revealed
@@ -5134,19 +6447,20 @@ function pStartPickedParagraph(){
     alert('This paragraph has no sentences to study.');
     return;
   }
-  pStartStackForPara(para);
+  pStartStackForPara(para, pTestMode === 'reading');
 }
 
 // Begin a stacking session on a specific paragraph. Shared by the picker and by
 // the "Continue" button on the results modal.
-function pStartStackForPara(para){
+function pStartStackForPara(para, reading){
   if(!para || !para.sentences || para.sentences.length === 0){
     alert('This paragraph has no sentences to study.');
     return;
   }
   switchApp('para');
   switchTab('quiz');
-  pTestMode = 'pick';
+  pStackReading = !!reading;
+  pTestMode = pStackReading ? 'reading' : 'pick';
   pHighlightTestModeButtons();
   pStackPara = para;
   pStackPointer = 0;
@@ -5315,11 +6629,17 @@ function findNextInSeries(para){
   return best ? best.para : null;
 }
 
-function showResultsModal(ratings, retryHandler, vocaWords, nextPara){
+let resultsParaForTest = null;
+
+function showResultsModal(ratings, retryHandler, vocaWords, nextPara, paraForTest){
   // The session is over — the results grid shows every colour at once, so a
   // leftover page tint from the last card would fight with it.
   clearRateTint();
-  document.getElementById('resultsGrid').innerHTML = ratings.map(v=>`<div class="result-square" style="background:${RATING_COLORS[v]};"></div>`).join('');
+  // Reading has no ratings, so this grid can be empty. An empty box still
+  // carries its own top margin, which showed up as dead space under the title.
+  const grid = document.getElementById('resultsGrid');
+  grid.innerHTML = ratings.map(v=>`<div class="result-square" style="background:${RATING_COLORS[v]};"></div>`).join('');
+  grid.style.display = ratings.length ? 'flex' : 'none';
   const hasWeak = ratings.some(v=>v===2 || v===3);
   const retryBtn = document.getElementById('resultsRetryBtn');
   retryBtn.style.display = hasWeak ? 'inline-block' : 'none';
@@ -5341,7 +6661,19 @@ function showResultsModal(ratings, retryHandler, vocaWords, nextPara){
     }
   }
 
+  // Offered after reading: the same text again, this time as the stacked test.
+  const paraBtn = document.getElementById('resultsParaBtn');
+  resultsParaForTest = paraForTest || null;
+  if(paraBtn) paraBtn.style.display = resultsParaForTest ? 'inline-block' : 'none';
+
   document.getElementById('resultsModal').classList.add('show');
+}
+
+function triggerResultsParaTest(){
+  const p = resultsParaForTest;
+  document.getElementById('resultsModal').classList.remove('show');
+  resultsParaForTest = null;
+  if(p) pStartStackForPara(p);
 }
 
 function triggerResultsNextPara(){
@@ -5456,6 +6788,11 @@ function hideVocabPopup(){
 function pRenderStack(){
   if(!pStackPara) return;
   const item = pStackPara;
+  if(pStackReading){
+    // Nothing is ever hidden here, so every sentence starts fully open.
+    pStackRevealStage = 9999;
+    pStackCurrentRated = false;
+  }
   // Stacking shows its rating on the sentence underline instead of the page
   // background, so any tint left over from another screen is cleared here.
   clearRateTint();
@@ -5468,7 +6805,8 @@ function pRenderStack(){
     `<span style="font-family:var(--font-ui); font-size:17px; font-weight:500; color:#111;">${escapeHtml(item.titleEn)}</span>`
     + speakRevealedBtn(13);
   document.getElementById('pStackProgress').textContent = `${pStackPointer+1} / ${item.sentences.length}`;
-  document.getElementById('pStackPrevBtn').disabled = (pStackPointer === 0 && pStackRevealStage === 0);
+  document.getElementById('pStackPrevBtn').disabled =
+    (pStackPointer === 0 && (pStackReading || pStackRevealStage === 0));
   document.getElementById('pStackPrevBtn').style.opacity = '1';
 
   const prevFlow = document.getElementById('pStackPrevFlow');
@@ -5482,6 +6820,7 @@ function pRenderStack(){
   // Rating color for a past sentence: this session's answer wins; a skip this session
   // means NO color (even if stored data has a rating); otherwise fall back to stored history.
   function pastRatingColor(idx, s){
+    if(pStackReading) return null;   // nothing is rated here, so nothing is coloured
     for(let j = pStackSessionAnswers.length - 1; j >= 0; j--){
       if(pStackSessionAnswers[j].idx === idx) return RATING_COLORS[pStackSessionAnswers[j].value];
     }
@@ -5556,7 +6895,7 @@ function pRenderStack(){
   const koSubCls = isSubhead(cur.ko) ? ' stack-subhead' : '';
   curCard.innerHTML = `<div class="cur-ko${koSubCls}">${escapeHtml(stripArrow(cur.ko))}</div>`;
 
-  const showRate = revealed;
+  const showRate = revealed && !pStackReading;
   if(!showRate) clearRateJelly();
   document.getElementById('pStackRateRow').style.display = showRate ? 'flex' : 'none';
   // Reserve room for the fixed bar only while it's actually up, otherwise the
@@ -5566,6 +6905,8 @@ function pRenderStack(){
 }
 
 function pStackFlip(){
+  // Reading has nothing to turn over, so the same tap moves on instead.
+  if(pStackReading){ pStackAdvance(); return; }
   if(pStackFlipped) return; // already fully revealed
   pStackRevealStage++;
   pRenderStack(); // recomputes pStackFlipped based on new stage vs this sentence's chunk count
@@ -5617,16 +6958,22 @@ function pStackAdvance(){
 function finishParaStackSession(){
   const values = pStackSessionAnswers.map(a=>a.value);
   document.getElementById('pStackQuizBody').style.display = 'none';
-  if(values.length === 0){
-    pShowSettings();
-    return;
-  }
   // Gather every linked word across this text's sentences, for a direct Voca test.
   const linkedWords = [];
   if(pStackPara && Array.isArray(pStackPara.sentences)){
     pStackPara.sentences.forEach(s=>{
       (s.vocabLinks || []).forEach(w=>{ if(w) linkedWords.push(w); });
     });
+  }
+  if(pStackReading){
+    // Reading keeps no record, so there are no results to show — only the two
+    // ways on from here.
+    showResultsModal([], null, linkedWords, null, pStackPara);
+    return;
+  }
+  if(values.length === 0){
+    pShowSettings();
+    return;
   }
   showResultsModal(values, retryParaStackWeakOnly, linkedWords, findNextInSeries(pStackPara));
 }
@@ -5651,7 +6998,7 @@ function retryParaStackWeakOnly(){
 }
 
 function pStackPrev(){
-  if(pStackRevealStage > 0){
+  if(!pStackReading && pStackRevealStage > 0){
     // Undo one revealed chunk at a time (protects against accidentally revealing too much).
     pStackRevealStage--;
     pRenderStack();
@@ -7386,7 +8733,7 @@ function closeEditByTxt(){
   if(wrap) wrap.style.display = 'none';
   document.getElementById('pManualEditPanel').style.display = 'none';
   document.getElementById('manualEditPanel').style.display = 'none';
-  editLoaded = {para:false, voca:false};
+  editLoaded = {para:false, voca:false, memo:false};
 }
 
 function pCopyManualEdit(){
@@ -7483,7 +8830,7 @@ document.getElementById('mainHeader').style.display = 'none';
 document.getElementById('view-add').classList.remove('active');
 document.getElementById('app-voca').style.display = 'none';
 document.getElementById('app-para').style.display = 'none';
-Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs()]).then(()=>{
+Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs(), loadMemos()]).then(()=>{
   document.getElementById('mainHeader').style.display = '';
   syncHeaderOffset();
   switchApp('para');
