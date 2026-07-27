@@ -236,7 +236,9 @@
     /* Dropped clear of the dial's top edge. Expressed as a percentage because
        the dial scales with the screen — a fixed pixel offset would sit at a
        different height on every device. 23% is 100px at a 430px width. */
-    top:23%; right:4px;
+    /* Flush with the dial's top: the headline figure and the dial start on the
+       same line now. */
+    top:0; right:4px;
     z-index:2;
     text-align:right;
     pointer-events:none;
@@ -250,13 +252,15 @@
      so this one element turns them back on for itself. */
   .clock-date{
     display:block;
-    margin:0 0 2px auto;
+    /* 8px under the total — the gap, by number. */
+    margin:8px 0 0 auto;
     padding:0;
     border:none;
     background:none;
     font-family:var(--font-ui);
     font-size:12.5px;
-    font-weight:300;
+    /* One step up, in step with the total above. */
+    font-weight:400;
     color:var(--text-dark);
     pointer-events:auto;
     font-variant-numeric:tabular-nums;
@@ -270,7 +274,8 @@
   .clock-total{
     font-family:var(--font-ui);
     font-size:72px;
-    font-weight:300;
+    /* One step up from the 300 it was — the headline of the screen. */
+    font-weight:400;
     line-height:0.95;
     letter-spacing:-0.03em;
     color:#111;
@@ -515,9 +520,13 @@
      look of its own. */
   /* Set back to the content column: past the date, not level with it. */
   .todo-add-row{
-    display:flex; align-items:center; gap:var(--sp-2);
-    padding-left:calc(var(--sp-1) + var(--day-col) + var(--sp-2));
-    margin-top:var(--sp-2);
+    display:flex; align-items:center;
+    /* Same gap the table's two buttons keep between themselves. */
+    gap:var(--sp-4);
+    /* Starts on the table's first cell line, like the rows above. */
+    padding-left:var(--day-col);
+    /* And the same clearance the table's controls keep above themselves. */
+    margin-top:var(--sp-4);
   }
   /* Bare until you go near it, exactly like the activity name box in Options:
      no edge at rest, grey on hover, black while being typed into. */
@@ -527,7 +536,7 @@
   input[type="text"].todo-add{
     flex:1; min-width:0;
     font-family:var(--font-ui);
-    font-size:13.5px;
+    font-size:20px;
     padding:4px 6px;
     border:0.5px solid transparent;
     background:none;
@@ -543,15 +552,16 @@
   }
   .todo-btn svg{width:15.4px; height:15.4px; fill:currentColor;}
   /* Showing today only: the switch itself says so by going quiet. */
-  .todo-btn.is-today-only{color:var(--text-muted);}
+  .mode-toggle.is-today-only{color:var(--text-muted);}
   /* The 4px on the left is the table cell's own padding, repeated here so the
      day in a to-do row sits in exactly the column the date above it does. */
   .todo-row{
     display:flex; align-items:center; gap:var(--sp-2);
-    padding:0 0 0 var(--sp-1);
-    /* A one-line row stays 24px, the day table's row height. The text's own
-       line-height is smaller than this now, so this is what holds the rhythm. */
-    min-height:24px;
+    /* No lead-in of its own: the row mirrors the table's columns — a 64px day
+       zone, the content, a 58px tail — so the dot and the black plate start
+       and end on the table's own cell boundaries. */
+    padding:0;
+    min-height:32px;
   }
   /* Edit and delete, on the right of every line. Both are components the apps
      already use — the Edit chip is the same .mini-toggle index puts on a word
@@ -597,7 +607,10 @@
   }
   .todo-act-row.active{font-weight:500;}
   .todo-act-row:hover{background:#F2F2F2;}
-  .todo-tools{display:flex; align-items:center; gap:var(--sp-1); flex-shrink:0;}
+  /* The table's 58px total column, minus the flex gap before it: the text zone
+     ends on the same line the table's grid does. */
+  .todo-tools{display:flex; align-items:center; justify-content:flex-end;
+    gap:var(--sp-1); flex:0 0 calc(58px - var(--sp-2)); box-sizing:border-box;}
   /* 11px, the size every other glyph in this row-height sits at. The stock 18px
      ✕ is drawn for a modal corner and would tower over a 24px line. */
   /* Black, not the usual delete red. Asked for: on a line of black text a red
@@ -616,19 +629,26 @@
      line up rather than merely looking close. */
   .todo-day{
     font-family:var(--font-ui); font-weight:500; font-size:12.5px;
-    line-height:24px;
-    width:var(--day-col); flex-shrink:0;
+    line-height:32px;
+    /* The table's 64px date column minus the flex gap that follows, with the
+       same 4px lead the date cell's ink sits behind. Content after this span
+       begins exactly where the table's grid cells do. */
+    box-sizing:border-box;
+    width:calc(var(--day-col) - var(--sp-2));
+    padding-left:var(--sp-1);
+    flex-shrink:0;
     white-space:nowrap;
     color:#111;
   }
   /* No box to aim at any more — the line itself is what you press. */
   .todo-text{
-    font-family:var(--font-ui); font-size:13.5px; font-weight:400;
-    /* Only matters once a line wraps. 13.5px of glyph inside a 24px box left
-       10.5px of air between the two halves of a wrapped item; this halves that
-       air to ~5px. Single-line rows are unaffected — .todo-row's min-height
-       still holds them at 24px. */
-    line-height:18px; color:#111;
+    font-family:var(--font-ui);
+    /* 1.5x the 13.5px it was. 20px stays one step under the Voca/Para reading
+       size (22px): the list is dense and its rows sit on a fixed grid, and the
+       full reading size left no air at all. Row height and wrap leading are
+       raised with it below. */
+    font-size:20px; font-weight:400;
+    line-height:26px; color:#111;
     flex:1; min-width:0; overflow-wrap:anywhere;
     cursor:pointer;
   }
@@ -1258,7 +1278,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28i</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28j</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -1821,7 +1841,9 @@ function formatDayLabel(code){
   const s = String(code);
   if(!/^\d{6}$/.test(s)) return s;
   const n = daysBefore(s);
-  if(n === 0) return '오늘';
+  /* Today is the screen's default and is not written; yesterday and the day
+     before keep their names. */
+  if(n === 0) return '';
   if(n === 1) return '어제';
   if(n === 2) return '그저께';
   return parseInt(s.slice(2,4),10) + '. ' + parseInt(s.slice(4,6),10);
@@ -1865,7 +1887,7 @@ function dayTotal(code){
    last N days ending today, not a list of days that happen to hold something —
    an empty day has to appear or a square marked to be done would have nowhere
    to be drawn. Older records are untouched and still reachable through +. */
-const TABLE_DAYS = 10;
+const TABLE_DAYS = 7;
 const TODO_DAYS  = 3;
 
 /* The last n calendar days ending at `from` (today unless told otherwise),
@@ -2313,14 +2335,17 @@ function renderClock(){
      thing on one day are two pieces of work and carry their own notes. */
   const labels = segs.map(seg => {
     const len = Math.min(1440, seg.e) - Math.max(0, seg.s);
-    if(len < LABEL_MIN) return '';
+    /* Under 40 minutes the abbreviation is dropped — the slice has no room —
+       but a note was typed on purpose and is kept whatever the length. */
+    const tooShort = len < LABEL_MIN;
     const mid = clockAngle((Math.max(0, seg.s) + Math.min(1440, seg.e)) / 2);
     const [x, y] = clockPoint(mid, CLOCK_R * 0.62);
     const note = seg.n || '';
     // The abbreviation alone, as the table head shows it — actDisplay prefixes
     // the group, which is more words than a slice has room for. The note goes
     // on its own line underneath rather than trailing off the same one.
-    const lines = [seg.act.short].concat(note ? [note] : []);
+    const lines = (tooShort ? [] : [seg.act.short]).concat(note ? [note] : []);
+    if(!lines.length) return '';
     // The plate is the activity's own colour, so the words read against it the
     // same way whatever they happen to be lying on.
     const dark = isDarkColor(seg.act.color);
@@ -2347,10 +2372,10 @@ function renderClock(){
   const live = clockLiveMins(code);
   const heading =
     `<div class="clock-head">` +
-      `<button class="clock-date${code === todayCode() ? '' : ' is-away'}" onclick="goToToday()"` +
-      ` title="${code === todayCode() ? 'Today' : 'Back to today'}">${dateWithDow(code)}</button>` +
       `<div class="clock-total${(total+live)?'':' is-zero'}${live?' is-running':''}"` +
       ` id="clockTotal">${fmtDur(total + live) || '00:00'}</div>` +
+      `<button class="clock-date${code === todayCode() ? '' : ' is-away'}" onclick="goToToday()"` +
+      ` title="${code === todayCode() ? 'Today' : 'Back to today'}">${dateWithDow(code)}</button>` +
     `</div>`;
 
   // The dial is drawn even with nothing recorded — an empty day still shows
@@ -2647,12 +2672,12 @@ function renderTodos(){
     '<div class="todo-add-row">' +
       '<input type="text" class="todo-add" id="todoQuickAdd"' +
         ' onkeydown="todoQuickAddKey(event)" aria-label="Add to today\'s list">' +
-      '<button class="todo-btn" onclick="todoAddFromBox()" aria-label="Add" title="Add">' +
+      '<button class="mode-toggle" onclick="todoAddFromBox()" aria-label="Add" title="Add">' +
         '<svg viewBox="0 0 24 24" aria-hidden="true">' +
         '<rect x="10.8" y="3" width="2.4" height="18"/>' +
         '<rect x="3" y="10.8" width="18" height="2.4"/></svg>' +
       '</button>' +
-      '<button class="todo-btn' + (todoTodayOnly ? ' is-today-only' : '') + '"' +
+      '<button class="mode-toggle' + (todoTodayOnly ? ' is-today-only' : '') + '"' +
         ' onclick="toggleTodoScope()"' +
         ' aria-label="' + (todoTodayOnly ? 'Show earlier days' : 'Show today only') + '"' +
         ' title="' + (todoTodayOnly ? 'Today only — tap for earlier days'
