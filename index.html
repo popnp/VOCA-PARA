@@ -116,6 +116,11 @@
        100vw fallback only applies for the first paint. Every full-bleed rule
        below uses this instead of raw 100vw. */
     --vw:100vw;
+    /* How wide the reading column may get. This was a bare number repeated in
+       nine places; widened 1.3x because the column read as a thin ribbon on a
+       landscape screen. The phone breakpoint in the @media rule further down
+       happens to have carried the same number and is NOT this — leave it. */
+    --content-w:832px;
   }
   /* Tinting the page with the rating colour. --rate-tint carries the colour and
      --rate-tint-a its opacity, so a single transition on background covers both
@@ -125,6 +130,11 @@
     background:#FFFFFF;
     color:var(--text-light);
     font-family:var(--font-ui);
+    /* The base SIZE, which was missing entirely. Rows that deliberately set no
+       size of their own — the word list and the memo list — were meant to
+       inherit "the body size" and instead fell through to the browser's 16px
+       default, so they stayed small while everything around them grew. */
+    font-size:var(--fs-body);
     /* The base leading for the whole app. Before this, every rule that set a
        size but not a leading fell through to the font's own default — which
        meant swapping the typeface silently re-spaced about seventy places.
@@ -135,7 +145,7 @@
     box-sizing:border-box;
     /* Body owns the gap under the header — one number for every screen. What
        starts a screen must not add its own on top of it. */
-    padding:calc(var(--header-h, 28px) + var(--gap-top)) max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 20px;
+    padding:calc(var(--header-h, 28px) + var(--gap-top)) max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px)) 20px;
     transition:background-color .40s cubic-bezier(.4,0,.2,1);
   }
   body.is-tinted{
@@ -159,12 +169,12 @@
     top:0;
     left:0;
     width:var(--vw);
-    padding:0 max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 0;
+    padding:0 max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px)) 0;
     box-sizing:border-box;
     z-index:50;
   }
   #topBar > *{
-    max-width:640px;
+    max-width:var(--content-w);
     margin-left:auto;
     margin-right:auto;
   }
@@ -175,7 +185,7 @@
   #topBar.theme-para{
     background:#FFFFFF;
   }
-  .wrap{max-width:640px;margin:0 auto;}
+  .wrap{max-width:var(--content-w);margin:0 auto;}
 
   header.top{
     position:relative;
@@ -198,7 +208,7 @@
     font-family:var(--font-ui);
     /* Two thirds of the old 38px. The icons and the gaps below came down by the
        same fraction so the header shrinks as one piece. */
-    font-size:25.3px;
+    font-size:50px;
     /* At this size the weight reads much heavier than the same number does in
        body copy, so the title sits a step below the rest of the UI. */
     font-weight:400;
@@ -217,6 +227,60 @@
   /* Brand and screen arrows travel together on the left of the header. */
   .header-left{display:flex; align-items:center; gap:var(--sp-4); min-width:0;}
   .head-arrows{display:flex; align-items:center; gap:6px;}
+
+  /* ---- Header drawer -------------------------------------------------
+     The header used to carry P V M, the three icons and the arrows on one
+     line, about 45px of permanent furniture above every screen. Everything
+     except the arrows and the playback control now waits off the right edge
+     and is pulled in. The handle is the only thing drawn, because a swipe
+     target with nothing on it cannot be found. */
+  #drawerHandle{
+    position:fixed; top:0; right:0;
+    /* Wide enough to hit with a thumb, but only a hairline is painted. */
+    width:24px; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    background:transparent; -webkit-appearance:none;
+    border:none; padding:0; margin:0;
+    line-height:0; cursor:pointer; z-index:60;
+  }
+  #drawerHandle::after{
+    content:'';
+    width:0.5px; height:56px; background:#6B6B6B;
+  }
+  body.drawer-open #drawerHandle{display:none;}
+
+  /* Catches the press that closes it. Deliberately colourless: dimming the
+     page would be the only tinted overlay in either app. */
+  #drawerScrim{position:fixed; inset:0; z-index:65; display:none;}
+  body.drawer-open #drawerScrim{display:block;}
+
+  #headDrawer{
+    position:fixed; top:0; right:0; height:100vh;
+    box-sizing:border-box;
+    background:#FFFFFF;
+    border-left:0.5px solid #6B6B6B;
+    padding:var(--sp-5);
+    z-index:70;
+    display:flex; flex-direction:column; gap:var(--sp-5);
+    /* Parked just off-screen rather than hidden, so it can be dragged. */
+    transform:translateX(100%);
+    transition:transform .22s cubic-bezier(.4,0,.2,1);
+  }
+  #headDrawer.is-open{transform:translateX(0);}
+
+  /* Three across, two down: P V M over add / list / options. Both rows are
+     the same grid, so the columns line up between them. */
+  #headDrawer .brand-header,
+  #headDrawer nav.tabs{
+    display:grid;
+    grid-template-columns:repeat(3, 56px);
+    align-items:center; justify-items:center;
+    gap:var(--sp-4);
+    margin:0; padding:0;
+  }
+  #headDrawer .app-tab{margin-left:0;}
+  #headDrawer .brand-header{line-height:1;}
+
   /* The rows the arrows came from keep their progress counts and buttons; only
      the arrows themselves step out. */
   .arrows-lifted{display:none !important;}
@@ -303,8 +367,8 @@
   /* fill:currentColor lets the icon pick up the same active/inactive colour
      the text labels used to get. */
   .tab-icon{
-    width:17.3px;
-    height:17.3px;
+    width:34px;
+    height:34px;
     display:block;
     fill:currentColor;
   }
@@ -406,7 +470,7 @@
     font-family:var(--font-ui);
     font-size:var(--fs-body);
     padding:var(--sp-1) var(--sp-4);
-    border:0.5px solid #6B6B6B;
+    border:0.5px solid #111;
     background:transparent;
     color:var(--text-dark);
     border-radius:0;
@@ -476,7 +540,9 @@
 
   .btn{
     font-family:var(--font-ui);
-    font-size:var(--fs-body);
+    /* One step down from the reading size: a button is a control, not the
+       thing being read. Matches the chips and dropdowns beside it. */
+    font-size:var(--fs-label);
     /* Matches .opt-btn (Choose a Paragraph) — light, but not as thin as the
        11px .mini-toggle chips. */
     font-weight:400;
@@ -829,10 +895,14 @@
     font-weight:400;
     font-size:var(--fs-label);
     letter-spacing:0.01em;
-    padding:var(--sp-1) var(--sp-4);
+    /* Sides kept tight: these sit three-in-a-row and a wide box made the set
+       read as three separate fields rather than one choice. */
+    padding:3px var(--sp-2);
+    /* No outline until chosen; choosing draws it. Same control everywhere now,
+       including the list and memo sort chips. */
     border:1px solid transparent;
     background:transparent;
-    color:var(--text-muted);
+    color:#111;
     border-radius:0;
     cursor:pointer;
   }
@@ -842,7 +912,6 @@
      grey made every unselected option look disabled even though all of them are
      tappable — the selection is already carried by the box outline, so the text
      itself can stay black. */
-  .settings-group .opt-btn{color:#111;}
   .mini-toggle{
     font-family:var(--font-ui);
     font-weight:300;
@@ -851,7 +920,7 @@
     padding:3px var(--sp-2);
     border:0.5px solid #6B6B6B;
     background:transparent;
-    color:var(--text-muted);
+    color:#111;
     border-radius:0;
     cursor:pointer;
   }
@@ -876,7 +945,7 @@
     font-weight:400;
     letter-spacing:0.01em;
     padding:var(--sp-1) var(--sp-4);
-    border:0.5px solid #6B6B6B;
+    border:0.5px solid #111;
     background:transparent;
     color:var(--text-dark);
     border-radius:0;
@@ -910,18 +979,12 @@
     transform:rotate(45deg);
   }
   .check-row.small{column-gap:var(--sp-3); row-gap:var(--sp-1);}
-  .check-row.small label{font-size:var(--fs-label); font-weight:300; gap:4px; line-height:1; color:var(--text-muted);}
+  .check-row.small label{gap:4px;}
   /* The list filters keep the lighter original treatment — the settings panels
      are where the heavier outline was wanted, not here. */
-  .check-row.small input[type=checkbox]{
-    width:14px; height:14px; margin:0;
-    border:0.5px solid #6B6B6B;
-  }
-  .check-row.small input[type=checkbox]:checked::after{
-    left:4px; top:2px;
-    width:3px; height:7px;
-  }
-  .check-row.small .status-dot{width:7px; height:7px;}
+  .check-row.small input[type=checkbox]{margin:0;}
+  
+  
   .subcontrols{margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
 
   /* A plain white bar. The four hit areas divide the CONTENT width into equal
@@ -936,7 +999,7 @@
     width:var(--vw);
     box-sizing:border-box;
     margin-top:0;
-    padding:0 max(16px, calc((var(--vw) - 640px) / 2 + 16px));
+    padding:0 max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px));
     background:transparent;
     border-top:none;
     border-bottom:none;
@@ -1015,12 +1078,12 @@
      than on the widened block. This is purely about dot placement now — the
      blocks no longer take presses, only the dots do. */
   .rate-btn:first-child{
-    margin-left:calc(-1 * max(16px, calc((var(--vw) - 640px) / 2 + 16px)));
-    padding-left:max(16px, calc((var(--vw) - 640px) / 2 + 16px));
+    margin-left:calc(-1 * max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px)));
+    padding-left:max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px));
   }
   .rate-btn:last-child{
-    margin-right:calc(-1 * max(16px, calc((var(--vw) - 640px) / 2 + 16px)));
-    padding-right:max(16px, calc((var(--vw) - 640px) / 2 + 16px));
+    margin-right:calc(-1 * max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px)));
+    padding-right:max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px));
   }
   /* The blocks are transparent hit areas; the dot carries the colour. */
   /* color is set on the button so the ripple (::after, currentColor) matches
@@ -1168,7 +1231,7 @@
     padding:3px var(--sp-2);
     border:0.5px solid #6B6B6B;
     background:transparent;
-    color:var(--text-muted);
+    color:#111;
     border-radius:0;
     cursor:pointer;
     white-space:nowrap;
@@ -1777,22 +1840,31 @@ if('serviceWorker' in navigator){
   <header class="top" id="mainHeader">
     <div class="header-row">
       <div class="header-left">
-        <p class="brand-header">
-          <span class="app-tab" id="appTabPara" onclick="onAppTabClick('para')" aria-label="Para" title="Para">P</span><span class="app-tab active" id="appTabVoca" onclick="onAppTabClick('voca')" aria-label="Voca" title="Voca">V</span><span class="app-tab" id="appTabMemo" onclick="openMemoSection()" aria-label="Memo" title="Memo">M</span>
-        </p>
         <!-- The back / skip arrows for whichever screen is open. They live here
              rather than at the top of each screen; headArrowsSync decides which
              pair of functions they stand for. -->
         <span class="head-arrows" id="headArrows" style="display:none;">
-          <button class="shuffle-btn" id="headPrevBtn" onclick="headArrowPrev()" aria-label="Back" title="Back"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
-          <button class="shuffle-btn" id="headNextBtn" onclick="headArrowNext()" aria-label="Skip" title="Skip"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+          <button class="shuffle-btn" id="headPrevBtn" onclick="headArrowPrev()" aria-label="Back" title="Back"><svg class="nav-chev flip" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+          <button class="shuffle-btn" id="headNextBtn" onclick="headArrowNext()" aria-label="Skip" title="Skip"><svg class="nav-chev" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
         </span>
-      </div>
-      <nav class="tabs" id="mainNav">
         <button id="speechControlBtn" onclick="toggleSpeechPlayback()" aria-label="Pause reading" title="Playing — tap to pause" style="display:none;">
           <svg class="tab-icon" id="speechControlIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5 L18 12 L6 20.5 Z"/></svg>
         </button>
-        <button id="unified-tab-add" class="active" onclick="switchTab('add')" aria-label="Add" title="Add">
+      </div>
+    </div>
+  </header>
+  </div>
+
+  <!-- The header drawer. Everything that used to sit on the right of the
+       header lives here now; the header keeps only the arrows and the
+       playback control. Pull in from the right edge, or press the handle. -->
+  <button id="drawerHandle" onclick="toggleDrawer()" aria-label="Open menu" title="Menu"></button>
+  <div id="drawerScrim" onclick="setDrawer(false)"></div>
+  <aside id="headDrawer" aria-label="Menu">
+    <p class="brand-header">
+          <span class="app-tab" id="appTabPara" onclick="onAppTabClick('para')" aria-label="Para" title="Para">P</span><span class="app-tab active" id="appTabVoca" onclick="onAppTabClick('voca')" aria-label="Voca" title="Voca">V</span><span class="app-tab" id="appTabMemo" onclick="openMemoSection()" aria-label="Memo" title="Memo">M</span>
+        </p>
+    <nav class="tabs" id="mainNav">        <button id="unified-tab-add" class="active" onclick="switchTab('add')" aria-label="Add" title="Add">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
         </button>
         <button id="unified-tab-cal" onclick="switchTab('cal')" aria-label="List" title="List">
@@ -1802,9 +1874,7 @@ if('serviceWorker' in navigator){
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19.4" cy="12" r="1.6"/></svg>
         </button>
       </nav>
-    </div>
-  </header>
-  </div>
+  </aside>
 
   <!-- SHARED ADD VIEW (auto-detects Voca vs Para from the pasted text) -->
   <section id="view-add" class="view active">
@@ -1826,7 +1896,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27y</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28c</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -2079,7 +2149,7 @@ if('serviceWorker' in navigator){
         </div>
 
         <div id="calToggleRow" style="display:flex; justify-content:flex-end; gap:6px; margin-top:var(--sp-3);">
-          <button class="mini-toggle" id="calViewToggleBtn" onclick="toggleCalView()">Calendar</button>
+          <button class="opt-btn" id="calViewToggleBtn" onclick="toggleCalView()">Calendar</button>
         </div>
       </div>
     </div>
@@ -2089,8 +2159,8 @@ if('serviceWorker' in navigator){
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <p id="dayDetailTitle" style="margin:0; font-family:var(--font-ui); font-weight:500; font-size:var(--fs-body); color:var(--text-dark);"></p>
         <span style="display:flex; gap:var(--sp-2);">
-          <button class="mini-toggle" id="showAllBtn" onclick="toggleShowAll()">All</button>
-          <button class="mini-toggle" id="showSimilarBtn" onclick="toggleShowSimilar()">Similar</button>
+          <button class="opt-btn" id="showAllBtn" onclick="toggleShowAll()">All</button>
+          <button class="opt-btn" id="showSimilarBtn" onclick="toggleShowSimilar()">Similar</button>
         </span>
       </div>
       <div class="check-row small" id="dayFilterCatRow" style="margin-bottom:var(--sp-1);">
@@ -2107,13 +2177,13 @@ if('serviceWorker' in navigator){
         <label><input type="checkbox" id="dayFilterUndertested" onchange="dayFilterChanged()"> Under-tested</label>
       </div>
       <div class="check-row small" id="dayFilterSortRow" style="margin-bottom:var(--sp-1);">
-        <button class="mini-toggle" id="sortRecentBtn" onclick="setSortMode('recent')">Recent first</button>
-        <button class="mini-toggle" id="sortOldBtn" onclick="setSortMode('old')">Oldest first</button>
-        <button class="mini-toggle" id="sortAlphaBtn" onclick="setSortMode('alpha')">A–Z</button>
+        <button class="opt-btn" id="sortRecentBtn" onclick="setSortMode('recent')">Recent first</button>
+        <button class="opt-btn" id="sortOldBtn" onclick="setSortMode('old')">Oldest first</button>
+        <button class="opt-btn" id="sortAlphaBtn" onclick="setSortMode('alpha')">A–Z</button>
       </div>
       <div style="display:flex; align-items:center; gap:6px; margin-bottom:var(--sp-2);">
         <input type="text" id="wordSearchInput" placeholder="Search word or meaning…" oninput="wordSearchChanged()"
-          style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-body); border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
+          style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-label); border:0.5px solid #111; border-radius:0; background:transparent;">
         <button class="mini-toggle" id="wordSearchClearBtn" onclick="clearWordSearch()" style="display:none;">✕</button>
       </div>
       <div style="margin-bottom:var(--sp-4);">
@@ -2136,13 +2206,13 @@ if('serviceWorker' in navigator){
           <label><input type="checkbox" id="memoFilterUndertested" onchange="renderMemoList()"> Under-tested</label>
         </div>
         <div class="check-row small" id="memoSortRow" style="margin-bottom:var(--sp-1);">
-          <button class="mini-toggle" id="memoSortRecentBtn" onclick="setMemoSort('recent')">Recent first</button>
-          <button class="mini-toggle" id="memoSortOldBtn" onclick="setMemoSort('old')">Oldest first</button>
-          <button class="mini-toggle" id="memoSortAlphaBtn" onclick="setMemoSort('alpha')">A–Z</button>
+          <button class="opt-btn" id="memoSortRecentBtn" onclick="setMemoSort('recent')">Recent first</button>
+          <button class="opt-btn" id="memoSortOldBtn" onclick="setMemoSort('old')">Oldest first</button>
+          <button class="opt-btn" id="memoSortAlphaBtn" onclick="setMemoSort('alpha')">A–Z</button>
         </div>
         <div style="display:flex; align-items:center; gap:6px; margin:0 0 var(--sp-3);">
           <input type="text" id="memoSearchInput" placeholder="Search memos…" oninput="renderMemoList()"
-            style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-body); border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
+            style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-label); border:0.5px solid #111; border-radius:0; background:transparent;">
           <button class="btn btn-ghost" onclick="newMemo()">+ New</button>
         </div>
         <div id="memoList"></div>
@@ -2442,7 +2512,7 @@ if('serviceWorker' in navigator){
       </div>
       <div style="display:flex; align-items:center; gap:6px; margin-bottom:var(--sp-2);">
         <input type="text" id="pWordSearchInput" placeholder="Search title or text…" oninput="pWordSearchChanged()"
-          style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-body); border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
+          style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-label); border:0.5px solid #111; border-radius:0; background:transparent;">
         <button class="mini-toggle" id="pWordSearchClearBtn" onclick="pClearWordSearch()" style="display:none;">✕</button>
       </div>
       <div style="margin-bottom:var(--sp-4);">
@@ -4493,7 +4563,10 @@ function toggleCalView(){
   calViewMode = (calViewMode === 'list') ? 'calendar' : 'list';
   document.getElementById('calTable').style.display = (calViewMode === 'calendar') ? 'none' : 'table';
   document.getElementById('calGridWrap').style.display = (calViewMode === 'calendar') ? 'block' : 'none';
-  document.getElementById('calViewToggleBtn').textContent = (calViewMode === 'calendar') ? 'List' : 'Calendar';
+  // Was swapping its own label between 'Calendar' and 'List'. Now it behaves
+  // like the two toggles beside it: the label stays put and the outline says
+  // whether it is on.
+  document.getElementById('calViewToggleBtn').classList.toggle('selected', calViewMode === 'calendar');
   renderCalendar();
 }
 
@@ -4764,7 +4837,7 @@ function setMemoSort(mode){
   memoSortMode = (memoSortMode === mode) ? 'none' : mode;
   ['recent','old','alpha'].forEach(k=>{
     const el = document.getElementById('memoSort' + k.charAt(0).toUpperCase() + k.slice(1) + 'Btn');
-    if(el) el.classList.toggle('active', memoSortMode === k);
+    if(el) el.classList.toggle('selected', memoSortMode === k);
   });
   renderMemoList();
 }
@@ -5430,9 +5503,9 @@ function toggleShowSimilar(){
   if(showSimilarOnly && !showAllWords) showAllWords = true;
   dayListPage = 1;
   const btn = document.getElementById('showSimilarBtn');
-  if(btn) btn.classList.toggle('active', showSimilarOnly);
+  if(btn) btn.classList.toggle('selected', showSimilarOnly);
   const allBtn = document.getElementById('showAllBtn');
-  if(allBtn) allBtn.classList.toggle('active', showAllWords);
+  if(allBtn) allBtn.classList.toggle('selected', showAllWords);
   showDayDetail(currentDayCode);
 }
 
@@ -5444,7 +5517,7 @@ function toggleShowAll(){
   if(!showAllWords && showSimilarOnly){
     showSimilarOnly = false;
     const sb = document.getElementById('showSimilarBtn');
-    if(sb) sb.classList.remove('active');
+    if(sb) sb.classList.remove('selected');
   }
   dayListPage = 1;
   const btn = document.getElementById('showAllBtn');
@@ -5455,10 +5528,10 @@ function toggleShowAll(){
 function setSortMode(mode){
   sortMode = (sortMode === mode) ? 'none' : mode;
   dayListPage = 1;
-  document.getElementById('sortRecentBtn').classList.toggle('active', sortMode === 'recent');
-  document.getElementById('sortOldBtn').classList.toggle('active', sortMode === 'old');
+  document.getElementById('sortRecentBtn').classList.toggle('selected', sortMode === 'recent');
+  document.getElementById('sortOldBtn').classList.toggle('selected', sortMode === 'old');
   const alphaBtn = document.getElementById('sortAlphaBtn');
-  if(alphaBtn) alphaBtn.classList.toggle('active', sortMode === 'alpha');
+  if(alphaBtn) alphaBtn.classList.toggle('selected', sortMode === 'alpha');
   showDayDetail(currentDayCode);
 }
 
@@ -5533,10 +5606,10 @@ function showDayDetail(code){
   const showAllBtnEl = document.getElementById('showAllBtn');
   if(showAllBtnEl){
     showAllBtnEl.style.display = 'inline-block';
-    showAllBtnEl.classList.toggle('active', showAllWords);
+    showAllBtnEl.classList.toggle('selected', showAllWords);
   }
   const showSimBtnEl = document.getElementById('showSimilarBtn');
-  if(showSimBtnEl) showSimBtnEl.classList.toggle('active', showSimilarOnly);
+  if(showSimBtnEl) showSimBtnEl.classList.toggle('selected', showSimilarOnly);
 
   const catV = document.getElementById('dayFilterV').checked;
   const catW = document.getElementById('dayFilterW').checked;
@@ -9192,6 +9265,58 @@ function syncViewportWidth(){
   document.documentElement.style.setProperty('--vw', w + 'px');
   syncHeaderOffset();
 }
+
+
+/* ---- Header drawer -------------------------------------------------------
+   Open by dragging in from the right edge or pressing the handle; close by
+   dragging back, pressing outside, or Escape. The app is installed to the home
+   screen, so an edge drag here does not collide with the browser's own back
+   gesture. */
+function setDrawer(open){
+  const d = document.getElementById('headDrawer');
+  if(!d) return;
+  d.classList.toggle('is-open', open);
+  document.body.classList.toggle('drawer-open', open);
+}
+function toggleDrawer(){
+  const d = document.getElementById('headDrawer');
+  setDrawer(!(d && d.classList.contains('is-open')));
+}
+function drawerIsOpen(){
+  const d = document.getElementById('headDrawer');
+  return !!(d && d.classList.contains('is-open'));
+}
+/* Anything pressed inside the drawer is a destination, so the drawer stands
+   aside once it has been used. */
+document.addEventListener('click', e => {
+  const d = document.getElementById('headDrawer');
+  if(d && drawerIsOpen() && d.contains(e.target)) setDrawer(false);
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && drawerIsOpen()) setDrawer(false);
+});
+(function(){
+  const EDGE = 28;      // how close to the edge a drag has to start
+  const TRIGGER = 40;   // how far it has to travel
+  let x0 = 0, y0 = 0, live = false;
+  document.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    if(!t) return;
+    live = drawerIsOpen() || t.clientX >= window.innerWidth - EDGE;
+    x0 = t.clientX; y0 = t.clientY;
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if(!live) return;
+    const t = e.touches[0];
+    if(!t) return;
+    const dx = t.clientX - x0, dy = t.clientY - y0;
+    // A mostly-vertical drag is a scroll, not a pull.
+    if(Math.abs(dy) > Math.abs(dx)){ live = false; return; }
+    if(!drawerIsOpen() && dx < -TRIGGER){ setDrawer(true);  live = false; }
+    if(drawerIsOpen()  && dx >  TRIGGER){ setDrawer(false); live = false; }
+  }, {passive:true});
+  document.addEventListener('touchend', () => { live = false; }, {passive:true});
+})();
 
 /* The pinned header is out of the document flow, so body has to reserve its
    height or the first line of content hides behind it. Measured rather than
