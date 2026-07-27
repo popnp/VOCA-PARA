@@ -1428,8 +1428,12 @@
   .blank-slot{
     position:relative;
     display:inline-block;
-    /* Never let a long answer squeeze the blank below the classic 5 underscores. */
-    min-width:3.2em;
+    /* The floor when the hidden answer is short. Kept in step with the run of
+       underscores drawn below: eight of them measure about 5.2em, so a short
+       answer still gets a line the same length as a long one. Raised from
+       3.2em / five underscores, which read as a gap rather than a blank to
+       write in. */
+    min-width:5.2em;
   }
   /* Occupies the answer's exact width but paints nothing. */
   .blank-sizer{
@@ -1936,7 +1940,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28h</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28i</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -4262,7 +4266,7 @@ function blankSpan(answer, index){
   const idFace = index === 0 ? ' id="blankFace"' : '';
   return '<span class="blank-slot"' + idSlot + ' data-blank="' + index + '">' +
            '<span class="blank-sizer" aria-hidden="true">' + escapeHtml(answer) + '</span>' +
-           '<span class="blank-face"' + idFace + '>_____</span>' +
+           '<span class="blank-face"' + idFace + '>________</span>' +
          '</span>';
 }
 
