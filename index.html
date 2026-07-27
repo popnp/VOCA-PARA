@@ -1127,7 +1127,9 @@
   /* Matches .cal-daynum in the grid view. Without an explicit size this cell
      inherited the 16px body default, which is why the same weight looked much
      heavier here than in the grid. */
-  .day-table .day-date{font-family:var(--font-ui); font-weight:500; font-size:var(--fs-list); white-space:nowrap;}
+  /* The dates are set exactly like the heads: 12.5px, weight 300. The weekend
+     grey below is untouched. */
+  .day-table .day-date{font-family:var(--font-ui); font-weight:300; font-size:12.5px; white-space:nowrap;}
   /* Saturdays and Sundays: the date text greys out so weeks are easy to scan. */
   .day-table tbody tr.is-weekend .day-date{color:var(--text-muted);}
   .day-table .day-cats{font-family:var(--font-ui); font-size:var(--fs-list); color:var(--text-muted);}
@@ -1159,7 +1161,9 @@
     font-size:var(--fs-list-tag);
     font-weight:500;
     color:#111;
-    padding:2px 6px;
+    /* Half the old 2px/6px. The colour was carrying more empty space than
+       lettering, which made every tag read as wider than its number. */
+    padding:1px 3px;
     border-radius:0;
     display:inline-block;
   }
@@ -1203,7 +1207,10 @@
   .day-table thead th.uni-col-head{text-align:center;}
   .uni-col-head{
     font-family:var(--font-ui);
-    font-size:11px;
+    /* 12.5px like every other label in both apps. It sat at 11px because in
+       capitals it looked larger than its neighbours, but that made it the one
+       label in the app with a size of its own. */
+    font-size:12.5px;
     /* Same weight as the other column heads — these are peers, not a level up. */
     font-weight:300;
     letter-spacing:0.04em;
@@ -1770,7 +1777,7 @@
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27l</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27n</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">

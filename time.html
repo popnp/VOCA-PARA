@@ -265,18 +265,6 @@
   .clock-date.is-away{cursor:pointer;}
   /* The stopwatch, moved down out of the header and drawn as a plus. Same
      pointer-events exception the date needs, for the same reason. */
-  /* Hidden while a session is on the clock: the header has become the stopwatch
-     by then, and a second way in would only be confusing. It returns the moment
-     the session is saved or thrown away. */
-  .clock-add{
-    display:block;
-    margin:0 0 var(--sp-1) auto;
-    padding:0;
-    border:none; background:none;
-    cursor:pointer; color:#111; line-height:0;
-    pointer-events:auto;
-  }
-  .clock-add svg{width:18px; height:18px; fill:currentColor;}
   .clock-total{
     font-family:var(--font-ui);
     font-size:72px;
@@ -590,16 +578,25 @@
   }
   input[type="text"].act-note:hover{border-color:#6B6B6B;}
   input[type="text"].act-note:focus{border-color:#111; background:#fff; outline:none;}
-  /* On the dial: the activity and its note, at the table-head size. */
+  /* On the dial: the activity and its note. The size is set on each element at
+     draw time — the dial scales, so a size written here would scale with it. */
   .clock-label{
     font-family:var(--font-ui);
-    font-size:12.5px;
     font-weight:300;
     fill:#111;
     dominant-baseline:middle;
     pointer-events:none;
   }
   .clock-label.on-dark{fill:#FFFFFF;}
+  .clock-label-plate{pointer-events:none;}
+  .todo-done-time{
+    font-family:var(--font-ui);
+    font-size:32px; font-weight:300;
+    letter-spacing:-0.02em;
+    color:#111;
+    margin:2px 0 0;
+    font-variant-numeric:tabular-nums;
+  }
   .todo-act-row{
     display:flex; align-items:center; gap:var(--sp-2);
     width:100%;
@@ -1097,6 +1094,9 @@
         </button>
       </div>
       <nav class="tabs">
+        <button onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="10.8" y="7.5" width="2.4" height="6.5"/><rect x="9" y="1.8" width="6" height="2.4"/></svg>
+        </button>
         <button onclick="openOptions()" aria-label="Options" title="Options">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19.4" cy="12" r="1.6"/></svg>
         </button>
@@ -1227,7 +1227,7 @@
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27l</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27n</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -1343,6 +1343,25 @@
     <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="pickAddKind('time')">Time</button>
       <button class="btn btn-primary" onclick="pickAddKind('todo')">To-do</button>
+    </div>
+  </div>
+</div>
+
+<div id="todoDoneOverlay" class="modal-overlay">
+  <div class="modal-box modal-box-tight">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <p class="modal-title" id="todoDoneTitle">Activity</p>
+      <button class="icon-x" onclick="closeTodoDone()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+    <p class="field-label" style="margin:0;">Time on this so far</p>
+    <p class="todo-done-time" id="todoDoneTime">00:00</p>
+    <p class="field-label" style="margin:14px 0 0;">Saved as the note</p>
+    <p class="hint" id="todoDoneNote" style="margin:2px 0 0;"></p>
+    <div style="display:flex; gap:var(--sp-2); margin-top:var(--sp-5); flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="todoDoneAddTime()">Add time</button>
+      <button class="btn btn-ghost" onclick="closeTodoDone()">Don't record time</button>
     </div>
   </div>
 </div>
@@ -2041,6 +2060,21 @@ const CLOCK_BLANK = {s: 0, e: 6 * 60};   // 00:00 – 06:00, no shading
    where the date and total sit — stays clear. */
 const CLOCK_MARKS_FROM = 7 * 60;         // first hour to get a spoke + number
 
+/* What the words on the dial should measure once drawn, in real screen pixels.
+   Two thirds of 12.5 would be 8.33; 9px is the nearest size this app already
+   uses — it is what the timeline's hour numbers are set in, which is the same
+   sort of thing: a small mark laid over a chart. That works out at 0.72x. */
+const CLOCK_LABEL_PX = 9;
+
+/* The dial is width:100% of its wrapper, capped at 520px — so the wrapper's own
+   width answers this without needing the SVG to exist yet. Measured before the
+   drawing rather than after, which keeps this to one pass. */
+function clockRenderedWidth(){
+  const wrap = document.getElementById('clockWrap');
+  if(!wrap) return 0;
+  return Math.min(wrap.clientWidth || 0, 520);
+}
+
 
 /* Minutes since midnight -> degrees, with 0 at 12 o'clock. */
 function clockAngle(min){ return (min / 1440) * 360; }
@@ -2244,6 +2278,17 @@ function renderClock(){
     const cur = bestByAct[seg.act.id];
     if(!cur || len > cur.len) bestByAct[seg.act.id] = {seg, len};
   });
+
+  /* Font size in viewBox units. The dial scales to the screen, so a size
+     written here is multiplied by that scale on the way out; dividing by it
+     first is what makes the words land at 12.5 real pixels — the same size the
+     table head below is set in. */
+  const fs = CLOCK_LABEL_PX * (CLOCK_VB_W / (clockRenderedWidth() || CLOCK_VB_W));
+  /* Korean sits on a full square, Latin on about half of one. Close enough to
+     size the plate behind the words, which is all this is for. */
+  const textW = s => Array.from(String(s)).reduce(
+    (t, ch) => t + (/[\uAC00-\uD7A3\u3131-\u318E]/.test(ch) ? 1 : 0.55), 0) * fs;
+
   const labels = Object.keys(bestByAct).map(id => {
     const {seg, len} = bestByAct[id];
     if(len < LABEL_MIN) return '';
@@ -2251,13 +2296,25 @@ function renderClock(){
     const [x, y] = clockPoint(mid, CLOCK_R * 0.62);
     const note = noteFor(code, seg.act.id);
     // The abbreviation alone, as the table head shows it — actDisplay prefixes
-    // the group, which is more words than a slice has room for.
-    const text = seg.act.short + (note ? '  ' + note : '');
-    // White on a dark slice, black on a light one — the same test the header
-    // uses to decide its own text colour.
-    const cls = 'clock-label' + (isDarkColor(seg.act.color) ? ' on-dark' : '');
-    return `<text class="${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}"` +
-           ` text-anchor="middle">${escapeHtmlT(text)}</text>`;
+    // the group, which is more words than a slice has room for. The note goes
+    // on its own line underneath rather than trailing off the same one.
+    const lines = [seg.act.short].concat(note ? [note] : []);
+    // The plate is the activity's own colour, so the words read against it the
+    // same way whatever they happen to be lying on.
+    const dark = isDarkColor(seg.act.color);
+    const cls = 'clock-label' + (dark ? ' on-dark' : '');
+    const lh = fs * 1.35;
+    const top = y - ((lines.length - 1) * lh) / 2;
+    return lines.map((line, i) => {
+      const ly = top + i * lh;
+      const w = textW(line) + fs * 0.7;
+      const hgt = lh;
+      return `<rect class="clock-label-plate" x="${(x - w/2).toFixed(1)}"` +
+             ` y="${(ly - hgt/2).toFixed(1)}" width="${w.toFixed(1)}"` +
+             ` height="${hgt.toFixed(1)}" fill="${seg.act.color}"/>` +
+             `<text class="${cls}" x="${x.toFixed(1)}" y="${ly.toFixed(1)}"` +
+             ` font-size="${fs.toFixed(2)}" text-anchor="middle">${escapeHtmlT(line)}</text>`;
+    }).join('');
   }).join('');
 
   // A wedge for the session running right now, drawn from where it resumed to
@@ -2267,12 +2324,6 @@ function renderClock(){
   const live = clockLiveMins(code);
   const heading =
     `<div class="clock-head">` +
-      `<button class="clock-add" id="clockAddBtn" onclick="openStopwatch()"` +
-      ` aria-label="Stopwatch" title="Stopwatch"${swIsActive() ? ' style="display:none;"' : ''}>` +
-        `<svg viewBox="0 0 24 24" aria-hidden="true">` +
-        `<rect x="10.8" y="3" width="2.4" height="18"/>` +
-        `<rect x="3" y="10.8" width="18" height="2.4"/></svg>` +
-      `</button>` +
       `<button class="clock-date${code === todayCode() ? '' : ' is-away'}" onclick="goToToday()"` +
       ` title="${code === todayCode() ? 'Today' : 'Back to today'}">${dateWithDow(code)}</button>` +
       `<div class="clock-total${(total+live)?'':' is-zero'}${live?' is-running':''}"` +
@@ -2762,6 +2813,45 @@ async function toggleTodo(code, id){
   await saveTodos();
   renderTodos();
   renderDatePickerIfOpen();
+  // Finishing something that belongs to an activity is the moment you know
+  // what it was and roughly how long it took, so that is when to ask.
+  if(t.done && t.actId) openTodoDone(code, id);
+}
+
+/* ---- Finishing a to-do that belongs to an activity ----
+   The line becomes that activity's note on the dial, and the time it took can
+   be filled in straight away — or not, which is what the second button is for. */
+let todoDoneTarget = null;
+
+async function openTodoDone(code, id){
+  const t = todoById(code, id);
+  const a = t && t.actId ? actById(t.actId) : null;
+  if(!t || !a) return;
+  todoDoneTarget = {code, id, actId: a.id};
+
+  // Written now rather than on the way out: pressing either button, or closing
+  // the box, should leave the note in place.
+  await setNote(code, a.id, todoDisplayText(t.text));
+
+  const mins = segmentsFor(code, a.id).reduce((s, g) => s + Math.max(0, g.e - g.s), 0);
+  document.getElementById('todoDoneTitle').innerHTML =
+    `<span class="act-swatch" style="background:${a.color}; display:inline-block; margin-right:7px; vertical-align:0;"></span>` +
+    escapeHtmlT(actDisplay(a));
+  document.getElementById('todoDoneTime').textContent = mins ? fmtDur(mins) : '00:00';
+  document.getElementById('todoDoneNote').textContent = todoDisplayText(t.text);
+  document.getElementById('todoDoneOverlay').classList.add('show');
+}
+
+function closeTodoDone(){
+  document.getElementById('todoDoneOverlay').classList.remove('show');
+  todoDoneTarget = null;
+}
+
+/* Straight into the times for that activity on that day. */
+function todoDoneAddTime(){
+  const t = todoDoneTarget;
+  closeTodoDone();
+  if(t) openActEditor(t.code, t.actId);
 }
 
 /* ---- The editor for one day ---- */
@@ -3193,8 +3283,6 @@ function renderHeaderState(){
 
   idle.style.display = active ? 'none' : '';
   run.style.display = active ? '' : 'none';
-  const plus = document.getElementById('clockAddBtn');
-  if(plus) plus.style.display = active ? 'none' : '';
 
   if(!active){
     // Nothing behind the idle header — the page shows through it.
@@ -4172,6 +4260,13 @@ function syncHeaderOffset(){
 }
 syncViewportWidth();
 window.addEventListener('resize', syncViewportWidth);
+/* The words on the dial are sized against its drawn width, so a change of
+   width has to redraw them. Throttled to the end of the gesture. */
+let clockResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(clockResizeTimer);
+  clockResizeTimer = setTimeout(renderClock, 120);
+});
 window.addEventListener('orientationchange', () => setTimeout(syncViewportWidth, 100));
 
 document.querySelectorAll('.modal-overlay').forEach(ov => {
