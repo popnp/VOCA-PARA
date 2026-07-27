@@ -1470,6 +1470,10 @@
   /* The tag itself is drawn with .tagbadge, the same class the word list uses,
      so there is nothing here to fall out of step. Only the space beneath is
      memo-specific. */
+  /* The back arrow line in the memo popup. Same 8px the other arrow-first
+     screens use, written as the gap between the two tokens so it follows if
+     either changes. */
+  .memo-popup-nav{margin-bottom:var(--sp-2);}
   .memo-tag-wrap{margin-bottom:14px;}
   .memo-body{color:#111;}
   /* Linked words are underlined rather than coloured, so a memo dense with
@@ -1583,6 +1587,7 @@
   .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:13.5px; color:#111; margin-bottom:6px;}
   .vocab-popup-meaning{font-size:13.5px; color:#111; margin-bottom:6px;}
   .vocab-popup-example{font-size:12.5px; color:#111; font-style:italic;}
+  .vocab-popup-example + .vocab-popup-example{margin-top:6px;}
   .dwc-top{
     display:grid;
     grid-template-columns: 1fr 1.6fr;
@@ -1622,6 +1627,7 @@
 <body>
 <div class="wrap">
 <div id="vocabPopupOverlay" class="modal-overlay"><div id="vocabPopup" class="modal-box"></div></div>
+<div id="memoPopupOverlay" class="modal-overlay"><div id="memoPopup" class="modal-box"></div></div>
 
 <div id="resultsModal" class="modal-overlay">
   <div class="modal-box" style="text-align:center;">
@@ -1706,7 +1712,7 @@
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-26r</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27d</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -1893,6 +1899,7 @@
             <div class="back-phonetics" id="backPhonetics" style="display:none;"></div>
             <div class="back-meaning" id="backMeaning"></div>
             <div class="back-example" id="backExample"></div>
+            <div id="backMemoRow" style="display:none; margin-top:10px; text-align:right;"></div>
           </div>
           <div id="backEdit" class="quiz-edit-form" style="display:none;" onclick="event.stopPropagation();">
             <div class="lbl">Word</div>
@@ -2642,6 +2649,14 @@ let pendingResetApp = null;
 /* The M tab. Unlike P and V it isn't a whole app, just a section of Voca, so
    it switches there and opens the memo list in one step. */
 function openMemoSection(){
+  /* Already reading a memo: M steps back to the list rather than doing nothing.
+     closeMemo also clears lastMemoId, which is right — going back to the list on
+     purpose means the list is where you should land next time too. */
+  if(memoViewOpen && openMemoId !== null){
+    closeMemo();
+    markMemoTab();
+    return;
+  }
   switchApp('voca');
   switchTab('cal');
   if(!memoViewOpen) toggleMemoView();
@@ -4079,6 +4094,17 @@ function renderQuizCard(){
   document.getElementById('backWord').innerHTML = escapeHtml(card.word) + speakerBtn(card.word, SPK_CARD);
   document.getElementById('backMeaning').textContent = card.meaning;
   document.getElementById('backExample').innerHTML = (card.examples||[]).map(ex=>`<div class="back-example-line">${escapeHtml(stripBrackets(ex))}</div>`).join('');
+  setBackMemoRow(card);
+}
+
+/* Lives inside #backView, so the edit form replacing that view takes it away
+   without anything having to remember to hide it. */
+function setBackMemoRow(card){
+  const row = document.getElementById('backMemoRow');
+  if(!row) return;
+  const chip = memoLinkChip(card.word, true);
+  row.innerHTML = chip;
+  row.style.display = chip ? 'block' : 'none';
 }
 
 function refreshBackContent(){
@@ -4095,6 +4121,7 @@ function refreshBackContent(){
   document.getElementById('backWord').innerHTML = escapeHtml(card.word) + speakerBtn(card.word, SPK_CARD);
   document.getElementById('backMeaning').textContent = card.meaning;
   document.getElementById('backExample').innerHTML = (card.examples||[]).map(ex=>`<div class="back-example-line">${escapeHtml(stripBrackets(ex))}</div>`).join('');
+  setBackMemoRow(card);
 }
 
 function enableQuizEdit(){
@@ -6630,8 +6657,12 @@ function findNextInSeries(para){
 }
 
 let resultsParaForTest = null;
+/* Continuing has to stay in the mode the session was run in — rolling out of
+   Reading into the stacked test halfway through a long text would be a change
+   of activity, not a continuation. */
+let resultsNextReading = false;
 
-function showResultsModal(ratings, retryHandler, vocaWords, nextPara, paraForTest){
+function showResultsModal(ratings, retryHandler, vocaWords, nextPara, paraForTest, nextReading){
   // The session is over — the results grid shows every colour at once, so a
   // leftover page tint from the last card would fight with it.
   clearRateTint();
@@ -6654,6 +6685,7 @@ function showResultsModal(ratings, retryHandler, vocaWords, nextPara, paraForTes
   // Optional: continue into the next instalment of a split text.
   const nextBtn = document.getElementById('resultsNextBtn');
   resultsNextPara = nextPara || null;
+  resultsNextReading = !!nextReading;
   if(nextBtn){
     nextBtn.style.display = resultsNextPara ? 'inline-block' : 'none';
     if(resultsNextPara){
@@ -6678,12 +6710,15 @@ function triggerResultsParaTest(){
 
 function triggerResultsNextPara(){
   const p = resultsNextPara;
+  const reading = resultsNextReading;
   document.getElementById('resultsModal').classList.remove('show');
   resultsRetryHandler = null;
   resultsVocaWords = null;
   resultsNextPara = null;
+  resultsParaForTest = null;
+  resultsNextReading = false;
   if(!p) return;
-  pStartStackForPara(p);
+  pStartStackForPara(p, reading);
 }
 
 // Given a list of linked-word strings, return the matching Voca cards (deduped).
@@ -6735,6 +6770,7 @@ function hideResultsModal(){
   resultsRetryHandler = null;
   resultsVocaWords = null;
   resultsNextPara = null;
+  resultsNextReading = false;
 }
 
 function triggerResultsRetry(){
@@ -6749,6 +6785,9 @@ function showVocabPopup(word){
   const card = cards.find(c => c.word.trim().toLowerCase() === word.trim().toLowerCase());
   const overlay = document.getElementById('vocabPopupOverlay');
   const popup = document.getElementById('vocabPopup');
+  // Tapping a [word] inside a memo popup lands here; both overlays share a
+  // z-index, so the memo has to step aside or this one opens behind it.
+  hideMemoPopup();
   if(!card){
     overlay.classList.remove('show');
     return;
@@ -6758,9 +6797,10 @@ function showVocabPopup(word){
     <div class="vocab-popup-word">${escapeHtml(card.word)}${speakerBtn(card.word, 13)}</div>
     ${card.phonetics ? `<div class="vocab-popup-phon">${mdLinksToHtml(escapeHtml(card.phonetics))}</div>` : ''}
     <div class="vocab-popup-meaning">${escapeHtml(card.meaning)}</div>
-    ${(card.examples && card.examples[0]) ? `<div class="vocab-popup-example">${escapeHtml(stripBrackets(card.examples[0]))}</div>` : ''}
+    ${(card.examples||[]).map(ex=>`<div class="vocab-popup-example">${escapeHtml(stripBrackets(ex))}</div>`).join('')}
     <div style="margin-top:10px;">
       <button class="mini-toggle" onclick="togglePopupEdit(${card.id})">Edit</button>
+      ${memoLinkChip(card.word)}
     </div>
     <div id="popupEditWrap-${card.id}" style="display:none; margin-top:8px;">
       <textarea rows="4" id="popupEditArea-${card.id}" style="width:100%; box-sizing:border-box; font-size:13.5px; padding:var(--sp-1) var(--sp-4);">${escapeHtml(cardToMiniBlock(card))}</textarea>
@@ -6783,6 +6823,120 @@ async function savePopupEdit(cardId){
 
 function hideVocabPopup(){
   document.getElementById('vocabPopupOverlay').classList.remove('show');
+}
+
+/* -------------------------------------------------------------------------
+   Word -> memo. memoLinkCount already asks "how many words does this memo
+   name"; this is the same question turned around: which memos name this word.
+   A memo links a word by carrying [word] on a line of its own or inline, which
+   is exactly what memoInline turns into a link, so the two directions agree.
+   ------------------------------------------------------------------------- */
+function memosLinkingWord(word){
+  const target = String(word || '').trim().toLowerCase();
+  if(!target) return [];
+  return memos.filter(m => {
+    const found = String(m.body || '').match(/\[([^\]]+)\]/g) || [];
+    return found.some(tok => tok.slice(1, -1).trim().toLowerCase() === target);
+  }).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+}
+
+/* The chip that opens them. Drawn only when there is something behind it, so an
+   unlinked word shows no dead button. Same .mini-toggle as Edit sits in. */
+function memoLinkChip(word, fromCard){
+  const n = memosLinkingWord(word).length;
+  if(!n) return '';
+  const safe = JSON.stringify(String(word)).replace(/"/g, '&quot;');
+  return '<button class="mini-toggle" onclick="event.stopPropagation(); openWordMemos(' +
+         safe + ', ' + (fromCard ? 'true' : 'false') + '); return false;">Memo' +
+         (n > 1 ? ' (' + n + ')' : '') + '</button>';
+}
+
+/* Where the memo popup should go when its back arrow is pressed.
+   'word'  — it was opened from the word popup, so that is what returns.
+   'none'  — it was opened from the test card; there is nothing behind it. */
+let memoPopupWord = null;
+let memoPopupReturn = 'none';
+
+function openWordMemos(word, fromCard){
+  const list = memosLinkingWord(word);
+  if(!list.length) return;
+  memoPopupWord = String(word);
+  memoPopupReturn = fromCard ? 'none' : 'word';
+  // One at a time. Both overlays share a z-index, so leaving the word popup up
+  // would put whichever opened first behind the other.
+  hideVocabPopup();
+  if(list.length === 1) renderMemoPopupDetail(list[0].id);
+  else renderMemoPopupList();
+}
+
+function memoPopupChevron(){
+  return '<button class="shuffle-btn" onclick="memoPopupBack()" aria-label="Back" title="Back">' +
+         '<svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+         '<path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" ' +
+         'stroke-linecap="square" stroke-linejoin="miter"/></svg></button>';
+}
+
+function memoPopupClose(){
+  return '<button class="modal-close" onclick="hideMemoPopup()" aria-label="Close">\u2715</button>';
+}
+
+function renderMemoPopupList(){
+  const list = memosLinkingWord(memoPopupWord);
+  const rows = list.map(m => {
+    const score = memoScore(m);
+    const dot = (score === null) ? '' :
+      '<span class="status-dot ' + ['cal-blue','cal-green','cal-yellow','cal-red'][score] + '"></span>';
+    return '<div class="memo-row" onclick="renderMemoPopupDetail(' + m.id + ')">' +
+             '<span class="memo-row-title">' + dot +
+             escapeHtml(memoTitleOf(m) || '(untitled)') + '</span>' +
+             '<span class="chevron">\u25BC</span>' +
+           '</div>';
+  }).join('');
+
+  document.getElementById('memoPopup').innerHTML =
+    memoPopupClose() +
+    (memoPopupReturn === 'word' ? '<div class="memo-popup-nav">' + memoPopupChevron() + '</div>' : '') +
+    '<div class="modal-title">' + escapeHtml(memoPopupWord) + '</div>' +
+    rows;
+  document.getElementById('memoPopupOverlay').classList.add('show');
+}
+
+function renderMemoPopupDetail(id){
+  const m = memos.find(x => x.id === id);
+  if(!m) return;
+  const tag = memoTagOf(m);
+  const head = tag
+    ? '<div class="memo-tag-wrap"><div class="lbl">Tag</div>' +
+      '<div class="tagbadge">' + escapeHtml(tag) + '</div></div>'
+    : '';
+  const bodyHtml = String(m.body || '').trim()
+    ? memoBodyToHtml(m.body, head)
+    : head + '<span class="hint">Empty.</span>';
+
+  // Back only leads somewhere when there is a list behind it, or a word popup.
+  const hasBack = (memosLinkingWord(memoPopupWord).length > 1) || (memoPopupReturn === 'word');
+
+  document.getElementById('memoPopup').innerHTML =
+    memoPopupClose() +
+    (hasBack ? '<div class="memo-popup-nav">' + memoPopupChevron() + '</div>' : '') +
+    '<div class="memo-body">' + bodyHtml + '</div>';
+  document.getElementById('memoPopupOverlay').classList.add('show');
+}
+
+function memoPopupBack(){
+  // From a memo, step back to the list of memos that name this word if there
+  // was one; otherwise back to the word popup that opened it.
+  const onDetail = !!document.querySelector('#memoPopup .memo-body');
+  if(onDetail && memosLinkingWord(memoPopupWord).length > 1){
+    renderMemoPopupList();
+    return;
+  }
+  hideMemoPopup();
+  if(memoPopupReturn === 'word' && memoPopupWord) showVocabPopup(memoPopupWord);
+}
+
+function hideMemoPopup(){
+  document.getElementById('memoPopupOverlay').classList.remove('show');
 }
 
 function pRenderStack(){
@@ -6966,16 +7120,16 @@ function finishParaStackSession(){
     });
   }
   if(pStackReading){
-    // Reading keeps no record, so there are no results to show — only the two
-    // ways on from here.
-    showResultsModal([], null, linkedWords, null, pStackPara);
+    // Reading keeps no record, so there are no results to show — only the ways
+    // on from here: the next instalment, or this same text as a test.
+    showResultsModal([], null, linkedWords, findNextInSeries(pStackPara), pStackPara, true);
     return;
   }
   if(values.length === 0){
     pShowSettings();
     return;
   }
-  showResultsModal(values, retryParaStackWeakOnly, linkedWords, findNextInSeries(pStackPara));
+  showResultsModal(values, retryParaStackWeakOnly, linkedWords, findNextInSeries(pStackPara), null, false);
 }
 
 function retryParaStackWeakOnly(){

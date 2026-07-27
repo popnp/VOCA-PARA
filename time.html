@@ -27,6 +27,9 @@
     /* The gap between the header and the start of a screen. One number, used
        in exactly one place: body's padding-top. Both apps share it. */
     --gap-top:16px;
+    /* The date column in the day table. The to-do rows and the add line both
+       measure off this, so the three stay in one column. */
+    --day-col:64px;
   }
   /* Activity colours live in the JS DEFAULT_ACTIVITIES array (single source of
      truth, keyed by id). The former --c-* CSS vars were unused and had drifted
@@ -216,9 +219,11 @@
      are wedges over a white base, with the off-hours shaded. */
   .clock-wrap{
     position:relative;
-    /* Clear of the table below — the hour numbers sit right on the rim, so the
-       dial needs room or it reads as part of the table. */
-    margin:0 0 52px;   /* + the table's own 8px top margin = 60px */
+    /* The one number that sets the gap under the dial. The block below it adds
+       no top margin of its own — two margins meeting here would collapse to the
+       larger rather than add, which is what made the old note claiming 60px
+       wrong. */
+    margin:0 0 var(--sp-5);   /* 24px */
   }
   /* The date and total are laid over the dial's right side — the 00:00-06:00
      quadrant, which is shaded off-hours and rarely carries a wedge. Right
@@ -461,6 +466,116 @@
     flex:0 0 auto;
   }
   .nav-chev.flip{transform:scaleX(-1);}
+  /* ---- To-do ------------------------------------------------------------
+     Sits under the check/time table, above the buttons: content first, then
+     the controls that act on it. */
+  /* Above the table, separated from it by a rule. Layer B — this parts two
+     blocks of content; it isn't an edge you press. */
+  .todo-wrap{
+    /* No top margin: the dial's bottom margin above already sets that gap, and
+       a second one here would only ever be swallowed by it. */
+    margin-top:0;
+    padding-bottom:var(--sp-4);
+    border-bottom:0.5px solid #6B6B6B;
+  }
+  /* The blank line at the top of the list. Adds to today without opening
+     anything. Takes the app's ordinary input border (Layer B) rather than a
+     look of its own. */
+  /* Set back to the content column: past the date, not level with it. */
+  .todo-add-row{
+    display:flex; align-items:center; gap:var(--sp-2);
+    padding-left:calc(var(--sp-1) + var(--day-col) + var(--sp-2));
+    margin-top:var(--sp-2);
+  }
+  .todo-add{flex:1; min-width:0;}
+  /* The two buttons beside it. Same bare-button treatment as the ones over the
+     table, so nothing new is introduced here. */
+  .todo-btn{
+    background:none; border:none; padding:0;
+    cursor:pointer; color:#111; line-height:0;
+    flex-shrink:0;
+  }
+  .todo-btn svg{width:15.4px; height:15.4px; fill:currentColor;}
+  /* Showing today only: the switch itself says so by going quiet. */
+  .todo-btn.is-today-only{color:var(--text-muted);}
+  /* The 4px on the left is the table cell's own padding, repeated here so the
+     day in a to-do row sits in exactly the column the date above it does. */
+  .todo-row{
+    display:flex; align-items:center; gap:var(--sp-2);
+    padding:0 0 0 var(--sp-1);
+    /* A one-line row stays 24px, the day table's row height. The text's own
+       line-height is smaller than this now, so this is what holds the rhythm. */
+    min-height:24px;
+  }
+  /* Edit and delete, on the right of every line. Both are components the apps
+     already use — the Edit chip is the same .mini-toggle index puts on a word
+     card, and the ✕ is the same red icon button every other delete uses. No new
+     vocabulary here. */
+  .todo-tools{display:flex; align-items:center; gap:var(--sp-1); flex-shrink:0;}
+  /* 11px, the size every other glyph in this row-height sits at. The stock 18px
+     ✕ is drawn for a modal corner and would tower over a 24px line. */
+  .todo-tools .icon-x svg{width:11px; height:11px;}
+  .todo-tools .mini-toggle{padding:1px var(--sp-1);}
+  /* The box that replaces the line while it is being reworded. */
+  .todo-edit-input{flex:1; min-width:0;}
+  /* Same width, size and weight as .day-date in the table, so the two columns
+     line up rather than merely looking close. */
+  .todo-day{
+    font-family:var(--font-ui); font-weight:500; font-size:12.5px;
+    line-height:24px;
+    width:var(--day-col); flex-shrink:0;
+    white-space:nowrap;
+    color:#111;
+  }
+  /* No box to aim at any more — the line itself is what you press. */
+  .todo-text{
+    font-family:var(--font-ui); font-size:13.5px; font-weight:400;
+    /* Only matters once a line wraps. 13.5px of glyph inside a 24px box left
+       10.5px of air between the two halves of a wrapped item; this halves that
+       air to ~5px. Single-line rows are unaffected — .todo-row's min-height
+       still holds them at 24px. */
+    line-height:18px; color:#111;
+    flex:1; min-width:0; overflow-wrap:anywhere;
+    cursor:pointer;
+  }
+  /* Importance, written as stars in the text. Two: bold and red. One: bold.
+     None: exactly as before, so the ordinary case gains no decoration. */
+  .todo-text.p2{font-weight:600; color:var(--rust);}
+  .todo-text.p1{font-weight:600;}
+  /* Struck through, not faded. Fading it would read as "can't press this" —
+     that is what :disabled looks like everywhere else in both apps. */
+  .todo-row.is-done .todo-text{text-decoration:line-through;}
+  /* Not from today: the whole line steps back to grey. Weight still carries
+     the importance, so a left-over urgent item stays bold. */
+  .todo-row.is-past .todo-day,
+  .todo-row.is-past .todo-text{color:var(--text-muted);}
+  .todo-edit-row.is-done input[type="text"]{text-decoration:line-through;}
+  /* Kept only inside the day editor, where the text is in a box being typed
+     into and so can't double as the button. */
+  .todo-check{
+    appearance:none; -webkit-appearance:none;
+    width:16px; height:16px;
+    border:1px solid #111;
+    border-radius:0;
+    background:transparent;
+    cursor:pointer;
+    position:relative;
+    flex-shrink:0;
+    margin:0;
+    margin-top:2px;
+  }
+  .todo-check:checked{background:#111; border-color:#111;}
+  .todo-check:checked::after{
+    content:'';
+    position:absolute;
+    left:5px; top:2px;
+    width:4px; height:8px;
+    border:solid #fff;
+    border-width:0 2px 2px 0;
+    transform:rotate(45deg);
+  }
+  .todo-edit-row{display:flex; align-items:center; gap:var(--sp-2); margin-bottom:var(--sp-2);}
+  .todo-edit-row input[type="text"]{flex:1; min-width:0;}
   .dp-nav{
     font-family:var(--font-ui);
     font-size:15px;
@@ -531,6 +646,15 @@
   }
   .check-cell.off::before{transform:translate(-50%,-50%) rotate(45deg);}
   .check-cell.off::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  /* Marked to be done: an empty square with a black edge. Deliberately not
+     filled — a filled square already means "this happened", and the whole point
+     of this one is that it hasn't yet. Layer A: 1px #111, the same as every
+     other line you are meant to act on, and the same 1px the other states carry
+     as a transparent spacer, so nothing shifts when it turns on. */
+  .check-cell.planned{
+    background:transparent !important;
+    border:1px solid #111;
+  }
 
   /* ---- Mode 2: timeline bars ---- */
   .tick-head{padding-left:0 !important; padding-right:0 !important;}
@@ -882,6 +1006,10 @@
        revealing the second tier can't push the table up and down. -->
   <div class="clock-wrap" id="clockWrap"></div>
 
+  <!-- The list sits above the table now, with a rule between the two. It always
+       shows: the blank add line is content, so this is not the empty-box case. -->
+  <div class="todo-wrap" id="todoWrap"></div>
+
   <table class="day-table">
     <thead id="dayHead"></thead>
     <tbody id="dayBody"></tbody>
@@ -969,7 +1097,7 @@
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-26r</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27d</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -1057,6 +1185,9 @@
       </button>
     </div>
     <p class="hint" style="margin:-8px 0 14px;">Times for this one activity. Add a row if you paused and came back.</p>
+    <div style="margin-bottom:14px;">
+      <button class="mini-toggle" id="actPlanBtn" onclick="togglePlanFromActEditor()">To do</button>
+    </div>
     <div id="actSegRows"></div>
     <button class="mini-toggle" style="margin-top:7px;" onclick="addActSegRow()">+ add</button>
     <div id="actWarn" class="seg-warn" style="margin-top:12px;"></div>
@@ -1068,6 +1199,39 @@
 </div>
 
 <!-- ================= Day editor modal ================= -->
+<div id="addKindOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <p class="modal-title">Add to a day</p>
+      <button class="icon-x" onclick="closeAddKind()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+    <p class="hint" style="margin:-8px 0 14px;">Then choose the day.</p>
+    <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="pickAddKind('time')">Time</button>
+      <button class="btn btn-primary" onclick="pickAddKind('todo')">To-do</button>
+    </div>
+  </div>
+</div>
+
+<div id="todoOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <p class="modal-title" id="todoModalTitle">Date</p>
+      <button class="icon-x" onclick="closeTodoEditor()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+    <p class="hint" style="margin:-8px 0 14px;">Only whether it is done is kept — no times.</p>
+    <div id="todoEditList"></div>
+    <div class="todo-edit-row" style="margin-top:var(--sp-3);">
+      <input type="text" id="todoNewInput" placeholder="New item" onkeydown="if(event.key==='Enter'){event.preventDefault();addTodoItem();}">
+      <button class="btn btn-primary" onclick="addTodoItem()">Add</button>
+    </div>
+  </div>
+</div>
+
 <div id="dayOverlay" class="modal-overlay">
   <div class="modal-box">
     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -1182,6 +1346,11 @@ const SUPABASE_URL = 'https://nwjrjptiugewhmxixxix.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53anJqcHRpdWdld2hteGl4eGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MTg2MDIsImV4cCI6MjEwMDM5NDYwMn0.Un6oOpn3iKeMXssTNQmOszHiYxaKFxamTp_oPDaZ42I';
 const SYNC_ID_KEY = 'voca-sync-id';   // shared with the Voca/Para app on purpose
 const DATA_KEY = 'time-entries';
+/* To-dos live apart from `days`. A day's record is a map of activity id ->
+   time spans, so a `todos` key inside it would sit where an activity id is
+   expected and every loop over that map would have to learn about it. */
+const TODO_KEY = 'time-todos';
+const PLAN_KEY = 'time-plans';
 
 function getSyncId(){
   let id = null;
@@ -1283,6 +1452,14 @@ function cloudStatus(ok){
    maths trivial and avoids timezone drift entirely.
    ========================================================================= */
 let days = {};
+/* {'260726': [{id, text, done, doneAt}]}. `doneAt` is the day it was ticked,
+   which is what lets a leftover from an earlier day stay on screen for the
+   rest of the day it was finished on instead of vanishing under the finger. */
+let todos = {};
+/* Activities marked "do this today" on a given day: {code: [actId, ...]}.
+   Only ever a marker — no times, no history. Kept apart from days so recorded
+   time is never touched by it. */
+let plans = {};
 let currentGroup = 'all';
 let currentAct = 'all';   // second tier: a single activity within the group
 let currentMode = 'check';
@@ -1404,9 +1581,29 @@ function isWeekendCode(code){
   const w = dayOfWeekFromCode(code);
   return w === 0 || w === 6;
 }
+function codeToDate(code){
+  const s = String(code);
+  return new Date(2000 + parseInt(s.slice(0,2),10), parseInt(s.slice(2,4),10) - 1,
+                  parseInt(s.slice(4,6),10));
+}
+
+/* Whole days between a date and today. Both ends are set to local midnight by
+   codeToDate, so this is a plain day count and never drifts by an hour. */
+function daysBefore(code){
+  return Math.round((codeToDate(todayCode()) - codeToDate(code)) / 86400000);
+}
+
+/* The nearest three days are named rather than numbered — a word is read at a
+   glance where "7. 26" has to be worked out. Anything older keeps the number,
+   since there is no short name for it. One function, so the table, the to-do
+   list and every modal title say the same thing. */
 function formatDayLabel(code){
   const s = String(code);
   if(!/^\d{6}$/.test(s)) return s;
+  const n = daysBefore(s);
+  if(n === 0) return '오늘';
+  if(n === 1) return '어제';
+  if(n === 2) return '그저께';
   return parseInt(s.slice(2,4),10) + '. ' + parseInt(s.slice(4,6),10);
 }
 
@@ -1621,6 +1818,9 @@ function renderDays(){
 
   // The clock rides along with the table — same data, same filter, both modes.
   renderClock();
+  // So does the to-do list. Hanging it here rather than on the callers means a
+  // screen can't be drawn with the table refreshed and the list stale.
+  renderTodos();
 }
 
 /* -------------------------------------------------------------------------
@@ -1670,15 +1870,20 @@ function clockWedgePath(a0, a1, r){
          `A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
 }
 
-/* Which day the clock shows: today if it has anything recorded, otherwise the
-   most recent day that does. Keeps the chart from being blank first thing. */
+/* The clock always shows today. It used to fall back to the most recent day
+   with anything on it so the dial wouldn't start out empty, but that made the
+   figure above it ambiguous — first thing in the morning it was yesterday's
+   total while reading as if it were now. An empty dial saying 0m is the honest
+   answer, and the day fills in as it goes. The total below is the same day's,
+   since everything here reads from this one function. */
 function clockCode(){
-  const t = todayCode();
-  if(flatSegments(t, false).length) return t;
-  const codes = allCodes();
-  for(const c of codes){ if(flatSegments(c, false).length) return c; }
-  return t;
+  return todayCode();
 }
+
+/* The day the dial was last drawn for. Left open past midnight the dial would
+   otherwise keep yesterday on screen, which is exactly what "always today" is
+   meant to rule out. The half-minute tick below notices and redraws. */
+let clockShownCode = null;
 
 /* Saved minutes for a day, counting only activities the filter is showing —
    the same basis the dial's wedges are drawn from. Shared so the once-a-second
@@ -1767,6 +1972,7 @@ function renderClock(){
   if(!wrap) return;
 
   const code = clockCode();
+  clockShownCode = code;
   const segs = flatSegments(code, true).slice().sort((a,b) => a.s - b.s);
   const total = dayVisibleMins(code);
 
@@ -1846,9 +2052,16 @@ function checkCellsHtml(code){
     const tip = actDisplay(a) + (segs.length ? ' — ' + fmtDur(mins) : ' — none');
     const newGroup = i > 0 && ACTIVITIES[i-1].group !== a.group;
     const gap = newGroup ? '<td class="group-gap"></td>' : '';
+    const planned = !has && shown && isPlanned(code, a.id);
+    const cls = 'check-cell' + (has ? '' : (planned ? ' planned' : ' off')) +
+                (shown ? '' : ' dimmed');
+    // Every square opens the editor, full or empty — that is the quickest way
+    // in and it was a mistake to take it away. The marker is set inside the
+    // editor instead, next to the times it is a promise about.
+    const label = has ? tip : (planned ? actDisplay(a) + ' — to do' : tip);
     return gap + `<td class="act-col">` +
-      `<span class="check-cell${has?'':' off'}${shown?'':' dimmed'}" style="${has?`background:${a.color}`:''}"` +
-      ` title="${tip}" onclick="openActEditor('${code}','${a.id}')"></span>` +
+      `<span class="${cls}" style="${has?`background:${a.color}`:''}"` +
+      ` title="${label}" onclick="openActEditor('${code}','${a.id}')"></span>` +
       `</td>`;
   }).join('');
 }
@@ -1958,7 +2171,8 @@ function dpPick(code){
     closeDatePicker();
   } else {
     closeDatePicker();
-    openDayEditor(code);
+    if(dpAddKind === 'todo') openTodoEditor(code);
+    else openDayEditor(code);
   }
 }
 
@@ -1990,7 +2204,7 @@ function renderDatePicker(){
     if(dow === 0 || dow === 6) cls.push('weekend');
     if(code === today) cls.push('today');
     if(code === chosen) cls.push('chosen');
-    if(days[code]) cls.push('has-data');
+    if(days[code] || todosFor(code).length) cls.push('has-data');
     html += `<button class="${cls.join(' ')}" onclick="dpPick('${code}')">${d}</button>`;
   }
   // Pad the final week so the grid keeps its shape.
@@ -2002,15 +2216,349 @@ function renderDatePicker(){
   document.getElementById('dpDays').innerHTML = html;
 }
 
-/* The header "+" opens the picker in a mode where choosing a day goes
-   straight into that day's editor, instead of filling a field first. */
+/* The header "+" asks what is being added first, then shows the calendar. The
+   branch comes before the date because the two paths land in different
+   editors; picking a day and only then being asked would mean the calendar had
+   to be shown without knowing what it was for. */
+let dpAddKind = 'time';
+
 function openAddDate(){
-  dpTargetId = null;          // null target = jump to the editor on pick
+  document.getElementById('addKindOverlay').classList.add('show');
+}
+
+function closeAddKind(){
+  document.getElementById('addKindOverlay').classList.remove('show');
+}
+
+function pickAddKind(kind){
+  dpAddKind = (kind === 'todo') ? 'todo' : 'time';
+  closeAddKind();
+  dpTargetId = null;          // null target = jump to an editor on pick
   const cur = todayCode();
   dpYear = 2000 + parseInt(cur.slice(0,2),10);
   dpMonth = parseInt(cur.slice(2,4),10) - 1;
   renderDatePicker();
   document.getElementById('dateOverlay').classList.add('show');
+}
+
+/* =========================================================================
+   To-do. One list per day, and the only thing recorded about an item is
+   whether it is done — no times, no history. Kept in its own store so the
+   activity records are untouched by it.
+   ========================================================================= */
+function escapeHtmlT(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function todosFor(code){
+  return Array.isArray(todos[code]) ? todos[code] : [];
+}
+
+function todoById(code, id){
+  return todosFor(code).find(t => t.id === id) || null;
+}
+
+/* Importance is written into the line itself, as stars. Two or more is the top
+   band, one is the middle, none is ordinary. The stars are a marker rather than
+   part of what was written, so they come out again before the line is drawn. */
+function todoLevel(text){
+  const n = (String(text || '').match(/\*/g) || []).length;
+  return n >= 2 ? 2 : (n === 1 ? 1 : 0);
+}
+
+function todoDisplayText(text){
+  return String(text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/* What the main screen lists: today's items, plus anything still unfinished
+   from an earlier day. A leftover ticked today stays on screen until tomorrow
+   rather than disappearing the instant it is pressed.
+
+   Order is importance first, then date within each band — so every two-star
+   item appears before any one-star item, and inside a band today leads,
+   yesterday follows, and so on back. Date codes are YYMMDD, so plain string
+   comparison is date comparison. */
+function mainTodoRows(){
+  const today = todayCode();
+  const rows = [];
+  Object.keys(todos).forEach(c => {
+    if(c > today) return;              // a day still ahead waits its turn
+    const carried = c < today;
+    if(carried && todoTodayOnly) return;
+    todosFor(c).forEach(t => {
+      if(carried && t.done && t.doneAt !== today) return;
+      rows.push({code: c, t, carried, level: todoLevel(t.text)});
+    });
+  });
+  rows.sort((a, b) =>
+    (b.level - a.level) ||
+    (a.code < b.code ? 1 : a.code > b.code ? -1 : 0));
+  return rows;
+}
+
+function renderTodos(){
+  const wrap = document.getElementById('todoWrap');
+  if(!wrap) return;
+  const rows = mainTodoRows();
+
+  // Anything half-typed survives the redraw. Ticking an item rewrites this
+  // whole block, and losing a line mid-sentence because of that would be its
+  // own small disaster.
+  const prev = document.getElementById('todoQuickAdd');
+  const kept = prev ? prev.value : '';
+  const hadFocus = prev && document.activeElement === prev;
+
+  // The add line is always present, so the block never collapses. That box is
+  // content in its own right — this is not the empty-container case. Nothing
+  // sets display here on purpose: no inline value to wipe later.
+  const addRow =
+    '<div class="todo-add-row">' +
+      '<input type="text" class="todo-add" id="todoQuickAdd"' +
+        ' onkeydown="todoQuickAddKey(event)" aria-label="Add to today\'s list">' +
+      '<button class="todo-btn" onclick="todoAddFromBox()" aria-label="Add" title="Add">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<rect x="10.8" y="3" width="2.4" height="18"/>' +
+        '<rect x="3" y="10.8" width="18" height="2.4"/></svg>' +
+      '</button>' +
+      '<button class="todo-btn' + (todoTodayOnly ? ' is-today-only' : '') + '"' +
+        ' onclick="toggleTodoScope()"' +
+        ' aria-label="' + (todoTodayOnly ? 'Show earlier days' : 'Show today only') + '"' +
+        ' title="' + (todoTodayOnly ? 'Today only — tap for earlier days'
+                                    : 'Earlier days shown — tap for today only') + '">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M6.4 7.2 L2.8 10.8 L6.4 14.4 Z"/>' +
+        '<path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>' +
+        '<rect x="4.6" y="9.6" width="14.8" height="2.4"/></svg>' +
+      '</button>' +
+    '</div>';
+
+  wrap.innerHTML =
+    rows.map(r => {
+      const key = r.code + '|' + r.t.id;
+      const middle = (todoEditingKey === key)
+        ? '<input type="text" class="todo-edit-input" value="' + escapeHtmlT(r.t.text) + '"' +
+            ' onkeydown="todoRenameKey(event,\'' + r.code + '\',\'' + r.t.id + '\')"' +
+            ' onblur="todoRenameCommit(this,\'' + r.code + '\',\'' + r.t.id + '\')"' +
+            ' aria-label="Reword this item">'
+        : '<span class="todo-text' + (r.level ? ' p' + r.level : '') + '"' +
+            ' onclick="toggleTodo(\'' + r.code + '\',\'' + r.t.id + '\')"' +
+            ' role="button" tabindex="0">' +
+            escapeHtmlT(todoDisplayText(r.t.text)) +
+          '</span>';
+      return '<div class="todo-row' + (r.t.done ? ' is-done' : '') +
+        (r.carried ? ' is-past' : '') + '">' +
+        '<span class="todo-day">' + escapeHtmlT(formatDayLabel(r.code)) + '</span>' +
+        middle +
+        '<span class="todo-tools">' +
+          '<button class="mini-toggle' + (todoEditingKey === key ? ' active' : '') + '"' +
+            ' onclick="todoStartEdit(\'' + r.code + '\',\'' + r.t.id + '\')"' +
+            ' title="Reword">Edit</button>' +
+          '<button class="icon-x" onclick="todoDeleteRow(\'' + r.code + '\',\'' + r.t.id + '\', this)"' +
+            ' aria-label="Delete" title="Delete">' +
+            '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+            '<path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>' +
+          '</button>' +
+        '</span>' +
+      '</div>';
+    }).join('') + addRow;
+
+  const box = document.getElementById('todoQuickAdd');
+  if(box){
+    box.value = kept;
+    if(hadFocus) box.focus();
+  }
+}
+
+/* Which line is open for rewording, as 'code|id'. Only ever one at a time. */
+let todoEditingKey = null;
+
+function todoStartEdit(code, id){
+  const key = code + '|' + id;
+  todoEditingKey = (todoEditingKey === key) ? null : key;
+  renderTodos();
+  const box = document.querySelector('#todoWrap .todo-edit-input');
+  if(box){ box.focus(); box.select(); }
+}
+
+/* Enter keeps it, Escape drops it. Blur keeps it too, so tapping elsewhere on a
+   phone doesn't quietly throw the wording away. */
+function todoRenameKey(ev, code, id){
+  if(ev.key === 'Enter'){ ev.preventDefault(); todoRenameCommit(ev.target, code, id); return; }
+  if(ev.key === 'Escape'){ ev.preventDefault(); todoEditingKey = null; renderTodos(); }
+}
+
+async function todoRenameCommit(el, code, id){
+  if(todoEditingKey === null) return;         // already closed by Escape
+  const t = todoById(code, id);
+  const text = String(el.value || '').trim();
+  todoEditingKey = null;
+  // An emptied box is not a delete — the ✕ is. Leave the wording alone.
+  if(t && text) t.text = text;
+  await saveTodos();
+  renderTodos();
+  renderDatePickerIfOpen();
+}
+
+/* Two presses, like every other delete in both apps: the first draws the red
+   dotted line under the icon, the second removes the item. */
+async function todoDeleteRow(code, id, el){
+  if(!askConfirm('Delete this item?', el, false)) return;
+  const list = todosFor(code);
+  const i = list.findIndex(t => t.id === id);
+  if(i === -1) return;
+  list.splice(i, 1);
+  if(!list.length) delete todos[code];
+  if(todoEditingKey === code + '|' + id) todoEditingKey = null;
+  await saveTodos();
+  renderTodos();
+  // Only if that day's editor happens to be open behind this.
+  if(todoEditCode) renderTodoEditor();
+  renderDatePickerIfOpen();
+}
+
+/* Whether the list is showing leftovers from earlier days or today alone.
+   Not saved: it is a way of looking at the list, not part of it. */
+let todoTodayOnly = false;
+
+function toggleTodoScope(){
+  todoTodayOnly = !todoTodayOnly;
+  renderTodos();
+}
+
+/* Enter on the blank top line files the item under today. */
+function todoQuickAddKey(ev){
+  if(ev.key !== 'Enter') return;
+  ev.preventDefault();
+  todoAddFromBox();
+}
+
+/* The + beside the box does exactly what Enter does — the same path, so the
+   two can't drift. It exists for a thumb, which has no Enter key. */
+async function todoAddFromBox(){
+  const box = document.getElementById('todoQuickAdd');
+  if(!box) return;
+  const text = String(box.value || '').trim();
+  if(!text) return;
+  const code = todayCode();
+  if(!Array.isArray(todos[code])) todos[code] = [];
+  todos[code].push({
+    id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    text, done: false, doneAt: null
+  });
+  box.value = '';
+  await saveTodos();
+  renderTodos();
+  renderDatePickerIfOpen();
+  const again = document.getElementById('todoQuickAdd');
+  if(again) again.focus();
+}
+
+async function toggleTodo(code, id){
+  const t = todoById(code, id);
+  if(!t) return;
+  t.done = !t.done;
+  t.doneAt = t.done ? todayCode() : null;
+  await saveTodos();
+  renderTodos();
+  renderDatePickerIfOpen();
+}
+
+/* ---- The editor for one day ---- */
+let todoEditCode = null;
+
+function openTodoEditor(code){
+  todoEditCode = code;
+  document.getElementById('todoModalTitle').textContent =
+    formatDayLabel(code) + '  (' + ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayOfWeekFromCode(code) ?? 0] + ')';
+  document.getElementById('todoNewInput').value = '';
+  renderTodoEditor();
+  document.getElementById('todoOverlay').classList.add('show');
+}
+
+function closeTodoEditor(){
+  document.getElementById('todoOverlay').classList.remove('show');
+  todoEditCode = null;
+}
+
+function renderTodoEditor(){
+  const list = document.getElementById('todoEditList');
+  if(!list) return;
+  const items = todosFor(todoEditCode);
+  if(!items.length){
+    list.innerHTML = '<p class="hint">Nothing yet.</p>';
+    return;
+  }
+  list.innerHTML = items.map(t =>
+    '<div class="todo-edit-row' + (t.done ? ' is-done' : '') + '">' +
+      '<input type="checkbox" class="todo-check"' + (t.done ? ' checked' : '') +
+        ' onchange="toggleTodoInEditor(\'' + t.id + '\')" aria-label="Done">' +
+      '<input type="text" value="' + escapeHtmlT(t.text) + '"' +
+        ' onchange="renameTodo(\'' + t.id + '\', this.value)">' +
+      '<button class="icon-x" onclick="deleteTodo(\'' + t.id + '\', this)"' +
+        ' aria-label="Delete" title="Delete">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>' +
+      '</button>' +
+    '</div>'
+  ).join('');
+}
+
+async function addTodoItem(){
+  const input = document.getElementById('todoNewInput');
+  const text = String(input.value || '').trim();
+  if(!text || !todoEditCode) return;
+  if(!Array.isArray(todos[todoEditCode])) todos[todoEditCode] = [];
+  todos[todoEditCode].push({
+    id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    text, done: false, doneAt: null
+  });
+  input.value = '';
+  await saveTodos();
+  renderTodoEditor();
+  renderTodos();
+  renderDatePickerIfOpen();
+  input.focus();
+}
+
+async function toggleTodoInEditor(id){
+  const t = todoById(todoEditCode, id);
+  if(!t) return;
+  t.done = !t.done;
+  t.doneAt = t.done ? todayCode() : null;
+  await saveTodos();
+  renderTodoEditor();
+  renderTodos();
+}
+
+async function renameTodo(id, value){
+  const t = todoById(todoEditCode, id);
+  if(!t) return;
+  const text = String(value || '').trim();
+  if(!text) return;              // emptying the box isn't a delete; X is
+  t.text = text;
+  await saveTodos();
+  renderTodos();
+}
+
+/* Two presses, no wording change — the icon holds an svg and writing text into
+   it would wipe the icon for good. */
+async function deleteTodo(id, el){
+  if(!askConfirm('Delete this item?', el, false)) return;
+  const list = todosFor(todoEditCode);
+  const i = list.findIndex(t => t.id === id);
+  if(i === -1) return;
+  list.splice(i, 1);
+  if(!list.length) delete todos[todoEditCode];
+  await saveTodos();
+  renderTodoEditor();
+  renderTodos();
+  renderDatePickerIfOpen();
+}
+
+/* The picker marks days that hold something; a day with only to-dos counts. */
+function renderDatePickerIfOpen(){
+  if(document.getElementById('dateOverlay').classList.contains('show')) renderDatePicker();
 }
 
 /* Editing a single activity on a single day. Reached by tapping its colour
@@ -2028,7 +2576,23 @@ function openActEditor(code, actId){
   document.getElementById('actSegRows').innerHTML =
     (segs.length ? segs : [null]).map(seg => segRowHtml(actId, 0, seg)).join('');
   document.getElementById('actWarn').textContent = '';
+  syncActPlanBtn();
   document.getElementById('actOverlay').classList.add('show');
+}
+
+/* The marker lives here now rather than on the square itself, so tapping a
+   square still does the obvious thing — open it. */
+function syncActPlanBtn(){
+  const btn = document.getElementById('actPlanBtn');
+  if(!btn) return;
+  const on = isPlanned(editingCode, editingAct);
+  btn.classList.toggle('active', on);
+  btn.title = on ? 'Marked to do — tap to unmark' : 'Mark as something to do';
+}
+
+async function togglePlanFromActEditor(){
+  await togglePlan(editingCode, editingAct);
+  syncActPlanBtn();
 }
 
 function closeActEditor(){
@@ -2145,10 +2709,24 @@ function renderDayEditor(){
           <span class="act-sum">${sum?fmtDur(sum):''}</span>
         </div>
         <div id="segs-${a.id}">${rows}</div>
-        <button class="mini-toggle" style="margin-top:7px;" onclick="addSegRow('${a.id}')">+ add</button>
+        <div style="display:flex; gap:var(--sp-2); margin-top:7px; flex-wrap:wrap;">
+          <button class="mini-toggle" onclick="addSegRow('${a.id}')">+ add</button>
+          <button class="mini-toggle${isPlanned(code, a.id)?' active':''}"
+                  onclick="togglePlanFromDayEditor('${a.id}')">To do</button>
+        </div>
       </div>`;
   }).join('');
   document.getElementById('dayWarn').textContent = '';
+}
+
+/* Redrawing the whole editor here would throw away any half-typed time rows,
+   so only the chip that was pressed changes. */
+async function togglePlanFromDayEditor(actId){
+  await togglePlan(editingCode, actId);
+  const wrap = document.getElementById('dayActList');
+  const btn = wrap && wrap.querySelector(
+    '.act-block[data-act="' + actId + '"] .mini-toggle:last-child');
+  if(btn) btn.classList.toggle('active', isPlanned(editingCode, actId));
 }
 
 function segRowHtml(actId, idx, seg){
@@ -2379,6 +2957,9 @@ function swTick(){
 /* Advances the current-time dot. Cheap enough to call often — it replaces one
    circle rather than redrawing the dial. */
 function moveNowMarker(){
+  // Midnight passed with the page still open: the whole day changed, so the
+  // wedges and the total are redrawn, not just the dot.
+  if(clockShownCode !== null && clockShownCode !== todayCode()){ renderDays(); return; }
   const m = document.getElementById('clockNowMark');
   if(m) m.innerHTML = nowMarkerHtml(clockCode());
 }
@@ -2610,6 +3191,78 @@ async function loadData(){
   }
 }
 
+async function saveTodos(){
+  try{
+    await appStorage.set(TODO_KEY, JSON.stringify(todos));
+  }catch(e){
+    alert('Could not save. Your data is still on this device.');
+  }
+}
+
+async function savePlans(){
+  try{
+    await appStorage.set(PLAN_KEY, JSON.stringify(plans));
+  }catch(e){
+    alert('Could not save. Your data is still on this device.');
+  }
+}
+
+async function loadPlans(){
+  try{
+    const res = await appStorage.get(PLAN_KEY);
+    plans = res && res.value ? (JSON.parse(res.value) || {}) : {};
+  }catch(e){
+    console.warn('plan load failed', e);
+    plans = {};
+  }
+  if(!plans || typeof plans !== 'object') plans = {};
+  Object.keys(plans).forEach(code => {
+    if(!Array.isArray(plans[code])){ delete plans[code]; return; }
+    plans[code] = plans[code].filter(id => typeof id === 'string' && id);
+    if(!plans[code].length) delete plans[code];
+  });
+}
+
+function isPlanned(code, actId){
+  return Array.isArray(plans[code]) && plans[code].indexOf(actId) !== -1;
+}
+
+/* An empty square is the only one this reaches: a square with time in it opens
+   the editor instead, since there is something there to edit. */
+async function togglePlan(code, actId){
+  if(!Array.isArray(plans[code])) plans[code] = [];
+  const i = plans[code].indexOf(actId);
+  if(i === -1) plans[code].push(actId);
+  else plans[code].splice(i, 1);
+  if(!plans[code].length) delete plans[code];
+  await savePlans();
+  renderDays();
+}
+
+async function loadTodos(){
+  try{
+    const res = await appStorage.get(TODO_KEY);
+    todos = res && res.value ? (JSON.parse(res.value) || {}) : {};
+  }catch(e){
+    console.warn('todo load failed', e);
+    todos = {};
+  }
+  if(!todos || typeof todos !== 'object') todos = {};
+  // Guard against a half-written record, the same way the memo list does.
+  Object.keys(todos).forEach(code => {
+    if(!Array.isArray(todos[code])){ delete todos[code]; return; }
+    todos[code] = todos[code]
+      .filter(t => t && typeof t === 'object' && String(t.text || '').trim())
+      .map(t => ({
+        id: t.id || ('t_' + Date.now() + '_' + Math.random().toString(36).slice(2,7)),
+        text: String(t.text),
+        done: !!t.done,
+        doneAt: t.doneAt || (t.done ? code : null)
+      }));
+    if(!todos[code].length) delete todos[code];
+  });
+}
+
 /* =========================================================================
    Sync controls
    ========================================================================= */
@@ -2724,7 +3377,7 @@ async function resetColors(el){
 function refreshAll(){
   renderColorRows();
   renderGroupRow();
-  renderDays();
+  renderDays();          // draws the dial and the to-do list too
   swRender();
 }
 
@@ -2775,14 +3428,33 @@ function buildTxt(){
     ['#', a.short, groupLabelOf(a.group), a.color.toUpperCase(), a.id].join('\t')
   );
   lines.push('');
-  Object.keys(days).sort().forEach(code => {
-    const d = days[code];
+  /* Every day that holds anything — time, to-dos, or both. A day with only
+     to-dos has to appear too, or it would be dropped on the next restore.
+     To-do lines are marked with * so they can never be read as an activity.
+     Not carried: which day an item was ticked on. On import a finished item is
+     filed under the day it is written beneath. */
+  const codes = Object.keys(days)
+    .concat(Object.keys(todos))
+    .concat(Object.keys(plans));
+  Array.from(new Set(codes)).sort().forEach(code => {
+    const d = days[code] || {};
     const body = ACTIVITIES
       .filter(a => (d[a.id]||[]).length)
       .map(a => a.short + ' ' + d[a.id].map(s => minToHHMM(s.s)+'-'+minToHHMM(s.e)).join(', '));
-    if(!body.length) return;
+    const todoLines = todosFor(code)
+      .map(t => '* [' + (t.done ? 'x' : ' ') + '] ' + t.text);
+    /* Squares marked to be done, as one '+' line of activity abbreviations.
+       A day holding nothing but these still has to be written out, or the
+       marks would vanish on the next restore. */
+    const marked = (plans[code] || [])
+      .map(id => (actById(id) || {}).short)
+      .filter(Boolean);
+    const planLines = marked.length ? ['+ ' + marked.join(' ')] : [];
+    if(!body.length && !todoLines.length && !planLines.length) return;
     lines.push('[' + code + ']');
     lines.push(...body);
+    lines.push(...planLines);
+    lines.push(...todoLines);
     lines.push('');
   });
   return lines.join('\n');
@@ -2811,6 +3483,8 @@ function closeImport(){
 
 function parseTxt(raw){
   const out = {};
+  const todoOut = {};
+  const planOut = {};
   const errors = [];
   const defs = [];          // activity definitions found in the file
   let code = null;
@@ -2837,6 +3511,35 @@ function parseTxt(raw){
     const head = /^\[(\d{6})\]$/.exec(t);
     if(head){ code = head[1]; out[code] = out[code] || {}; return; }
     if(!code){ errors.push('Line ' + (i+1) + ': no [date] above this.'); return; }
+
+    // '* [ ] text' / '* [x] text' — a to-do. Read before the activity match,
+    // since '*' is not an activity and would otherwise be reported as unknown.
+    const td = /^\*\s*\[([ xX]?)\]\s*(.*)$/.exec(t);
+    if(td){
+      const text = td[2].trim();
+      if(!text){ errors.push('Line ' + (i+1) + ': to-do has no text.'); return; }
+      const done = td[1].toLowerCase() === 'x';
+      todoOut[code] = todoOut[code] || [];
+      todoOut[code].push({
+        id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        text, done, doneAt: done ? code : null
+      });
+      return;
+    }
+
+    // '+ S R PV' — squares marked to be done. Read before the activity match,
+    // since '+' is not an activity name.
+    if(t.startsWith('+')){
+      t.replace(/^\+\s*/, '').split(/\s+/).filter(Boolean).forEach(tok => {
+        const fromFile = defs.find(dd => dd.short.toLowerCase() === tok.toLowerCase());
+        const a = fromFile ? {id: fromFile.id || ('a_' + fromFile.short.toLowerCase())} : actByToken(tok);
+        if(!a){ errors.push('Line ' + (i+1) + ': unknown activity "' + tok + '".'); return; }
+        planOut[code] = planOut[code] || [];
+        if(planOut[code].indexOf(a.id) === -1) planOut[code].push(a.id);
+      });
+      return;
+    }
+
     const m = /^(\S+)\s+(.*)$/.exec(t);
     if(!m){ errors.push('Line ' + (i+1) + ': could not read.'); return; }
     // Definitions in this file take priority, so a file naming an activity the
@@ -2860,7 +3563,7 @@ function parseTxt(raw){
       out[code][act.id] = segs;
     }
   });
-  return {data:out, errors, defs};
+  return {data:out, todoData:todoOut, planData:planOut, errors, defs};
 }
 
 /* Rebuild ACTIVITIES from definition lines, keeping ids stable so the imported
@@ -2886,7 +3589,7 @@ function activitiesFromDefs(defs){
 }
 
 async function applyImport(){
-  const {data, errors, defs} = parseTxt(document.getElementById('importArea').value);
+  const {data, todoData, planData, errors, defs} = parseTxt(document.getElementById('importArea').value);
   const msg = document.getElementById('importMsg');
   if(errors.length){
     msg.textContent = errors.slice(0,5).join('  ') + (errors.length>5 ? ` (+${errors.length-5} more)` : '');
@@ -2905,7 +3608,11 @@ async function applyImport(){
     await saveActivities();
   }
   days = data;
+  todos = todoData;
+  plans = planData;
   await saveData();
+  await saveTodos();
+  await savePlans();
   closeImport();
   refreshAll();
   msg.textContent = '';
@@ -2967,7 +3674,7 @@ if(sw.startedAt) swTimer = setInterval(swTick, 1000);
 // The current-time marker advances whether or not a stopwatch is running.
 setInterval(moveNowMarker, 30000);
 
-Promise.all([loadData(), loadActivities()]).then(() => {
+Promise.all([loadData(), loadTodos(), loadPlans(), loadActivities()]).then(() => {
   document.getElementById('mainHeader').style.display = '';
   renderGroupRow();
   setMode('check');
