@@ -255,18 +255,22 @@
     font-family:var(--font-ui);
     font-size:12.5px;
     font-weight:300;
-    color:var(--text-muted);
-    cursor:pointer;
+    color:var(--text-dark);
     pointer-events:auto;
     font-variant-numeric:tabular-nums;
+    cursor:default;
   }
-  /* Looking at some other day: the date speaks up, and pressing it comes home. */
-  .clock-date.is-away{color:var(--text-dark); text-decoration:underline;}
+  /* Away from today it becomes the way back, but says so by being pressable
+     rather than by growing a line under itself. */
+  .clock-date.is-away{cursor:pointer;}
   /* The stopwatch, moved down out of the header and drawn as a plus. Same
      pointer-events exception the date needs, for the same reason. */
+  /* Hidden while a session is on the clock: the header has become the stopwatch
+     by then, and a second way in would only be confusing. It returns the moment
+     the session is saved or thrown away. */
   .clock-add{
     display:block;
-    margin:var(--sp-1) 0 0 auto;
+    margin:0 0 var(--sp-1) auto;
     padding:0;
     border:none; background:none;
     cursor:pointer; color:#111; line-height:0;
@@ -512,8 +516,9 @@
     /* No top margin: the dial's bottom margin above already sets that gap, and
        a second one here would only ever be swallowed by it. */
     margin-top:0;
-    padding-bottom:var(--sp-4);
-    border-bottom:0.5px solid #6B6B6B;
+    /* Space rather than a line. The table below adds its own 8px, and margins
+       between siblings collapse, so this is the number that decides. */
+    margin-bottom:var(--sp-6);
   }
   /* The blank line at the top of the list. Adds to today without opening
      anything. Takes the app's ordinary input border (Layer B) rather than a
@@ -526,7 +531,10 @@
   }
   /* Bare until you go near it, exactly like the activity name box in Options:
      no edge at rest, grey on hover, black while being typed into. */
-  .todo-add{
+  /* Written as input[type=...] on purpose: the blanket rule for text inputs is
+     one step more specific than a bare class and was quietly winning, which is
+     why this box kept its grey edge. */
+  input[type="text"].todo-add{
     flex:1; min-width:0;
     font-family:var(--font-ui);
     font-size:13.5px;
@@ -534,8 +542,8 @@
     border:0.5px solid transparent;
     background:none;
   }
-  .todo-add:hover{border-color:#6B6B6B;}
-  .todo-add:focus{border-color:#111; background:#fff; outline:none;}
+  input[type="text"].todo-add:hover{border-color:#6B6B6B;}
+  input[type="text"].todo-add:focus{border-color:#111; background:#fff; outline:none;}
   /* The two buttons beside it. Same bare-button treatment as the ones over the
      table, so nothing new is introduced here. */
   .todo-btn{
@@ -559,6 +567,49 @@
      already use — the Edit chip is the same .mini-toggle index puts on a word
      card, and the ✕ is the same red icon button every other delete uses. No new
      vocabulary here. */
+  /* Which activity the line belongs to, as a filled circle. Empty circle when
+     it belongs to none. 50% is the one radius this app allows. */
+  .todo-dot{
+    width:10px; height:10px;
+    flex-shrink:0;
+    padding:0;
+    border:0.5px solid #6B6B6B;
+    border-radius:50%;
+    background:transparent;
+    cursor:pointer;
+  }
+  /* A line about what was done. Bare like the activity name box, so it reads as
+     an optional aside rather than another required field. */
+  input[type="text"].act-note{
+    display:block; width:100%; box-sizing:border-box;
+    margin-top:7px;
+    font-family:var(--font-ui); font-size:12.5px;
+    padding:4px 6px;
+    border:0.5px solid transparent;
+    background:none;
+  }
+  input[type="text"].act-note:hover{border-color:#6B6B6B;}
+  input[type="text"].act-note:focus{border-color:#111; background:#fff; outline:none;}
+  /* On the dial: the activity and its note, at the table-head size. */
+  .clock-label{
+    font-family:var(--font-ui);
+    font-size:12.5px;
+    font-weight:300;
+    fill:#111;
+    dominant-baseline:middle;
+    pointer-events:none;
+  }
+  .clock-label.on-dark{fill:#FFFFFF;}
+  .todo-act-row{
+    display:flex; align-items:center; gap:var(--sp-2);
+    width:100%;
+    padding:var(--sp-2) var(--sp-1);
+    border:none; background:none;
+    font-family:var(--font-ui); font-size:13.5px; color:#111;
+    cursor:pointer; text-align:left;
+  }
+  .todo-act-row.active{font-weight:500;}
+  .todo-act-row:hover{background:#F2F2F2;}
   .todo-tools{display:flex; align-items:center; gap:var(--sp-1); flex-shrink:0;}
   /* 11px, the size every other glyph in this row-height sits at. The stock 18px
      ✕ is drawn for a modal corner and would tower over a 24px line. */
@@ -567,7 +618,11 @@
      confirmation is what makes it safe, and that is unchanged. */
   .todo-tools .icon-x{color:var(--text-dark);}
   .todo-tools .icon-x svg{width:11px; height:11px;}
-  .todo-tools .mini-toggle{padding:1px var(--sp-1);}
+  /* The same three dots the header's Options button uses, at 13px so it sits
+     inside a 24px line. Its own class rather than .mini-toggle: this is an
+     icon now, and the chip's border and padding no longer apply. */
+  .todo-edit-btn svg{width:13px; height:13px;}
+  .todo-edit-btn.is-on{color:var(--text-muted);}
   /* The box that replaces the line while it is being reworded. */
   .todo-edit-input{flex:1; min-width:0;}
   /* Same width, size and weight as .day-date in the table, so the two columns
@@ -1172,7 +1227,7 @@
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27g</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27h</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -1260,8 +1315,10 @@
       </button>
     </div>
     <p class="hint" style="margin:-8px 0 14px;">Times for this one activity. Add a row if you paused and came back.</p>
-    <div style="margin-bottom:14px;">
+    <div style="margin-bottom:14px; display:flex; gap:var(--sp-2); align-items:center;">
       <button class="mini-toggle" id="actPlanBtn" onclick="togglePlanFromActEditor()">To do</button>
+      <input type="text" class="act-note" id="actNoteInput" placeholder="note" maxlength="40"
+             onchange="setNoteFromActEditor(this.value)" aria-label="Note" style="margin:0;">
     </div>
     <div id="actSegRows"></div>
     <button class="mini-toggle" style="margin-top:7px;" onclick="addActSegRow()">+ add</button>
@@ -1287,6 +1344,18 @@
       <button class="btn btn-primary" onclick="pickAddKind('time')">Time</button>
       <button class="btn btn-primary" onclick="pickAddKind('todo')">To-do</button>
     </div>
+  </div>
+</div>
+
+<div id="todoActOverlay" class="modal-overlay">
+  <div class="modal-box modal-box-tight">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <p class="modal-title">Activity</p>
+      <button class="icon-x" onclick="closeTodoActPick()" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+    <div id="todoActList"></div>
   </div>
 </div>
 
@@ -1430,6 +1499,7 @@ const DATA_KEY = 'time-entries';
 const TODO_KEY = 'time-todos';
 const PLAN_KEY = 'time-plans';
 const WEEK_KEY = 'time-weekplan';
+const NOTE_KEY = 'time-notes';
 /* Weekly rules start here and never reach back. A rule written today would
    otherwise sprout marks on every past Monday, and the record of a day that has
    already happened should show what happened, not what was meant to. */
@@ -1552,6 +1622,11 @@ let todos = {};
    changes every day that hasn't been touched by hand. */
 let plans = {};
 let weekPlans = {};
+/* A line of text about what was done: {code: {actId: 'tested it'}}. One per
+   activity per day, not per stretch — the dial draws one label for the
+   activity, and two stretches of the same thing on one day are one piece of
+   work told twice. */
+let notes = {};
 let currentGroup = 'all';
 let currentAct = 'all';   // second tier: a single activity within the group
 let currentMode = 'check';
@@ -2157,6 +2232,34 @@ function renderClock(){
            `<title>${tip}</title></path>`;
   }).join('');
 
+  /* The name of the activity, and whatever was written about it, laid on the
+     slice. Only once per activity — two stretches of the same thing are one
+     piece of work — and only on the longest of them, since a five-minute wedge
+     has no room. Anything under 40 minutes is left bare rather than overspilling
+     its slice. */
+  const LABEL_MIN = 40;
+  const bestByAct = {};
+  segs.forEach(seg => {
+    const len = Math.min(1440, seg.e) - Math.max(0, seg.s);
+    const cur = bestByAct[seg.act.id];
+    if(!cur || len > cur.len) bestByAct[seg.act.id] = {seg, len};
+  });
+  const labels = Object.keys(bestByAct).map(id => {
+    const {seg, len} = bestByAct[id];
+    if(len < LABEL_MIN) return '';
+    const mid = clockAngle((Math.max(0, seg.s) + Math.min(1440, seg.e)) / 2);
+    const [x, y] = clockPoint(mid, CLOCK_R * 0.62);
+    const note = noteFor(code, seg.act.id);
+    // The abbreviation alone, as the table head shows it — actDisplay prefixes
+    // the group, which is more words than a slice has room for.
+    const text = seg.act.short + (note ? '  ' + note : '');
+    // White on a dark slice, black on a light one — the same test the header
+    // uses to decide its own text colour.
+    const cls = 'clock-label' + (isDarkColor(seg.act.color) ? ' on-dark' : '');
+    return `<text class="${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}"` +
+           ` text-anchor="middle">${escapeHtmlT(text)}</text>`;
+  }).join('');
+
   // A wedge for the session running right now, drawn from where it resumed to
   // the current minute. Given an id so swTick can regrow it each second
   // without redrawing the dial. Empty string when nothing is running.
@@ -2164,15 +2267,16 @@ function renderClock(){
   const live = clockLiveMins(code);
   const heading =
     `<div class="clock-head">` +
-      `<button class="clock-date${code === todayCode() ? '' : ' is-away'}" onclick="goToToday()"` +
-      ` title="${code === todayCode() ? 'Today' : 'Back to today'}">${dateWithDow(code)}</button>` +
-      `<div class="clock-total${(total+live)?'':' is-zero'}${live?' is-running':''}"` +
-      ` id="clockTotal">${fmtDur(total + live) || '00:00'}</div>` +
-      `<button class="clock-add" onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">` +
+      `<button class="clock-add" id="clockAddBtn" onclick="openStopwatch()"` +
+      ` aria-label="Stopwatch" title="Stopwatch"${swIsActive() ? ' style="display:none;"' : ''}>` +
         `<svg viewBox="0 0 24 24" aria-hidden="true">` +
         `<rect x="10.8" y="3" width="2.4" height="18"/>` +
         `<rect x="3" y="10.8" width="18" height="2.4"/></svg>` +
       `</button>` +
+      `<button class="clock-date${code === todayCode() ? '' : ' is-away'}" onclick="goToToday()"` +
+      ` title="${code === todayCode() ? 'Today' : 'Back to today'}">${dateWithDow(code)}</button>` +
+      `<div class="clock-total${(total+live)?'':' is-zero'}${live?' is-running':''}"` +
+      ` id="clockTotal">${fmtDur(total + live) || '00:00'}</div>` +
     `</div>`;
 
   // The dial is drawn even with nothing recorded — an empty day still shows
@@ -2182,6 +2286,7 @@ function renderClock(){
       `<circle class="clock-base" cx="${CLOCK_CX}" cy="${CLOCK_CY}" r="${CLOCK_R}"/>` +
       offBands +
       wedges +
+      labels +
       `<g id="clockLive">` + liveWedge + `</g>` +
       ticks +
       nums +
@@ -2487,6 +2592,10 @@ function renderTodos(){
   wrap.innerHTML =
     rows.map(r => {
       const key = r.code + '|' + r.t.id;
+      const a = r.t.actId ? actById(r.t.actId) : null;
+      const dot = '<button class="todo-dot" onclick="openTodoActPick(\'' + r.code + '\',\'' + r.t.id + '\')"' +
+        ' aria-label="Activity" title="' + (a ? escapeHtmlT(actDisplay(a)) : 'No activity') + '"' +
+        (a ? ' style="background:' + a.color + '; border-color:' + a.color + ';"' : '') + '></button>';
       const middle = (todoEditingKey === key)
         ? '<input type="text" class="todo-edit-input" value="' + escapeHtmlT(r.t.text) + '"' +
             ' onkeydown="todoRenameKey(event,\'' + r.code + '\',\'' + r.t.id + '\')"' +
@@ -2500,11 +2609,16 @@ function renderTodos(){
       return '<div class="todo-row' + (r.t.done ? ' is-done' : '') +
         (r.carried ? ' is-past' : '') + '">' +
         '<span class="todo-day">' + escapeHtmlT(formatDayLabel(r.code)) + '</span>' +
+        dot +
         middle +
         '<span class="todo-tools">' +
-          '<button class="mini-toggle' + (todoEditingKey === key ? ' active' : '') + '"' +
+          '<button class="todo-btn todo-edit-btn' + (todoEditingKey === key ? ' is-on' : '') + '"' +
             ' onclick="todoStartEdit(\'' + r.code + '\',\'' + r.t.id + '\')"' +
-            ' title="Reword">Edit</button>' +
+            ' aria-label="Reword" title="Reword">' +
+            '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+            '<circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/>' +
+            '<circle cx="19.4" cy="12" r="1.6"/></svg>' +
+          '</button>' +
           '<button class="icon-x" onclick="todoDeleteRow(\'' + r.code + '\',\'' + r.t.id + '\', this)"' +
             ' aria-label="Delete" title="Delete">' +
             '<svg viewBox="0 0 24 24" aria-hidden="true">' +
@@ -2519,6 +2633,40 @@ function renderTodos(){
     box.value = kept;
     if(hadFocus) box.focus();
   }
+}
+
+/* ---- Which activity a line belongs to ---- */
+let todoActTarget = null;
+
+function openTodoActPick(code, id){
+  todoActTarget = {code, id};
+  const cur = (todoById(code, id) || {}).actId || '';
+  document.getElementById('todoActList').innerHTML =
+    ACTIVITIES.map(a =>
+      '<button class="todo-act-row' + (cur === a.id ? ' active' : '') + '"' +
+        ' onclick="pickTodoAct(\'' + a.id + '\')">' +
+        '<span class="todo-dot" style="background:' + a.color + '; border-color:' + a.color + ';"></span>' +
+        '<span>' + escapeHtmlT(actDisplay(a)) + '</span>' +
+      '</button>').join('') +
+    '<button class="todo-act-row' + (cur ? '' : ' active') + '" onclick="pickTodoAct(\'\')">' +
+      '<span class="todo-dot"></span><span>None</span></button>';
+  document.getElementById('todoActOverlay').classList.add('show');
+}
+
+function closeTodoActPick(){
+  document.getElementById('todoActOverlay').classList.remove('show');
+  todoActTarget = null;
+}
+
+async function pickTodoAct(actId){
+  if(!todoActTarget) return;
+  const t = todoById(todoActTarget.code, todoActTarget.id);
+  if(t){
+    if(actId) t.actId = actId; else delete t.actId;
+  }
+  closeTodoActPick();
+  await saveTodos();
+  renderTodos();
 }
 
 /* Which line is open for rewording, as 'code|id'. Only ever one at a time. */
@@ -2728,6 +2876,8 @@ function openActEditor(code, actId){
     (segs.length ? segs : [null]).map(seg => segRowHtml(actId, 0, seg)).join('');
   document.getElementById('actWarn').textContent = '';
   syncActPlanBtn();
+  const nb = document.getElementById('actNoteInput');
+  if(nb) nb.value = noteFor(code, actId);
   document.getElementById('actOverlay').classList.add('show');
 }
 
@@ -2739,6 +2889,10 @@ function syncActPlanBtn(){
   const on = isPlanned(editingCode, editingAct);
   btn.classList.toggle('active', on);
   btn.title = on ? 'Marked to do — tap to unmark' : 'Mark as something to do';
+}
+
+async function setNoteFromActEditor(v){
+  await setNote(editingCode, editingAct, v);
 }
 
 async function togglePlanFromActEditor(){
@@ -2860,6 +3014,9 @@ function renderDayEditor(){
           <span class="act-sum">${sum?fmtDur(sum):''}</span>
         </div>
         <div id="segs-${a.id}">${rows}</div>
+        <input type="text" class="act-note" id="note-${a.id}" value="${escapeAttr(noteFor(code, a.id))}"
+               placeholder="note" maxlength="40"
+               onchange="setNote('${code}','${a.id}',this.value)" aria-label="Note">
         <div style="display:flex; gap:var(--sp-2); margin-top:7px; flex-wrap:wrap;">
           <button class="mini-toggle" onclick="addSegRow('${a.id}')">+ add</button>
           <button class="mini-toggle${isPlanned(code, a.id)?' active':''}"
@@ -3021,8 +3178,14 @@ function isDarkColor(hex){
 
 /* The header shows the stopwatch whenever a session is under way — running or
    merely paused — so an unfinished session can't be forgotten about. */
+/* A session is on the clock: running, paused, or holding time not yet saved.
+   The header and the dial's + both read this so they can't disagree. */
+function swIsActive(){
+  return !!sw.actId && (sw.startedAt || sw.elapsed > 0 || sw.segments.length > 0);
+}
+
 function renderHeaderState(){
-  const active = !!sw.actId && (sw.startedAt || sw.elapsed > 0 || sw.segments.length > 0);
+  const active = swIsActive();
   const idle = document.getElementById('headerIdle');
   const run = document.getElementById('headerRunning');
   const bar = document.getElementById('topBar');
@@ -3030,6 +3193,8 @@ function renderHeaderState(){
 
   idle.style.display = active ? 'none' : '';
   run.style.display = active ? '' : 'none';
+  const plus = document.getElementById('clockAddBtn');
+  if(plus) plus.style.display = active ? 'none' : '';
 
   if(!active){
     // Nothing behind the idle header — the page shows through it.
@@ -3381,6 +3546,50 @@ async function loadPlans(){
   });
 }
 
+async function saveNotes(){
+  try{
+    await appStorage.set(NOTE_KEY, JSON.stringify(notes));
+  }catch(e){
+    alert('Could not save. Your data is still on this device.');
+  }
+}
+
+async function loadNotes(){
+  try{
+    const res = await appStorage.get(NOTE_KEY);
+    notes = res && res.value ? (JSON.parse(res.value) || {}) : {};
+  }catch(e){
+    console.warn('note load failed', e);
+    notes = {};
+  }
+  if(!notes || typeof notes !== 'object') notes = {};
+  Object.keys(notes).forEach(code => {
+    if(!notes[code] || typeof notes[code] !== 'object'){ delete notes[code]; return; }
+    Object.keys(notes[code]).forEach(id => {
+      const v = String(notes[code][id] || '').trim();
+      if(v) notes[code][id] = v; else delete notes[code][id];
+    });
+    if(!Object.keys(notes[code]).length) delete notes[code];
+  });
+}
+
+function noteFor(code, actId){
+  return (notes[code] && notes[code][actId]) || '';
+}
+
+async function setNote(code, actId, value){
+  const v = String(value || '').trim();
+  if(v){
+    if(!notes[code]) notes[code] = {};
+    notes[code][actId] = v;
+  } else if(notes[code]){
+    delete notes[code][actId];
+    if(!Object.keys(notes[code]).length) delete notes[code];
+  }
+  await saveNotes();
+  renderDays();
+}
+
 async function saveWeekPlans(){
   try{
     await appStorage.set(WEEK_KEY, JSON.stringify(weekPlans));
@@ -3469,7 +3678,8 @@ async function loadTodos(){
         id: t.id || ('t_' + Date.now() + '_' + Math.random().toString(36).slice(2,7)),
         text: String(t.text),
         done: !!t.done,
-        doneAt: t.doneAt || (t.done ? code : null)
+        doneAt: t.doneAt || (t.done ? code : null),
+        actId: t.actId || undefined
       }));
     if(!todos[code].length) delete todos[code];
   });
@@ -3682,14 +3892,19 @@ function buildTxt(){
      filed under the day it is written beneath. */
   const codes = Object.keys(days)
     .concat(Object.keys(todos))
-    .concat(Object.keys(plans));
+    .concat(Object.keys(plans))
+    .concat(Object.keys(notes));
   Array.from(new Set(codes)).sort().forEach(code => {
     const d = days[code] || {};
     const body = ACTIVITIES
       .filter(a => (d[a.id]||[]).length)
       .map(a => a.short + ' ' + d[a.id].map(s => minToHHMM(s.s)+'-'+minToHHMM(s.e)).join(', '));
-    const todoLines = todosFor(code)
-      .map(t => '* [' + (t.done ? 'x' : ' ') + '] ' + t.text);
+    /* '* [x][S] text' — the second bracket names the activity, and is left out
+       when the line belongs to none. */
+    const todoLines = todosFor(code).map(t => {
+      const a = t.actId ? actById(t.actId) : null;
+      return '* [' + (t.done ? 'x' : ' ') + ']' + (a ? '[' + a.short + ']' : '') + ' ' + t.text;
+    });
     /* What this particular day says, over and above the weekly rule. '+' is a
        mark this day was given by hand, '-' is one the rule asked for and this
        day took away. A day holding nothing but these still has to be written
@@ -3700,10 +3915,16 @@ function buildTxt(){
     const planLines = [];
     if(on.length)  planLines.push('+ ' + on.join(' '));
     if(off.length) planLines.push('- ' + off.join(' '));
-    if(!body.length && !todoLines.length && !planLines.length) return;
+    /* '= S tested it' — what was written about an activity on this day. */
+    const noteLines = Object.keys(notes[code] || {}).map(id => {
+      const a = actById(id);
+      return a ? '= ' + a.short + ' ' + notes[code][id] : '';
+    }).filter(Boolean);
+    if(!body.length && !todoLines.length && !planLines.length && !noteLines.length) return;
     lines.push('[' + code + ']');
     lines.push(...body);
     lines.push(...planLines);
+    lines.push(...noteLines);
     lines.push(...todoLines);
     lines.push('');
   });
@@ -3736,6 +3957,7 @@ function parseTxt(raw){
   const todoOut = {};
   const planOut = {};
   const weekOut = {};
+  const noteOut = {};
   const errors = [];
   const defs = [];          // activity definitions found in the file
   let code = null;
@@ -3778,21 +4000,41 @@ function parseTxt(raw){
 
     // '* [ ] text' / '* [x] text' — a to-do. Read before the activity match,
     // since '*' is not an activity and would otherwise be reported as unknown.
-    const td = /^\*\s*\[([ xX]?)\]\s*(.*)$/.exec(t);
+    const td = /^\*\s*\[([ xX]?)\]\s*(?:\[([^\]]+)\])?\s*(.*)$/.exec(t);
     if(td){
-      const text = td[2].trim();
+      const text = td[3].trim();
       if(!text){ errors.push('Line ' + (i+1) + ': to-do has no text.'); return; }
       const done = td[1].toLowerCase() === 'x';
+      let actId;
+      if(td[2]){
+        const fromFile = defs.find(dd => dd.short.toLowerCase() === td[2].trim().toLowerCase());
+        const a = fromFile ? {id: fromFile.id || ('a_' + fromFile.short.toLowerCase())} : actByToken(td[2].trim());
+        if(!a){ errors.push('Line ' + (i+1) + ': unknown activity "' + td[2].trim() + '".'); return; }
+        actId = a.id;
+      }
       todoOut[code] = todoOut[code] || [];
       todoOut[code].push({
         id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-        text, done, doneAt: done ? code : null
+        text, done, doneAt: done ? code : null, actId
       });
       return;
     }
 
     // '+ S R PV' — squares marked to be done. Read before the activity match,
     // since '+' is not an activity name.
+    // '= S tested it' — a note about one activity on this day.
+    if(t.startsWith('=')){
+      const rest = t.replace(/^=\s*/, '');
+      const sp = rest.indexOf(' ');
+      const tok = sp === -1 ? rest : rest.slice(0, sp);
+      const body = sp === -1 ? '' : rest.slice(sp + 1).trim();
+      const fromFile = defs.find(dd => dd.short.toLowerCase() === tok.toLowerCase());
+      const a = fromFile ? {id: fromFile.id || ('a_' + fromFile.short.toLowerCase())} : actByToken(tok);
+      if(!a){ errors.push('Line ' + (i+1) + ': unknown activity "' + tok + '".'); return; }
+      if(body){ noteOut[code] = noteOut[code] || {}; noteOut[code][a.id] = body; }
+      return;
+    }
+
     if(t.startsWith('+') || t.startsWith('-')){
       const want = t.startsWith('+');
       t.slice(1).trim().split(/\s+/).filter(Boolean).forEach(tok => {
@@ -3828,7 +4070,7 @@ function parseTxt(raw){
       out[code][act.id] = segs;
     }
   });
-  return {data:out, todoData:todoOut, planData:planOut, weekData:weekOut, errors, defs};
+  return {data:out, todoData:todoOut, planData:planOut, weekData:weekOut, noteData:noteOut, errors, defs};
 }
 
 /* Rebuild ACTIVITIES from definition lines, keeping ids stable so the imported
@@ -3854,7 +4096,7 @@ function activitiesFromDefs(defs){
 }
 
 async function applyImport(){
-  const {data, todoData, planData, weekData, errors, defs} = parseTxt(document.getElementById('importArea').value);
+  const {data, todoData, planData, weekData, noteData, errors, defs} = parseTxt(document.getElementById('importArea').value);
   const msg = document.getElementById('importMsg');
   if(errors.length){
     msg.textContent = errors.slice(0,5).join('  ') + (errors.length>5 ? ` (+${errors.length-5} more)` : '');
@@ -3876,10 +4118,12 @@ async function applyImport(){
   todos = todoData;
   plans = planData;
   weekPlans = weekData;
+  notes = noteData;
   await saveData();
   await saveTodos();
   await savePlans();
   await saveWeekPlans();
+  await saveNotes();
   closeImport();
   refreshAll();
   msg.textContent = '';
@@ -3941,7 +4185,7 @@ if(sw.startedAt) swTimer = setInterval(swTick, 1000);
 // The current-time marker advances whether or not a stopwatch is running.
 setInterval(moveNowMarker, 30000);
 
-Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActivities()]).then(() => {
+Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadNotes(), loadActivities()]).then(() => {
   document.getElementById('mainHeader').style.display = '';
   renderGroupRow();
   setMode('check');
