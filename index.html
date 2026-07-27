@@ -225,8 +225,16 @@
   /* Same gap as the header icons on the right. */
   .brand-header .app-tab + .app-tab{margin-left:11.7px;}
   /* Brand and screen arrows travel together on the left of the header. */
-  .header-left{display:flex; align-items:center; gap:var(--sp-4); min-width:0;}
-  .head-arrows{display:flex; align-items:center; gap:6px;}
+  /* Fixed under the header rule, flush with the right edge of the reading
+     column, so they hold one position on every screen instead of riding the
+     content. The column scrolls beneath them. */
+  .head-arrows{
+    position:fixed;
+    top:calc(var(--header-h, 9px) + var(--sp-1));
+    right:max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px));
+    display:flex; align-items:center; gap:var(--sp-2);
+    z-index:55;
+  }
 
   /* ---- Header drawer -------------------------------------------------
      The header used to carry P V M, the three icons and the arrows on one
@@ -257,11 +265,15 @@
   #headDrawer{
     position:fixed; top:0; right:0; height:100vh;
     box-sizing:border-box;
-    background:#FFFFFF;
-    border-left:0.5px solid #6B6B6B;
+    /* No panel: nothing is drawn but the marks themselves. */
+    background:transparent;
+    border:none;
     padding:var(--sp-5);
     z-index:70;
-    display:flex; flex-direction:column; gap:var(--sp-5);
+    /* One column, so the two groups read as a single run of marks. The gap is
+       the same one that separated them side by side. */
+    display:flex; flex-direction:column; gap:var(--sp-4);
+    justify-content:center;
     /* Parked just off-screen rather than hidden, so it can be dragged. */
     transform:translateX(100%);
     transition:transform .22s cubic-bezier(.4,0,.2,1);
@@ -272,14 +284,29 @@
      the same grid, so the columns line up between them. */
   #headDrawer .brand-header,
   #headDrawer nav.tabs{
-    display:grid;
-    grid-template-columns:repeat(3, 56px);
-    align-items:center; justify-items:center;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-start;
     gap:var(--sp-4);
     margin:0; padding:0;
   }
   #headDrawer .app-tab{margin-left:0;}
   #headDrawer .brand-header{line-height:1;}
+
+  /* Wide enough to stand the marks beside the column instead of behind an
+     edge: the reading column plus room for the drawer on both sides. Written
+     in em so it follows the text rather than a device. Below this — every
+     phone, and a narrow window on a desktop — the drawer goes back to being
+     pulled in. */
+  @media (min-width:68em){
+    #drawerHandle{display:none;}
+    #drawerScrim{display:none;}
+    #headDrawer{
+      transform:none;
+      top:0; height:100vh;
+      padding-right:var(--sp-4);
+      transition:none;
+    }
+  }
 
   /* The rows the arrows came from keep their progress counts and buttons; only
      the arrows themselves step out. */
@@ -312,13 +339,13 @@
   /* The full-bleed rules belong to the header as a whole. They used to live on
      nav.tabs, but once the nav became a narrow right-hand stack the lines were
      only as wide as the nav — hence the cut-off rule. */
+  /* Nothing sits in the header any more. It is kept only to carry the progress
+     rule, so it is a third of the height it was when it held the arrows —
+     enough to seat a 2px line and keep the white band under the status bar. */
   .header-row{
     position:relative;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:var(--sp-4);
-    padding:2px 0;
+    height:9px;
+    padding:0;
   }
   /* The rule under the header, off for now. Putting it back is this one line:
      border-bottom:1px solid #111. The progress segment below still draws, so a
@@ -481,6 +508,9 @@
   textarea{min-height:110px; line-height:1.3;}
   /* Muted grey at weight 400 read as heavy for what is secondary text; 300
      is where Switzer's lighter cut sits without becoming faint. */
+  /* An empty message still owns its line height, which showed as an
+     unexplained gap under the sync field. */
+  .hint:empty{display:none;}
   .hint{font-size:var(--fs-label); font-weight:300; color:var(--text-muted); line-height:1.3; margin:6px 0 0;}
 
   /* Range inputs render with the OS accent colour by default — bright blue here,
@@ -768,13 +798,11 @@
   }
   .stack-prev .prev-en{ color:#111; font-size:var(--fs-lead); }
   .stack-prev .hint{
-    background:#EFEFEF;
     border-bottom:2px solid transparent;
     font-size:var(--fs-lead);
     font-weight:400;
   }
   .stack-prev .cur-answer{
-    background:#EFEFEF;
     font-size:var(--fs-lead);
   }
   /* Random quiz shows one sentence at a time rather than a growing stack, so
@@ -792,9 +820,9 @@
   .stack-para-break{ height:14px; }
   /* Same gap as .back-word -> phonetics in the Voca card. */
   .stack-current{
-    /* One and a half times the old 36px. The Korean is an aside on the English
-       above it, and at the larger body size 36px no longer read as a break. */
-    margin-top:54px;
+    /* The same 132px the blank-quiz hint sits at — the Korean is the same kind
+       of aside on the English above it. Was 54px. */
+    margin-top:132px;
   }
   /* Matches .back-meaning in the Voca card so the Korean gloss reads the same
      in both apps. */
@@ -1426,7 +1454,10 @@
     font-style:normal;
     font-size:var(--fs-body);
     color:var(--text-muted);
-    margin-top:120px;
+    /* The one gap between a sentence and whatever explains it. 1.1x the 120px
+       the blank-quiz hint used, now shared with the Korean under a paragraph
+       so reading and testing break in the same place. */
+    margin-top:132px;
     position:relative;
   }
   .back-phonetics{
@@ -1604,7 +1635,8 @@
   .memo-word{
     font-family:var(--font-ui);
     font-size:var(--fs-body); line-height:1.3;
-    margin-top:var(--sp-3);
+    /* The same 24px the popup uses between the parts of one word. */
+    margin-top:24px;
   }
   .memo-word .memo-link, .memo-word .memo-missing{font-weight:600;}
   /* A blank line in the source becomes real breathing room. */
@@ -1730,9 +1762,9 @@
     background-clip:content-box !important;
   }
   /* Each gap is twice what it was: 4->8, 6->12, 6->12. */
-  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:var(--fs-lead); color:#111; margin-bottom:8px; padding-right:28px;}
-  .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:var(--fs-body); color:#111; margin-bottom:12px;}
-  .vocab-popup-meaning{font-size:var(--fs-body); color:#111; margin-bottom:12px;}
+  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:var(--fs-lead); color:#111; margin-bottom:16px; padding-right:28px;}
+  .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:var(--fs-body); color:#111; margin-bottom:24px;}
+  .vocab-popup-meaning{font-size:var(--fs-body); color:#111; margin-bottom:24px;}
   /* Examples read as a list, so they are marked as one. The dash sits in the
      margin and the text stays flush, the way a real list hangs. */
   .vocab-popup-example{
@@ -1839,18 +1871,6 @@ if('serviceWorker' in navigator){
   <div id="topBar" class="theme-voca">
   <header class="top" id="mainHeader">
     <div class="header-row">
-      <div class="header-left">
-        <!-- The back / skip arrows for whichever screen is open. They live here
-             rather than at the top of each screen; headArrowsSync decides which
-             pair of functions they stand for. -->
-        <span class="head-arrows" id="headArrows" style="display:none;">
-          <button class="shuffle-btn" id="headPrevBtn" onclick="headArrowPrev()" aria-label="Back" title="Back"><svg class="nav-chev flip" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
-          <button class="shuffle-btn" id="headNextBtn" onclick="headArrowNext()" aria-label="Skip" title="Skip"><svg class="nav-chev" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
-        </span>
-        <button id="speechControlBtn" onclick="toggleSpeechPlayback()" aria-label="Pause reading" title="Playing — tap to pause" style="display:none;">
-          <svg class="tab-icon" id="speechControlIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5 L18 12 L6 20.5 Z"/></svg>
-        </button>
-      </div>
     </div>
   </header>
   </div>
@@ -1873,8 +1893,19 @@ if('serviceWorker' in navigator){
         <button id="unified-tab-edit" onclick="switchTab('edit')" aria-label="Edit" title="Backup / edit by text">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19.4" cy="12" r="1.6"/></svg>
         </button>
+        <button id="speechControlBtn" onclick="toggleSpeechPlayback()" aria-label="Pause reading" title="Playing — tap to pause" style="display:none;">
+          <svg class="tab-icon" id="speechControlIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5 L18 12 L6 20.5 Z"/></svg>
+        </button>
       </nav>
   </aside>
+
+  <!-- Back / skip. No longer part of the header: the header is now only the
+       progress rule, and these float under it at the top right, in the same
+       place on every screen. headArrowsSync still decides what they mean. -->
+  <span class="head-arrows" id="headArrows" style="display:none;">
+    <button class="shuffle-btn" id="headPrevBtn" onclick="headArrowPrev()" aria-label="Back" title="Back"><svg class="nav-chev flip" width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+    <button class="shuffle-btn" id="headNextBtn" onclick="headArrowNext()" aria-label="Skip" title="Skip"><svg class="nav-chev" width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+        </span>
 
   <!-- SHARED ADD VIEW (auto-detects Voca vs Para from the pasted text) -->
   <section id="view-add" class="view active">
@@ -1896,7 +1927,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28c</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28f</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -1907,6 +1938,8 @@ if('serviceWorker' in navigator){
         <p class="hint" id="syncMsg" style="margin:8px 0 0;"></p>
       </div>
     </div>
+
+    <div class="divider-bleed"></div>
 
     <div class="card-panel">
       <div class="panel-inner">
@@ -2186,7 +2219,7 @@ if('serviceWorker' in navigator){
           style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-label); border:0.5px solid #111; border-radius:0; background:transparent;">
         <button class="mini-toggle" id="wordSearchClearBtn" onclick="clearWordSearch()" style="display:none;">✕</button>
       </div>
-      <div style="margin-bottom:var(--sp-4);">
+      <div style="margin-bottom:72px;">
         <button class="btn btn-ghost" id="dayTestFilteredBtn" onclick="testFilteredVoca()">Test these</button>
       </div>
       <div id="dayDetailList" class="card-panel"></div>
@@ -2210,7 +2243,7 @@ if('serviceWorker' in navigator){
           <button class="opt-btn" id="memoSortOldBtn" onclick="setMemoSort('old')">Oldest first</button>
           <button class="opt-btn" id="memoSortAlphaBtn" onclick="setMemoSort('alpha')">A–Z</button>
         </div>
-        <div style="display:flex; align-items:center; gap:6px; margin:0 0 var(--sp-3);">
+        <div style="display:flex; align-items:center; gap:6px; margin:0 0 72px;">
           <input type="text" id="memoSearchInput" placeholder="Search memos…" oninput="renderMemoList()"
             style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-label); border:0.5px solid #111; border-radius:0; background:transparent;">
           <button class="btn btn-ghost" onclick="newMemo()">+ New</button>
@@ -2225,7 +2258,6 @@ if('serviceWorker' in navigator){
           </button>
           <span style="flex:1;"></span>
           <button class="mini-toggle" id="memoAddWordBtn" onclick="addMissingWordsFromMemo(this)">Add word</button>
-          <button class="mini-toggle" id="memoEditBtn" onclick="toggleMemoEdit()">Edit</button>
         </div>
 
         <!-- MEMO QUIZ — every word in the memo laid out at once. Tap a card to
@@ -2515,7 +2547,7 @@ if('serviceWorker' in navigator){
           style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-label); border:0.5px solid #111; border-radius:0; background:transparent;">
         <button class="mini-toggle" id="pWordSearchClearBtn" onclick="pClearWordSearch()" style="display:none;">✕</button>
       </div>
-      <div style="margin-bottom:var(--sp-4);">
+      <div style="margin-bottom:72px;">
         <button class="btn btn-ghost" id="pDayTestFilteredBtn" onclick="testFilteredPara()">Test these</button>
       </div>
       <div id="pDayDetailList" class="card-panel"></div>
@@ -5144,7 +5176,9 @@ function showMemoDetail(){
   document.getElementById('memoEditWrap').style.display = memoEditing ? 'block' : 'none';
   document.getElementById('memoView').style.display = memoEditing ? 'none' : 'block';
   setMemoRateVisible(!memoEditing && !!String(m.body || '').trim());
-  document.getElementById('memoEditBtn').style.display = memoEditing ? 'none' : '';
+  // Drawn inside the memo body now, so it is simply absent while editing.
+  const editBtn = document.getElementById('memoEditBtn');
+  if(editBtn) editBtn.style.display = memoEditing ? 'none' : '';
   // Only worth offering when the memo names a word that has no card yet.
   const addBtn = document.getElementById('memoAddWordBtn');
   if(addBtn){
@@ -5161,7 +5195,7 @@ function showMemoDetail(){
     /* Straight under the title: the one thing you might want to do with the
        memo. Only worth offering when there is something to be tested on. */
     const head = memoPairs(m).length
-      ? '<div style="margin-bottom:14px;">' +
+      ? '<div style="margin-bottom:72px;">' +
           '<button class="btn btn-ghost" onclick="startMemoQuiz()">Test</button>' +
         '</div>'
       : '';
@@ -5169,8 +5203,13 @@ function showMemoDetail(){
     /* The tag and the record of testing are about the memo rather than part of
        it, so they wait until the end. They used to sit between the title and
        the first line, which pushed the writing itself down the page. */
+    /* Edit belongs with the facts about the memo rather than with the back
+       arrow: last on the page, above the tag, on the left margin. */
     const tail =
-      (tag ? '<div class="memo-tag-wrap" style="margin-top:28px;">' +
+      '<div style="margin-top:72px;">' +
+        '<button class="mini-toggle" id="memoEditBtn" onclick="toggleMemoEdit()">Edit</button>' +
+      '</div>' +
+      (tag ? '<div class="memo-tag-wrap" style="margin-top:24px;">' +
                '<div class="lbl">Tag</div>' +
                '<div class="tagbadge">' + escapeHtml(tag) + '</div>' +
              '</div>' : '<div style="height:28px;"></div>') +
