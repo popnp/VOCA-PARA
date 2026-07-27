@@ -77,7 +77,11 @@
     --fs-display:clamp(31px, 9vw, 38px);  /* card headword     was 26/7.5vw/32 */
     --fs-lead:23px;                       /* blanked sentence, memo title  was 19 */
     --fs-body:20px;                       /* paragraph sentences, popup headword  was 17 */
-    --fs-gloss:17px;                      /* meanings, examples, memo body  was 14 / 14.5 */
+    --fs-gloss:17px;                      /* answer meanings, examples, memo headwords  was 14 / 14.5 */
+    --fs-sub:14px;                        /* the Korean under a paragraph, memo entry text — 70% of body */
+    --fs-detail:15px;                     /* word detail: pronunciation, meaning, examples */
+    --fs-list:14px;                       /* the day list's dates and cells  was 12.5 */
+    --fs-list-tag:12px;                   /* its coloured tags and stars     was 11   */
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -245,6 +249,23 @@
     bottom:0;
     border-bottom:1px solid #111;
   }
+  /* How far through a test you are, drawn on the header's own rule rather than
+     counted out in numbers beside the arrows. The thick part runs from the left
+     edge; --quiz-progress is a plain fraction between 0 and 1, and at 0 the
+     segment has no width, so the line is just the line again. */
+  .header-row::before{
+    content:'';
+    position:absolute;
+    left:calc(-50vw + 50%);
+    bottom:0;
+    width:calc(var(--vw, 100vw) * var(--quiz-progress, 0));
+    border-bottom:5px solid #111;
+    z-index:1;
+    transition:width .18s ease-out;
+  }
+  /* The count the bar replaces. Kept in the markup — screen readers still read
+     it, and it is where the numbers come from. */
+  .progress{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%);}
   nav.tabs button{
     flex:0 0 auto;
     background:transparent;
@@ -657,7 +678,6 @@
   }
   .stack-prev .prev-en{ color:#111; font-size:var(--fs-body); }
   .stack-prev .hint{
-    background:#EFEFEF;
     border-bottom:2px solid transparent;
     font-size:var(--fs-body);
     font-weight:400;
@@ -681,12 +701,14 @@
   .stack-para-break{ height:14px; }
   /* Same gap as .back-word -> phonetics in the Voca card. */
   .stack-current{
-    margin-top:36px;
+    /* One and a half times the old 36px. The Korean is an aside on the English
+       above it, and at the larger body size 36px no longer read as a break. */
+    margin-top:54px;
   }
   /* Matches .back-meaning in the Voca card so the Korean gloss reads the same
      in both apps. */
   .stack-current .cur-ko{
-    font-size:var(--fs-gloss);
+    font-size:var(--fs-sub);
     color:var(--text-dark);
     line-height:1.5;
   }
@@ -1077,10 +1099,12 @@
   .day-table thead th{
     text-align:left;
     font-family:var(--font-ui);
-    /* Same size and spacing as every other label; grey because the rows under
-       it are black and the head should stay behind them. */
+    /* Black from 2026-07-27j, reversing the grey head this app had held to.
+       The reason grey was chosen — that a black head flattens a table whose
+       rows are also black — no longer holds: the rows are 14px now and the head
+       stayed at 12.5, so size carries the difference instead of colour. */
     font-size:12.5px;
-    color:var(--text-muted);
+    color:var(--text-dark);
     /* 300 sat noticeably lighter than the PARA/VOCA heads next to it, which
        read as a different typeface rather than a different emphasis. */
     font-weight:300;
@@ -1103,10 +1127,10 @@
   /* Matches .cal-daynum in the grid view. Without an explicit size this cell
      inherited the 16px body default, which is why the same weight looked much
      heavier here than in the grid. */
-  .day-table .day-date{font-family:var(--font-ui); font-weight:500; font-size:12.5px; white-space:nowrap;}
+  .day-table .day-date{font-family:var(--font-ui); font-weight:500; font-size:var(--fs-list); white-space:nowrap;}
   /* Saturdays and Sundays: the date text greys out so weeks are easy to scan. */
   .day-table tbody tr.is-weekend .day-date{color:var(--text-muted);}
-  .day-table .day-cats{font-family:var(--font-ui); font-size:12.5px; color:var(--text-muted);}
+  .day-table .day-cats{font-family:var(--font-ui); font-size:var(--fs-list); color:var(--text-muted);}
   .day-table .day-perf{width:20px;}
   .day-table .day-perf .status-dot{width:14px; height:14px;}
   .day-table .day-test-btn{
@@ -1132,7 +1156,7 @@
   }
   .day-cat-tag{
     font-family:var(--font-ui);
-    font-size:11px;
+    font-size:var(--fs-list-tag);
     font-weight:500;
     color:#111;
     padding:2px 6px;
@@ -1149,7 +1173,7 @@
      Each chunk is independently clickable and opens that app's detail panel. */
   .day-table .day-col-para, .day-table .day-col-voca{
     font-family:var(--font-ui);
-    font-size:12.5px;
+    font-size:var(--fs-list);
     color:var(--text-muted);
     vertical-align:top;
   }
@@ -1184,7 +1208,7 @@
     font-weight:300;
     letter-spacing:0.04em;
     text-transform:uppercase;
-    color:var(--text-muted);
+    color:var(--text-dark);
   }
 
   /* Nav chevrons sit inline with button text, so they ride the baseline rather
@@ -1227,7 +1251,7 @@
   .ut-badge{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-list-tag);
     color:#FF4602;
     margin-left:1px;
     position:relative;
@@ -1318,7 +1342,7 @@
   }
   .back-phonetics a{color:var(--text-dark);}
 
-  .phonetics-preview{font-family:var(--font-serif); font-style:italic; font-size:15px; margin-top:4px;}
+  .phonetics-preview{font-family:var(--font-serif); font-style:italic; font-size:var(--fs-detail); margin-top:4px;}
   .phonetics-preview a{color:var(--text-dark);}
 
   .day-word-wrap{margin-bottom:0;}
@@ -1374,8 +1398,8 @@
     font-weight:300; font-size:11px; color:var(--text-muted);
     letter-spacing:0.06em; margin-bottom:4px;
   }
-  .meaning-view{font-size:12.5px; line-height:1.6;}
-  .ex-view-line{font-size:13.5px; color:#111; padding:4px 0; border-bottom:1px dashed var(--paper-line);}
+  .meaning-view{font-size:var(--fs-detail); line-height:1.6;}
+  .ex-view-line{font-size:var(--fs-detail); color:#111; padding:4px 0; border-bottom:1px dashed var(--paper-line);}
   .ex-view-line:last-child{border-bottom:none;}
   .sent-row{
     display:grid;
@@ -1409,9 +1433,12 @@
     margin-top:4px;
     margin-bottom:10px;
   }
+  /* Written in px rather than em on purpose. As a fraction of the sentence it
+     grew when the sentence did; this is a marginal note and should stay the
+     size it was whatever the body does. */
   .vocab-link-row-test{
     font-family:var(--font-ui);
-    font-size:0.85em;
+    font-size:14.5px;
     color:var(--text-muted);
   }
   .vocab-link-row-test .voca-link{font-size:0.75em;}
@@ -1473,7 +1500,7 @@
     font-family:var(--font-ui); font-weight:600; font-size:var(--fs-gloss); color:#111;
     margin:var(--sp-4) 0 var(--sp-1);
   }
-  .memo-line{font-size:var(--fs-gloss); line-height:1.75; color:#111;}
+  .memo-line{font-size:var(--fs-sub); line-height:1.75; color:#111;}
   /* The headword of an entry, set on its own line above its description.
      Uses .memo-head's size and weight (14.5px / 600) so the memo keeps one
      type scale rather than gaining a new one. */
@@ -1501,7 +1528,9 @@
   /* Blue where the word has a card behind it, grey where it hasn't — the
      colour carries the distinction, so no underline is needed. */
   .memo-link{
-    color:#1B4FD8;
+    /* The same blue .voca-link uses. These were #1B4FD8 and #2519FF — two blues
+       for one meaning, which read as a mistake once the two sat side by side. */
+    color:#2519FF;
     text-decoration:none;
     cursor:pointer;
   }
@@ -1741,7 +1770,7 @@
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27i</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27l</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -2736,12 +2765,28 @@ function headArrowSet(){
   return null;
 }
 
+/* The header rule doubles as the progress bar. Written as a fraction of 1 so
+   the CSS can turn it into a width without knowing anything about counts. */
+function setQuizProgress(cur, total){
+  const f = (total > 0) ? Math.max(0, Math.min(1, cur / total)) : 0;
+  document.documentElement.style.setProperty('--quiz-progress', String(f));
+}
+
+function clearQuizProgress(){
+  document.documentElement.style.setProperty('--quiz-progress', '0');
+}
+
 function headArrowPrev(){ const s = headArrowSet(); if(s && s.prev) s.prev(); headArrowsSync(); }
 function headArrowNext(){ const s = headArrowSet(); if(s && s.next) s.next(); headArrowsSync(); }
 
 /* Shows the pair only where there is something for it to do, and drops the
    second arrow on the screens that only go back. */
 function headArrowsSync(){
+  // Off every screen that isn't a test — the results modal, the settings, the
+  // memo. Leaving a bar behind would say a test was still running.
+  if(!shownById('quizBody') && !shownById('pQuizBody') && !shownById('pStackQuizBody')){
+    clearQuizProgress();
+  }
   const wrap = document.getElementById('headArrows');
   if(!wrap) return;
   const s = headArrowSet();
@@ -4116,6 +4161,7 @@ function renderQuizCard(){
   const target = pickedExample ? parseExampleBlank(pickedExample, card.word) : {ok:false};
 
   document.getElementById('quizProgress').textContent = `${quizIndex+1} / ${quizQueue.length}`;
+  setQuizProgress(quizIndex + 1, quizQueue.length);
   document.getElementById('prevCardBtn').disabled = (quizIndex === 0);
   document.getElementById('prevCardBtn').style.opacity = '1';
   document.getElementById('backContent').classList.remove('show');
@@ -7037,6 +7083,7 @@ function pRenderStack(){
     `<span style="font-family:var(--font-ui); font-size:var(--fs-body); font-weight:500; color:#111;">${escapeHtml(item.titleEn)}</span>`
     + speakRevealedBtn(13);
   document.getElementById('pStackProgress').textContent = `${pStackPointer+1} / ${item.sentences.length}`;
+  setQuizProgress(pStackPointer + 1, item.sentences.length);
   document.getElementById('pStackPrevBtn').disabled =
     (pStackPointer === 0 && (pStackReading || pStackRevealStage === 0));
   document.getElementById('pStackPrevBtn').style.opacity = '1';
@@ -7692,6 +7739,7 @@ function pRenderCard(){
   doneBefore += pSentenceIndex;
 
   document.getElementById('pQuizProgress').textContent = `${doneBefore+1} / ${totalInSession}`;
+  setQuizProgress(doneBefore + 1, totalInSession);
   document.getElementById('pTitleLabel').innerHTML =
     `<span style="font-family:var(--font-ui); font-size:var(--fs-body); font-weight:500; color:#111;">${escapeHtml(item.para.titleEn)}</span>`;
   const atStart = (pParaIndex===0 && pSentenceIndex===0 && pRevealStage === 0);
