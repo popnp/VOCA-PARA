@@ -68,20 +68,31 @@
     --gap-top-nav:8px;
 
     /* ---- Study text ----------------------------------------------------
-       The sizes the learning content is read at. Four numbers, and every place
-       that reads at one of them points here — so the whole app resizes from
-       this block rather than from thirty scattered declarations.
-       Raised 1.2x on 2026-07-27 and rounded to whole pixels. At that rounding
-       the old 14px and 14.5px both land on 17, so they now share one token; the
-       memo's sub-headings still stand apart by weight, as they always did. */
-    --fs-display:clamp(31px, 9vw, 38px);  /* card headword     was 26/7.5vw/32 */
-    --fs-lead:23px;                       /* blanked sentence, memo title  was 19 */
-    --fs-body:20px;                       /* paragraph sentences, popup headword  was 17 */
-    --fs-gloss:17px;                      /* answer meanings, examples, memo headwords  was 14 / 14.5 */
-    --fs-sub:14px;                        /* the Korean under a paragraph, memo entry text — 70% of body */
-    --fs-detail:15px;                     /* word detail: pronunciation, meaning, examples */
-    --fs-list:14px;                       /* the day list's dates and cells  was 12.5 */
-    --fs-list-tag:12px;                   /* its coloured tags and stars     was 11   */
+       Every size the learning content is read at, and nothing else. Each place
+       in the app that reads at one of these points here, so the whole thing
+       resizes from these eight lines rather than from thirty declarations
+       scattered through the file. To make the app bigger or smaller, change
+       the numbers here and nowhere else.
+
+       History: the originals were raised 1.2x on 2026-07-27, then a further
+       1.1x the same day, each time rounded to whole pixels. Two consequences
+       of that rounding are worth knowing —
+         · the old 14px and 14.5px met at one value, so the memo's body and its
+           sub-headings are now the same size and stand apart by weight alone;
+         · --fs-sub is meant to read as 70% of --fs-body. Keep that ratio if you
+           change one of them.                                                 */
+    --fs-display:clamp(38px, 12vw, 50px); /* card headword          from 26/7.5vw/32 */
+    --fs-lead:30px;                        /* blanked sentence, memo title      from 19 */
+    --fs-body:26px;                        /* paragraph sentences, popup headword from 17 */
+    --fs-gloss:22px;                       /* answer meaning, examples, memo headwords  from 14 / 14.5 */
+    --fs-sub:20px;                         /* Korean under a paragraph, memo entry text — 70% of body */
+    --fs-detail:20px;                      /* word detail: pronunciation, meaning, examples — one size */
+
+    /* ---- The day list --------------------------------------------------
+       Left where it is. The date column is deliberately set to 12.5px to match
+       the table head above it, so raising these would break that pairing. */
+    --fs-list:14px;                        /* the list's cells       from 12.5 */
+    --fs-list-tag:12px;                    /* its coloured tags and stars  from 11 */
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -1814,7 +1825,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27t</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27w</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
