@@ -4,7 +4,7 @@
   "short_name": "Time",
   "description": "Daily time recording and to-dos.",
   "start_url": "./time.html",
-  "scope": "./",
+  "scope": "./time.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FFFFFF",

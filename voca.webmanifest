@@ -4,7 +4,7 @@
   "short_name": "Voca",
   "description": "Vocabulary, paragraph and memo study.",
   "start_url": "./index.html",
-  "scope": "./",
+  "scope": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FFFFFF",
