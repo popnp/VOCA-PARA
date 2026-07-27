@@ -241,13 +241,16 @@
     gap:var(--sp-4);
     padding:2px 0;
   }
+  /* The rule under the header, off for now. Putting it back is this one line:
+     border-bottom:1px solid #111. The progress segment below still draws, so a
+     test still shows its bar; there is simply no line behind it. */
   .header-row::after{
     content:'';
     position:absolute;
     left:calc(-50vw + 50%);
     right:calc(-50vw + 50%);
     bottom:0;
-    border-bottom:1px solid #111;
+    border-bottom:none;
   }
   /* How far through a test you are, drawn on the header's own rule rather than
      counted out in numbers beside the arrows. The thick part runs from the left
@@ -259,7 +262,7 @@
     left:calc(-50vw + 50%);
     bottom:0;
     width:calc(var(--vw, 100vw) * var(--quiz-progress, 0));
-    border-bottom:5px solid #111;
+    border-bottom:2px solid #111;
     z-index:1;
     transition:width .18s ease-out;
   }
@@ -493,9 +496,12 @@
   .preview-item .pm{color:var(--text-muted); flex:1; text-align:right;}
 
   .divider{height:1px; background:var(--grid-line-strong); margin:30px 0 18px;}
+  /* Three of these: under the Options sections, and between each app's
+     calendar and the day it has open. The line is off; the space it was holding
+     stays, so nothing below it moves. Put it back with background:#111. */
   .divider-bleed{
     height:1px;
-    background:#111;
+    background:transparent;
     margin:30px 0 18px;
     position:relative;
     left:calc(-50vw + 50%);
@@ -1777,7 +1783,7 @@
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27n</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27o</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">

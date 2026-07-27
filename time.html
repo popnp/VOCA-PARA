@@ -1227,7 +1227,7 @@
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27n</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27o</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2816,6 +2816,7 @@ async function toggleTodo(code, id){
   // Finishing something that belongs to an activity is the moment you know
   // what it was and roughly how long it took, so that is when to ask.
   if(t.done && t.actId) openTodoDone(code, id);
+
 }
 
 /* ---- Finishing a to-do that belongs to an activity ----
@@ -2827,13 +2828,19 @@ async function openTodoDone(code, id){
   const t = todoById(code, id);
   const a = t && t.actId ? actById(t.actId) : null;
   if(!t || !a) return;
-  todoDoneTarget = {code, id, actId: a.id};
+
+  /* The work happened on the day you are looking at, not on the day the item
+     was written down. A leftover from Tuesday ticked off on Thursday is
+     Thursday's time and Thursday's note — filing it under Tuesday put it on a
+     dial nobody was looking at, which is why the time appeared to vanish. */
+  const day = currentViewCode();
+  todoDoneTarget = {code: day, id, actId: a.id};
 
   // Written now rather than on the way out: pressing either button, or closing
   // the box, should leave the note in place.
-  await setNote(code, a.id, todoDisplayText(t.text));
+  await setNote(day, a.id, todoDisplayText(t.text));
 
-  const mins = segmentsFor(code, a.id).reduce((s, g) => s + Math.max(0, g.e - g.s), 0);
+  const mins = segmentsFor(day, a.id).reduce((s, g) => s + Math.max(0, g.e - g.s), 0);
   document.getElementById('todoDoneTitle').innerHTML =
     `<span class="act-swatch" style="background:${a.color}; display:inline-block; margin-right:7px; vertical-align:0;"></span>` +
     escapeHtmlT(actDisplay(a));
