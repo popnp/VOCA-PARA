@@ -53,7 +53,7 @@
     top:0; left:0;
     width:var(--vw);
     padding:0 max(16px, calc((var(--vw) - 640px) / 2 + 16px)) 0;
-    background:#FFFFFF;
+    background:transparent;
     z-index:50;
   }
   #topBar > *{max-width:640px; margin-left:auto; margin-right:auto;}
@@ -64,7 +64,9 @@
     justify-content:space-between;
     padding:2px 0;
   }
-  .header-row::after{
+  /* Only the running header keeps its rule. The idle one sits on the page with
+     nothing under it and nothing behind it. */
+  .hw-row::after{
     content:'';
     position:absolute;
     left:calc(-50vw + 50%);
@@ -72,6 +74,11 @@
     bottom:0;
     border-bottom:1px solid #111;
   }
+  /* The two day arrows, in the slot the T used to hold. Same 11px chevron the
+     rest of both apps uses; the padding is the press area, not the glyph. */
+  .day-nav{display:flex; align-items:center; gap:var(--sp-2);}
+  .day-nav .mode-toggle{padding:var(--sp-2) var(--sp-1);}
+  .day-nav .nav-chev{width:11px; height:11px;}
   .brand-header{
     font-family:var(--font-ui);
     font-size:38px;
@@ -242,6 +249,26 @@
   /* 70% of the previous 39px. The weekday and wall clock sit on the same line,
      lighter, so the date still leads. */
   /* The headline figure. */
+  /* The date the figure below belongs to. Grey and 12.5px — the one size both
+     apps use for text that supports something else rather than titling it.
+     .clock-head turns pointer events off so the dial stays tappable through it,
+     so this one element turns them back on for itself. */
+  .clock-date{
+    display:block;
+    margin:0 0 2px auto;
+    padding:0;
+    border:none;
+    background:none;
+    font-family:var(--font-ui);
+    font-size:12.5px;
+    font-weight:300;
+    color:var(--text-muted);
+    cursor:pointer;
+    pointer-events:auto;
+    font-variant-numeric:tabular-nums;
+  }
+  /* Looking at some other day: the date speaks up, and pressing it comes home. */
+  .clock-date.is-away{color:var(--text-dark); text-decoration:underline;}
   .clock-total{
     font-family:var(--font-ui);
     font-size:72px;
@@ -466,6 +493,12 @@
     flex:0 0 auto;
   }
   .nav-chev.flip{transform:scaleX(-1);}
+  /* The same chevron turned a quarter, rather than two more icons to keep in
+     step with it. */
+  .nav-chev.chev-up{transform:rotate(-90deg);}
+  .nav-chev.chev-down{transform:rotate(90deg);}
+  .act-move{padding:var(--sp-1); flex-shrink:0;}
+  .act-move .nav-chev{width:11px; height:11px;}
   /* ---- To-do ------------------------------------------------------------
      Sits under the check/time table, above the buttons: content first, then
      the controls that act on it. */
@@ -487,7 +520,18 @@
     padding-left:calc(var(--sp-1) + var(--day-col) + var(--sp-2));
     margin-top:var(--sp-2);
   }
-  .todo-add{flex:1; min-width:0;}
+  /* Bare until you go near it, exactly like the activity name box in Options:
+     no edge at rest, grey on hover, black while being typed into. */
+  .todo-add{
+    flex:1; min-width:0;
+    font-family:var(--font-ui);
+    font-size:13.5px;
+    padding:4px 6px;
+    border:0.5px solid transparent;
+    background:none;
+  }
+  .todo-add:hover{border-color:#6B6B6B;}
+  .todo-add:focus{border-color:#111; background:#fff; outline:none;}
   /* The two buttons beside it. Same bare-button treatment as the ones over the
      table, so nothing new is introduced here. */
   .todo-btn{
@@ -573,6 +617,22 @@
     border:solid #fff;
     border-width:0 2px 2px 0;
     transform:rotate(45deg);
+  }
+  /* The weekly rule for one activity, under its row in the activities editor.
+     Seven of them, so they get their own line rather than crowding the colour,
+     name and group that are already there. */
+  .week-row{
+    display:flex; gap:var(--sp-3);
+    padding:0 0 var(--sp-3) 34px;   /* clear of the colour swatch above */
+    flex-wrap:wrap;
+  }
+  .week-day{
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    cursor:pointer;
+  }
+  .week-lbl{
+    font-family:var(--font-ui); font-weight:300; font-size:12.5px;
+    color:var(--text-muted); line-height:1;
   }
   .todo-edit-row{display:flex; align-items:center; gap:var(--sp-2); margin-bottom:var(--sp-2);}
   .todo-edit-row input[type="text"]{flex:1; min-width:0;}
@@ -962,7 +1022,14 @@
   <header class="top" id="mainHeader" style="display:none;">
     <!-- Idle: the normal app header. -->
     <div class="header-row" id="headerIdle">
-      <h1 class="brand-header"><span class="app-tab" id="appTabTime" onclick="switchTab('cal')" title="Time">T</span></h1>
+      <div class="day-nav">
+        <button class="mode-toggle" onclick="shiftViewDay(-1)" aria-label="Previous day" title="Previous day">
+          <svg class="nav-chev flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+        </button>
+        <button class="mode-toggle" onclick="shiftViewDay(1)" aria-label="Next day" title="Next day">
+          <svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+        </button>
+      </div>
       <nav class="tabs">
         <button onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="10.8" y="7.5" width="2.4" height="6.5"/><rect x="9" y="1.8" width="6" height="2.4"/></svg>
@@ -1097,7 +1164,7 @@
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27d</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27f</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -1254,6 +1321,9 @@
 /* =========================================================================
    Activities. Order here drives the order everywhere else.
    ========================================================================= */
+/* Sunday first, matching Date#getDay and the date picker's own header. */
+const WEEK_LABELS = ['일','월','화','수','목','금','토'];
+
 const DEFAULT_GROUPS = [
   {id:'ielts',  label:'IELTS'},
   {id:'eng',    label:'pavo'},
@@ -1351,6 +1421,11 @@ const DATA_KEY = 'time-entries';
    expected and every loop over that map would have to learn about it. */
 const TODO_KEY = 'time-todos';
 const PLAN_KEY = 'time-plans';
+const WEEK_KEY = 'time-weekplan';
+/* Weekly rules start here and never reach back. A rule written today would
+   otherwise sprout marks on every past Monday, and the record of a day that has
+   already happened should show what happened, not what was meant to. */
+const WEEKPLAN_FROM = '260727';
 
 function getSyncId(){
   let id = null;
@@ -1456,10 +1531,19 @@ let days = {};
    which is what lets a leftover from an earlier day stay on screen for the
    rest of the day it was finished on instead of vanishing under the finger. */
 let todos = {};
-/* Activities marked "do this today" on a given day: {code: [actId, ...]}.
-   Only ever a marker — no times, no history. Kept apart from days so recorded
-   time is never touched by it. */
+/* Two layers, and the day always wins over the week.
+
+   weekPlans {actId: [0-6]}   the standing rule — "S every Monday and Friday"
+   plans     {code: {actId: true|false}}
+                              what was said about one particular day. An entry
+                              here overrides the rule, in both directions: true
+                              adds a mark the rule didn't ask for, false takes
+                              away one it did.
+
+   Nothing is written into plans just because a rule fired, so changing the rule
+   changes every day that hasn't been touched by hand. */
 let plans = {};
+let weekPlans = {};
 let currentGroup = 'all';
 let currentAct = 'all';   // second tier: a single activity within the group
 let currentMode = 'check';
@@ -1556,12 +1640,13 @@ function hhmmToMin(s){
   if(h > 23 || mi > 59) return null;
   return h*60 + mi;
 }
+/* Hours and minutes as a clock reading. An empty string for nothing at all, so
+   a day with no time keeps its cell blank rather than printing 00:00 in every
+   row of the table. */
 function fmtDur(mins){
   if(!mins) return '';
   const h = Math.floor(mins/60), m = Math.round(mins%60);
-  if(h && m) return h + 'h ' + m + 'm';
-  if(h) return h + 'h';
-  return m + 'm';
+  return pad2(h) + ':' + pad2(m);
 }
 
 function todayCode(){
@@ -1597,6 +1682,16 @@ function daysBefore(code){
    glance where "7. 26" has to be worked out. Anything older keeps the number,
    since there is no short name for it. One function, so the table, the to-do
    list and every modal title say the same thing. */
+/* '07.27 mon' — the date the total belongs to, spelled out above it. */
+const DOW_SHORT = ['sun','mon','tue','wed','thu','fri','sat'];
+
+function dateWithDow(code){
+  const s = String(code);
+  if(!/^\d{6}$/.test(s)) return s;
+  const dow = dayOfWeekFromCode(s);
+  return s.slice(2,4) + '.' + s.slice(4,6) + (dow === null ? '' : ' ' + DOW_SHORT[dow]);
+}
+
 function formatDayLabel(code){
   const s = String(code);
   if(!/^\d{6}$/.test(s)) return s;
@@ -1641,11 +1736,27 @@ function dayTotal(code){
 /* Every day that holds any record, regardless of the active filter. Filtering
    changes which COLUMNS are filled, not which rows exist — so the table keeps
    its shape and a group with no time simply shows empty cells. */
+/* How much history each part of the screen shows. The table is a window on the
+   last N days ending today, not a list of days that happen to hold something —
+   an empty day has to appear or a square marked to be done would have nowhere
+   to be drawn. Older records are untouched and still reachable through +. */
+const TABLE_DAYS = 10;
+const TODO_DAYS  = 3;
+
+/* The last n calendar days ending at `from` (today unless told otherwise),
+   newest first. */
+function recentCodes(n, from){
+  const out = [];
+  const t = codeToDate(from || todayCode());
+  for(let i = 0; i < n; i++){
+    const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() - i);
+    out.push(ymdToCode(d.getFullYear(), d.getMonth(), d.getDate()));
+  }
+  return out;
+}
+
 function allCodes(){
-  return Object.keys(days)
-    .filter(c => /^\d{6}$/.test(c))
-    .filter(c => ACTIVITIES.some(a => segmentsFor(c, a.id).length > 0))
-    .sort((a,b) => b.localeCompare(a));
+  return recentCodes(TABLE_DAYS, currentViewCode());
 }
 
 /* -------------------------------------------------------------------------
@@ -1876,8 +1987,31 @@ function clockWedgePath(a0, a1, r){
    total while reading as if it were now. An empty dial saying 0m is the honest
    answer, and the day fills in as it goes. The total below is the same day's,
    since everything here reads from this one function. */
+/* The day the whole screen is looking at. The dial, the table and the to-do
+   list all read this; today is where it starts and where the date label sends
+   it back to. Only what is DRAWN follows it — the stopwatch still records
+   against the real today, and 오늘/어제 are still counted from the real today. */
+let viewCode = null;
+
+function currentViewCode(){
+  return viewCode || todayCode();
+}
+
+function shiftViewDay(delta){
+  const d = codeToDate(currentViewCode());
+  const n = new Date(d.getFullYear(), d.getMonth(), d.getDate() + delta);
+  const code = ymdToCode(n.getFullYear(), n.getMonth(), n.getDate());
+  viewCode = (code === todayCode()) ? null : code;
+  renderDays();
+}
+
+function goToToday(){
+  viewCode = null;
+  renderDays();
+}
+
 function clockCode(){
-  return todayCode();
+  return currentViewCode();
 }
 
 /* The day the dial was last drawn for. Left open past midnight the dial would
@@ -2022,8 +2156,10 @@ function renderClock(){
   const live = clockLiveMins(code);
   const heading =
     `<div class="clock-head">` +
+      `<button class="clock-date${code === todayCode() ? '' : ' is-away'}" onclick="goToToday()"` +
+      ` title="${code === todayCode() ? 'Today' : 'Back to today'}">${dateWithDow(code)}</button>` +
       `<div class="clock-total${(total+live)?'':' is-zero'}${live?' is-running':''}"` +
-      ` id="clockTotal">${fmtDur(total + live) || '0m'}</div>` +
+      ` id="clockTotal">${fmtDur(total + live) || '00:00'}</div>` +
     `</div>`;
 
   // The dial is drawn even with nothing recorded — an empty day still shows
@@ -2283,8 +2419,9 @@ function todoDisplayText(text){
 function mainTodoRows(){
   const today = todayCode();
   const rows = [];
+  const window = recentCodes(TODO_DAYS, currentViewCode());
   Object.keys(todos).forEach(c => {
-    if(c > today) return;              // a day still ahead waits its turn
+    if(window.indexOf(c) === -1) return;
     const carried = c < today;
     if(carried && todoTodayOnly) return;
     todosFor(c).forEach(t => {
@@ -2441,7 +2578,8 @@ async function todoAddFromBox(){
   if(!box) return;
   const text = String(box.value || '').trim();
   if(!text) return;
-  const code = todayCode();
+  // Filed under the day on screen, which is today unless the arrows moved it.
+  const code = currentViewCode();
   if(!Array.isArray(todos[code])) todos[code] = [];
   todos[code].push({
     id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
@@ -2881,7 +3019,8 @@ function renderHeaderState(){
   run.style.display = active ? '' : 'none';
 
   if(!active){
-    bar.style.background = '#FFFFFF';
+    // Nothing behind the idle header — the page shows through it.
+    bar.style.background = 'transparent';
     bar.classList.remove('hw-dark');
     syncHeaderOffset();
     return;
@@ -2945,7 +3084,7 @@ function swTick(){
   const c = document.getElementById('clockTotal');
   if(c){
     const mins = dayVisibleMins(code) + liveMins;
-    c.textContent = fmtDur(mins) || '0m';
+    c.textContent = fmtDur(mins) || '00:00';
     c.classList.toggle('is-running', liveMins > 0);
     c.classList.toggle('is-zero', mins === 0);
   }
@@ -2959,7 +3098,7 @@ function swTick(){
 function moveNowMarker(){
   // Midnight passed with the page still open: the whole day changed, so the
   // wedges and the total are redrawn, not just the dot.
-  if(clockShownCode !== null && clockShownCode !== todayCode()){ renderDays(); return; }
+  if(!viewCode && clockShownCode !== null && clockShownCode !== todayCode()){ renderDays(); return; }
   const m = document.getElementById('clockNowMark');
   if(m) m.innerHTML = nowMarkerHtml(clockCode());
 }
@@ -3217,25 +3356,85 @@ async function loadPlans(){
   }
   if(!plans || typeof plans !== 'object') plans = {};
   Object.keys(plans).forEach(code => {
-    if(!Array.isArray(plans[code])){ delete plans[code]; return; }
-    plans[code] = plans[code].filter(id => typeof id === 'string' && id);
-    if(!plans[code].length) delete plans[code];
+    const v = plans[code];
+    // Earlier builds stored a plain list of ids, all of them meaning "on".
+    if(Array.isArray(v)){
+      const obj = {};
+      v.forEach(id => { if(typeof id === 'string' && id) obj[id] = true; });
+      plans[code] = obj;
+    }
+    if(!plans[code] || typeof plans[code] !== 'object'){ delete plans[code]; return; }
+    if(!Object.keys(plans[code]).length) delete plans[code];
   });
 }
 
-function isPlanned(code, actId){
-  return Array.isArray(plans[code]) && plans[code].indexOf(actId) !== -1;
+async function saveWeekPlans(){
+  try{
+    await appStorage.set(WEEK_KEY, JSON.stringify(weekPlans));
+  }catch(e){
+    alert('Could not save. Your data is still on this device.');
+  }
 }
 
-/* An empty square is the only one this reaches: a square with time in it opens
-   the editor instead, since there is something there to edit. */
+async function loadWeekPlans(){
+  try{
+    const res = await appStorage.get(WEEK_KEY);
+    weekPlans = res && res.value ? (JSON.parse(res.value) || {}) : {};
+  }catch(e){
+    console.warn('week plan load failed', e);
+    weekPlans = {};
+  }
+  if(!weekPlans || typeof weekPlans !== 'object') weekPlans = {};
+  Object.keys(weekPlans).forEach(id => {
+    if(!Array.isArray(weekPlans[id])){ delete weekPlans[id]; return; }
+    weekPlans[id] = weekPlans[id]
+      .map(Number).filter(n => n >= 0 && n <= 6)
+      .filter((n,i,arr) => arr.indexOf(n) === i)
+      .sort();
+    if(!weekPlans[id].length) delete weekPlans[id];
+  });
+}
+
+/* What the weekly rule alone says about a day. */
+function weekPlanSays(code, actId){
+  if(String(code) < WEEKPLAN_FROM) return false;
+  const dow = dayOfWeekFromCode(code);
+  if(dow === null) return false;
+  return Array.isArray(weekPlans[actId]) && weekPlans[actId].indexOf(dow) !== -1;
+}
+
+/* The rule, unless this particular day says otherwise. */
+function isPlanned(code, actId){
+  const ov = plans[code];
+  if(ov && Object.prototype.hasOwnProperty.call(ov, actId)) return !!ov[actId];
+  return weekPlanSays(code, actId);
+}
+
+/* Turning the mark on or off for one day. When the result agrees with the rule
+   again the override is dropped rather than stored, so a day only carries an
+   entry while it genuinely differs from the week. */
 async function togglePlan(code, actId){
-  if(!Array.isArray(plans[code])) plans[code] = [];
-  const i = plans[code].indexOf(actId);
-  if(i === -1) plans[code].push(actId);
-  else plans[code].splice(i, 1);
-  if(!plans[code].length) delete plans[code];
+  const want = !isPlanned(code, actId);
+  if(want === weekPlanSays(code, actId)){
+    if(plans[code]) delete plans[code][actId];
+  } else {
+    if(!plans[code] || typeof plans[code] !== 'object') plans[code] = {};
+    plans[code][actId] = want;
+  }
+  if(plans[code] && !Object.keys(plans[code]).length) delete plans[code];
   await savePlans();
+  renderDays();
+}
+
+/* Ticking a weekday in the activities editor. */
+async function toggleWeekPlan(actId, dow){
+  if(!Array.isArray(weekPlans[actId])) weekPlans[actId] = [];
+  const i = weekPlans[actId].indexOf(dow);
+  if(i === -1) weekPlans[actId].push(dow);
+  else weekPlans[actId].splice(i, 1);
+  weekPlans[actId].sort();
+  if(!weekPlans[actId].length) delete weekPlans[actId];
+  await saveWeekPlans();
   renderDays();
 }
 
@@ -3278,10 +3477,22 @@ function renderColorRows(){
              onchange="setActField('${a.id}','short',this.value)" aria-label="Name">
       <input type="text" class="act-group" value="${escapeAttr(groupLabelOf(a.group))}" maxlength="20"
              onchange="setActField('${a.id}','group',this.value)" aria-label="Group" title="Group">
+      <button class="mode-toggle act-move" onclick="moveActivity('${a.id}',-1)" aria-label="Move up" title="Move up">
+        <svg class="nav-chev chev-up" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+      </button>
+      <button class="mode-toggle act-move" onclick="moveActivity('${a.id}',1)" aria-label="Move down" title="Move down">
+        <svg class="nav-chev chev-down" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+      </button>
       <button class="icon-x act-del" onclick="deleteActivity('${a.id}', this)" aria-label="Delete" title="Delete this activity">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
       </button>
-    </div>`).join('');
+    </div>
+    <div class="week-row">${WEEK_LABELS.map((lbl,dow) => `
+      <label class="week-day">
+        <span class="week-lbl">${lbl}</span>
+        <input type="checkbox" class="todo-check"${(weekPlans[a.id]||[]).indexOf(dow)!==-1?' checked':''}
+               onchange="toggleWeekPlan('${a.id}',${dow})" aria-label="${escapeAttr(a.short)} ${lbl}">
+      </label>`).join('')}</div>`).join('');
 }
 
 function escapeAttr(v){
@@ -3322,6 +3533,22 @@ async function setActField(id, field, value){
   syncGroups();
   await saveActivities();
   refreshAll();
+}
+
+/* Order in ACTIVITIES drives the order everywhere — the table columns, the day
+   editor, the stopwatch picker — so moving a row here moves it in all of them.
+   An activity added later can be walked to the front this way. */
+async function moveActivity(id, delta){
+  const i = ACTIVITIES.findIndex(a => a.id === id);
+  if(i === -1) return;
+  const j = i + delta;
+  if(j < 0 || j >= ACTIVITIES.length) return;
+  const [row] = ACTIVITIES.splice(i, 1);
+  ACTIVITIES.splice(j, 0, row);
+  await saveActivities();
+  renderColorRows();
+  renderGroupRow();
+  renderDays();
 }
 
 async function addActivity(){
@@ -3427,6 +3654,13 @@ function buildTxt(){
   const lines = ACTIVITIES.map(a =>
     ['#', a.short, groupLabelOf(a.group), a.color.toUpperCase(), a.id].join('\t')
   );
+  /* The standing weekly rules, written before the first day block because they
+     belong to the activity rather than to any one date. '~ S 1 3 5' is
+     "S on Monday, Wednesday and Friday", 0 being Sunday. */
+  ACTIVITIES.forEach(a => {
+    const dows = weekPlans[a.id] || [];
+    if(dows.length) lines.push('~ ' + a.short + ' ' + dows.join(' '));
+  });
   lines.push('');
   /* Every day that holds anything — time, to-dos, or both. A day with only
      to-dos has to appear too, or it would be dropped on the next restore.
@@ -3443,13 +3677,16 @@ function buildTxt(){
       .map(a => a.short + ' ' + d[a.id].map(s => minToHHMM(s.s)+'-'+minToHHMM(s.e)).join(', '));
     const todoLines = todosFor(code)
       .map(t => '* [' + (t.done ? 'x' : ' ') + '] ' + t.text);
-    /* Squares marked to be done, as one '+' line of activity abbreviations.
-       A day holding nothing but these still has to be written out, or the
-       marks would vanish on the next restore. */
-    const marked = (plans[code] || [])
-      .map(id => (actById(id) || {}).short)
-      .filter(Boolean);
-    const planLines = marked.length ? ['+ ' + marked.join(' ')] : [];
+    /* What this particular day says, over and above the weekly rule. '+' is a
+       mark this day was given by hand, '-' is one the rule asked for and this
+       day took away. A day holding nothing but these still has to be written
+       out, or they would vanish on the next restore. */
+    const ov = plans[code] || {};
+    const on  = Object.keys(ov).filter(id => ov[id]).map(id => (actById(id)||{}).short).filter(Boolean);
+    const off = Object.keys(ov).filter(id => !ov[id]).map(id => (actById(id)||{}).short).filter(Boolean);
+    const planLines = [];
+    if(on.length)  planLines.push('+ ' + on.join(' '));
+    if(off.length) planLines.push('- ' + off.join(' '));
     if(!body.length && !todoLines.length && !planLines.length) return;
     lines.push('[' + code + ']');
     lines.push(...body);
@@ -3485,6 +3722,7 @@ function parseTxt(raw){
   const out = {};
   const todoOut = {};
   const planOut = {};
+  const weekOut = {};
   const errors = [];
   const defs = [];          // activity definitions found in the file
   let code = null;
@@ -3508,6 +3746,19 @@ function parseTxt(raw){
       }
       return;
     }
+    // '~ S 1 3 5' — a weekly rule. Belongs to no date, so it is read before the
+    // "is there a [date] above this" check.
+    if(t.startsWith('~')){
+      const parts = t.replace(/^~\s*/,'').split(/\s+/).filter(Boolean);
+      const tok = parts.shift();
+      const fromFile = defs.find(dd => dd.short.toLowerCase() === String(tok).toLowerCase());
+      const a = fromFile ? {id: fromFile.id || ('a_' + fromFile.short.toLowerCase())} : actByToken(tok);
+      if(!a){ errors.push('Line ' + (i+1) + ': unknown activity "' + tok + '".'); return; }
+      const dows = parts.map(Number).filter(n => n >= 0 && n <= 6);
+      if(dows.length) weekOut[a.id] = dows.filter((n,j,arr)=>arr.indexOf(n)===j).sort();
+      return;
+    }
+
     const head = /^\[(\d{6})\]$/.exec(t);
     if(head){ code = head[1]; out[code] = out[code] || {}; return; }
     if(!code){ errors.push('Line ' + (i+1) + ': no [date] above this.'); return; }
@@ -3529,13 +3780,14 @@ function parseTxt(raw){
 
     // '+ S R PV' — squares marked to be done. Read before the activity match,
     // since '+' is not an activity name.
-    if(t.startsWith('+')){
-      t.replace(/^\+\s*/, '').split(/\s+/).filter(Boolean).forEach(tok => {
+    if(t.startsWith('+') || t.startsWith('-')){
+      const want = t.startsWith('+');
+      t.slice(1).trim().split(/\s+/).filter(Boolean).forEach(tok => {
         const fromFile = defs.find(dd => dd.short.toLowerCase() === tok.toLowerCase());
         const a = fromFile ? {id: fromFile.id || ('a_' + fromFile.short.toLowerCase())} : actByToken(tok);
         if(!a){ errors.push('Line ' + (i+1) + ': unknown activity "' + tok + '".'); return; }
-        planOut[code] = planOut[code] || [];
-        if(planOut[code].indexOf(a.id) === -1) planOut[code].push(a.id);
+        planOut[code] = planOut[code] || {};
+        planOut[code][a.id] = want;
       });
       return;
     }
@@ -3563,7 +3815,7 @@ function parseTxt(raw){
       out[code][act.id] = segs;
     }
   });
-  return {data:out, todoData:todoOut, planData:planOut, errors, defs};
+  return {data:out, todoData:todoOut, planData:planOut, weekData:weekOut, errors, defs};
 }
 
 /* Rebuild ACTIVITIES from definition lines, keeping ids stable so the imported
@@ -3589,7 +3841,7 @@ function activitiesFromDefs(defs){
 }
 
 async function applyImport(){
-  const {data, todoData, planData, errors, defs} = parseTxt(document.getElementById('importArea').value);
+  const {data, todoData, planData, weekData, errors, defs} = parseTxt(document.getElementById('importArea').value);
   const msg = document.getElementById('importMsg');
   if(errors.length){
     msg.textContent = errors.slice(0,5).join('  ') + (errors.length>5 ? ` (+${errors.length-5} more)` : '');
@@ -3610,9 +3862,11 @@ async function applyImport(){
   days = data;
   todos = todoData;
   plans = planData;
+  weekPlans = weekData;
   await saveData();
   await saveTodos();
   await savePlans();
+  await saveWeekPlans();
   closeImport();
   refreshAll();
   msg.textContent = '';
@@ -3674,7 +3928,7 @@ if(sw.startedAt) swTimer = setInterval(swTick, 1000);
 // The current-time marker advances whether or not a stopwatch is running.
 setInterval(moveNowMarker, 30000);
 
-Promise.all([loadData(), loadTodos(), loadPlans(), loadActivities()]).then(() => {
+Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActivities()]).then(() => {
   document.getElementById('mainHeader').style.display = '';
   renderGroupRow();
   setMode('check');
