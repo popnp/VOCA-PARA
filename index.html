@@ -66,6 +66,18 @@
     /* Screens that open with a back/next arrow row. Arrow buttons carry their
        own space above the glyph, so the same number reads as a wider gap. */
     --gap-top-nav:8px;
+
+    /* ---- Study text ----------------------------------------------------
+       The sizes the learning content is read at. Four numbers, and every place
+       that reads at one of them points here — so the whole app resizes from
+       this block rather than from thirty scattered declarations.
+       Raised 1.2x on 2026-07-27 and rounded to whole pixels. At that rounding
+       the old 14px and 14.5px both land on 17, so they now share one token; the
+       memo's sub-headings still stand apart by weight, as they always did. */
+    --fs-display:clamp(31px, 9vw, 38px);  /* card headword     was 26/7.5vw/32 */
+    --fs-lead:23px;                       /* blanked sentence, memo title  was 19 */
+    --fs-body:20px;                       /* paragraph sentences, popup headword  was 17 */
+    --fs-gloss:17px;                      /* meanings, examples, memo body  was 14 / 14.5 */
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -581,14 +593,14 @@
   }
   .prompt-text{
     font-family:var(--font-ui);
-    font-size:clamp(26px, 7.5vw, 32px);
+    font-size:var(--fs-display);
     font-weight:500;
     letter-spacing:-0.01em;
     line-height:1.4;
     position:relative;
     margin-bottom:var(--sp-2);
   }
-  .prompt-text.example-mode{font-size:19px; font-style:normal; font-weight:500;}
+  .prompt-text.example-mode{font-size:var(--fs-lead); font-style:normal; font-weight:500;}
   .blank{
     border-bottom:2px solid var(--rust);
     padding:0 4px;
@@ -608,14 +620,14 @@
      8 + 24 = 32px, matching the gap above the word (quiz-top 8 + flashcard 24). */
   .back-content.show{display:block; margin-top:24px;}
   .prompt-text.hidden-when-back{display:none;}
-  .back-word{font-size:clamp(26px, 7.5vw, 32px); font-weight:500; letter-spacing:-0.01em; line-height:1.15; margin-bottom:36px;}
-  .back-meaning{font-size:14px; color:var(--text-dark); margin-bottom:0; line-height:1.5;}
-  .back-example{font-size:14px; color:var(--text-muted); font-style:normal; line-height:1.5; margin-top:16px; padding-left:17.9px;}
+  .back-word{font-size:var(--fs-display); font-weight:500; letter-spacing:-0.01em; line-height:1.15; margin-bottom:36px;}
+  .back-meaning{font-size:var(--fs-gloss); color:var(--text-dark); margin-bottom:0; line-height:1.5;}
+  .back-example{font-size:var(--fs-gloss); color:var(--text-muted); font-style:normal; line-height:1.5; margin-top:16px; padding-left:17.9px;}
   .back-example-line{
     font-family:var(--font-ui);
     font-style:normal;
     font-weight:400;
-    font-size:14px;
+    font-size:var(--fs-gloss);
     color:#111;
     margin-bottom:16px;
     padding-left:0;
@@ -632,7 +644,7 @@
     min-height:260px;
     padding:var(--sp-5) 0;
     font-family:var(--font-ui);
-    font-size:17px;
+    font-size:var(--fs-body);
     line-height:1.6;
     color:#111;
     cursor:pointer;
@@ -643,16 +655,16 @@
     border-radius:0;
     border-bottom:2px solid transparent;
   }
-  .stack-prev .prev-en{ color:#111; font-size:17px; }
+  .stack-prev .prev-en{ color:#111; font-size:var(--fs-body); }
   .stack-prev .hint{
     background:#EFEFEF;
     border-bottom:2px solid transparent;
-    font-size:17px;
+    font-size:var(--fs-body);
     font-weight:400;
   }
   .stack-prev .cur-answer{
     background:#EFEFEF;
-    font-size:17px;
+    font-size:var(--fs-body);
   }
   /* Random quiz shows one sentence at a time rather than a growing stack, so
      there's no earlier text for the highlight to distinguish it from. */
@@ -664,7 +676,7 @@
   .stack-prev .stack-subhead{ font-weight:500; }
   .stack-prev .answer-space-holder{
     visibility:hidden;
-    font-size:17px;
+    font-size:var(--fs-body);
   }
   .stack-para-break{ height:14px; }
   /* Same gap as .back-word -> phonetics in the Voca card. */
@@ -674,7 +686,7 @@
   /* Matches .back-meaning in the Voca card so the Korean gloss reads the same
      in both apps. */
   .stack-current .cur-ko{
-    font-size:14px;
+    font-size:var(--fs-gloss);
     color:var(--text-dark);
     line-height:1.5;
   }
@@ -1299,7 +1311,7 @@
   .back-phonetics{
     font-family:var(--font-serif);
     font-style:italic;
-    font-size:14px;
+    font-size:var(--fs-gloss);
     line-height:1.5;
     color:var(--text-dark);
     margin-bottom:16px;
@@ -1453,21 +1465,21 @@
     min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .memo-title{
-    font-family:var(--font-ui); font-weight:600; font-size:19px; color:#111;
+    font-family:var(--font-ui); font-weight:600; font-size:var(--fs-lead); color:#111;
     margin:0 0 var(--sp-3);
   }
   /* A sub-heading inside the memo, written with an arrow. */
   .memo-head{
-    font-family:var(--font-ui); font-weight:600; font-size:14.5px; color:#111;
+    font-family:var(--font-ui); font-weight:600; font-size:var(--fs-gloss); color:#111;
     margin:var(--sp-4) 0 var(--sp-1);
   }
-  .memo-line{font-size:14px; line-height:1.75; color:#111;}
+  .memo-line{font-size:var(--fs-gloss); line-height:1.75; color:#111;}
   /* The headword of an entry, set on its own line above its description.
      Uses .memo-head's size and weight (14.5px / 600) so the memo keeps one
      type scale rather than gaining a new one. */
   .memo-word{
     font-family:var(--font-ui);
-    font-size:14.5px; line-height:1.75;
+    font-size:var(--fs-gloss); line-height:1.75;
     margin-top:var(--sp-3);
   }
   .memo-word .memo-link, .memo-word .memo-missing{font-weight:600;}
@@ -1560,7 +1572,7 @@
   /* Same scale as the flashcard prompt, so a memo entry reads like a test word. */
   .memo-quiz-word{
     font-family:var(--font-ui);
-    font-size:clamp(26px, 7.5vw, 32px);
+    font-size:var(--fs-display);
     font-weight:500;
     letter-spacing:-0.01em;
     line-height:1.4;
@@ -1568,7 +1580,7 @@
   }
   /* Turned over, the word gives way entirely to its description. */
   .memo-quiz-desc{
-    font-size:17px;
+    font-size:var(--fs-body);
     line-height:1.6;
     color:#111;
   }
@@ -1591,7 +1603,7 @@
     background-origin:content-box !important;
     background-clip:content-box !important;
   }
-  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:17px; color:#111; margin-bottom:4px; padding-right:28px;}
+  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:var(--fs-body); color:#111; margin-bottom:4px; padding-right:28px;}
   .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:13.5px; color:#111; margin-bottom:6px;}
   .vocab-popup-meaning{font-size:13.5px; color:#111; margin-bottom:6px;}
   .vocab-popup-example{font-size:12.5px; color:#111; font-style:italic;}
@@ -1729,7 +1741,7 @@
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27h</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27i</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -7022,7 +7034,7 @@ function pRenderStack(){
   if(editWrap) editWrap.style.display = 'none';
 
   document.getElementById('pStackTitleLabel').innerHTML =
-    `<span style="font-family:var(--font-ui); font-size:17px; font-weight:500; color:#111;">${escapeHtml(item.titleEn)}</span>`
+    `<span style="font-family:var(--font-ui); font-size:var(--fs-body); font-weight:500; color:#111;">${escapeHtml(item.titleEn)}</span>`
     + speakRevealedBtn(13);
   document.getElementById('pStackProgress').textContent = `${pStackPointer+1} / ${item.sentences.length}`;
   document.getElementById('pStackPrevBtn').disabled =
@@ -7681,7 +7693,7 @@ function pRenderCard(){
 
   document.getElementById('pQuizProgress').textContent = `${doneBefore+1} / ${totalInSession}`;
   document.getElementById('pTitleLabel').innerHTML =
-    `<span style="font-family:var(--font-ui); font-size:17px; font-weight:500; color:#111;">${escapeHtml(item.para.titleEn)}</span>`;
+    `<span style="font-family:var(--font-ui); font-size:var(--fs-body); font-weight:500; color:#111;">${escapeHtml(item.para.titleEn)}</span>`;
   const atStart = (pParaIndex===0 && pSentenceIndex===0 && pRevealStage === 0);
   document.getElementById('pPrevBtn').disabled = atStart;
   document.getElementById('pPrevBtn').style.opacity = '1';
