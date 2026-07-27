@@ -753,17 +753,25 @@
     position:relative;
   }
   .back-content{display:none; position:relative;}
-  /* Word-mode keeps the front prompt visible and hides .back-word, so the gap
-     under the big word is prompt-text's margin-bottom (8px) PLUS this value.
-     8 + 24 = 32px, matching the gap above the word (quiz-top 8 + flashcard 24). */
-  .back-content.show{display:block; margin-top:24px;}
-  /* Example mode keeps the sentence on screen above the answer, so the gap
-     there is prompt-text's 8px plus this. 8 + 56 = 64, twice the 32 it was. */
+  /* WORD MODE. The front prompt stays visible and .back-word is hidden, so this
+     is the gap between the headword and the pronunciation under it.
+     Note it does NOT add to prompt-text's 8px bottom margin — touching vertical
+     margins collapse to the larger, so the gap is 48px, not 56. An older comment
+     here claimed they summed, which was wrong.
+     EXAMPLE MODE sets the same 48px on .back-word below. The two are halves of
+     one measurement and are always changed together. */
+  .back-content.show{display:block; margin-top:48px;}
+  /* Example mode keeps the blanked sentence above the answer; this is the gap
+     between the two. Again it collapses with prompt-text's 8px rather than
+     adding to it, so what is on screen is 56px. */
   .prompt-text.example-mode ~ .back-content.show{margin-top:56px;}
   .prompt-text.hidden-when-back{display:none;}
-  .back-word{font-size:var(--fs-display); font-weight:500; letter-spacing:-0.01em; line-height:1.3; margin-bottom:36px;}
+  .back-word{font-size:var(--fs-display); font-weight:500; letter-spacing:-0.01em; line-height:1.3; margin-bottom:48px;}
   .back-meaning{font-size:var(--fs-body); color:var(--text-dark); margin-bottom:0; line-height:1.3;}
-  .back-example{font-size:var(--fs-body); color:var(--text-muted); font-style:normal; line-height:1.3; margin-top:16px; padding-left:17.9px;}
+  .back-example{font-size:var(--fs-body); color:var(--text-muted); font-style:normal; line-height:1.3;
+    /* Same 48px as word-to-pronunciation: the examples are a separate block,
+       while the pronunciation and the meaning are one. */
+    margin-top:48px; padding-left:17.9px;}
   .back-example-line{
     font-family:var(--font-ui);
     font-style:normal;
@@ -817,7 +825,9 @@
     visibility:hidden;
     font-size:var(--fs-lead);
   }
-  .stack-para-break{ height:14px; }
+  /* One blank line rather than a measured gap: tied to the text, so it stays a
+     line whatever size the sentences are set at. */
+  .stack-para-break{ height:1.3em; }
   /* Same gap as .back-word -> phonetics in the Voca card. */
   .stack-current{
     /* The same 132px the blank-quiz hint sits at — the Korean is the same kind
@@ -869,8 +879,8 @@
   #speechControlBtn.is-playing{color:var(--rust);}
   #speechControlBtn.is-playing:hover{color:var(--rust);}
   .speak-btn svg{
-    width:var(--spk, 15px);
-    height:var(--spk, 15px);
+    width:var(--spk, 22px);
+    height:var(--spk, 22px);
     fill:currentColor;
     display:block;
   }
@@ -1762,9 +1772,9 @@
     background-clip:content-box !important;
   }
   /* Each gap is twice what it was: 4->8, 6->12, 6->12. */
-  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:var(--fs-lead); color:#111; margin-bottom:16px; padding-right:28px;}
-  .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:var(--fs-body); color:#111; margin-bottom:24px;}
-  .vocab-popup-meaning{font-size:var(--fs-body); color:#111; margin-bottom:24px;}
+  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:var(--fs-lead); color:#111; margin-bottom:48px; padding-right:28px;}
+  .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:var(--fs-body); color:#111; margin-bottom:16px;}
+  .vocab-popup-meaning{font-size:var(--fs-body); color:#111; margin-bottom:48px;}
   /* Examples read as a list, so they are marked as one. The dash sits in the
      margin and the text stays flush, the way a real list hangs. */
   .vocab-popup-example{
@@ -1860,7 +1870,6 @@ if('serviceWorker' in navigator){
 <div id="resetConfirmModal" class="modal-overlay">
   <div class="modal-box modal-box-tight">
     <button class="modal-close" onclick="closeResetConfirm()" aria-label="Close">✕</button>
-    <p class="modal-title" style="margin-bottom:var(--sp-4);">Restart this test?</p>
     <div class="actions" style="justify-content:flex-start; margin:0;">
       <button class="btn btn-primary" onclick="confirmResetTest()">Restart</button>
     </div>
@@ -1927,7 +1936,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28f</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28h</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -3860,7 +3869,7 @@ function speakRevealedStack(ev, btnEl){
 
 function speakRevealedBtn(size){
   if(!SPEECH_OK) return '';
-  const px = size || 13;
+  const px = size || 22;
   return `<button type="button" class="speak-btn speak-para-btn" style="--spk:${px}px"`
     + ` aria-label="Read the sentences shown so far" title="Read the sentences shown so far"`
     + ` onclick="speakRevealedStack(event, this)">`
@@ -3871,7 +3880,7 @@ function speakRevealedBtn(size){
 // Play/stop button for a whole paragraph.
 function speakParaBtn(paraId, size){
   if(!SPEECH_OK) return '';
-  const px = size || 13;
+  const px = size || 22;
   return `<button type="button" class="speak-btn speak-para-btn" style="--spk:${px}px"`
     + ` aria-label="Read the whole paragraph" title="Read the whole paragraph"`
     + ` onclick="speakParagraph('${paraId}', event, this)">`
@@ -3881,16 +3890,16 @@ function speakParaBtn(paraId, size){
 
 // Speaker button markup. Returns '' when the browser can't speak, so callers
 // can concatenate it unconditionally.
-/* The test card sets its word at clamp(26px, 7.5vw, 32px), so a fixed 13px
-   speaker sat at only 41–50% of the text height and read as an afterthought.
-   18px keeps it between 56% and 69% across that whole range — the band where an
-   inline icon reads as part of the line rather than a footnote. Lists and
-   popups keep 13px; their text is small enough to already be proportionate. */
-const SPK_CARD = 18;
+/* Two sizes in the whole app and no more: 20px beside the card's headword,
+   which is set as large as 50px, and 22px everywhere else. The card's is the
+   smaller of the two on purpose — next to a 50px word a bigger icon starts to
+   compete with it, while the 22px one has to hold its own beside ordinary
+   text and be findable with a thumb. */
+const SPK_CARD = 20;
 
 function speakerBtn(text, size){
   if(!SPEECH_OK) return '';
-  const px = size || 13;
+  const px = size || 22;
   return `<button type="button" class="speak-btn" style="--spk:${px}px" aria-label="Play pronunciation"`
     + ` onclick="speakText(this.dataset.say, event)" data-say="${escapeAttr(text)}">`
     + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 8.6h4.6L13.4 3.4v17.2L7.1 15.4H2.5Z"/><path d="M16.8 8.2a5.4 5.4 0 0 1 0 7.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>`
@@ -5734,7 +5743,7 @@ function showDayDetail(code){
 
     const header = document.createElement('div');
     header.className = 'day-word-header';
-    header.innerHTML = `<span class="word-label"><span class="status-dot ${colorClass}"></span>${escapeHtml(c.word)}${speakerBtn(c.word, 13)}</span><span class="chevron">${isOpen?'▲':'▼'}</span>`;
+    header.innerHTML = `<span class="word-label"><span class="status-dot ${colorClass}"></span>${escapeHtml(c.word)}${speakerBtn(c.word, 22)}</span><span class="chevron">${isOpen?'▲':'▼'}</span>`;
     header.onclick = () => toggleWordOpen(c.id);
     wrap.appendChild(header);
 
@@ -6789,6 +6798,7 @@ function pStartStackForPara(para, reading){
   pHighlightTestModeButtons();
   pStackPara = para;
   pStackPointer = 0;
+  pSkipSubheads(1);
   pStackFlipped = false;
   pStackRevealStage = 0;
   pStackCurrentRated = false;
@@ -7092,7 +7102,7 @@ function showVocabPopup(word){
   }
   popup.innerHTML = `
     <button class="modal-close" onclick="hideVocabPopup()" aria-label="Close">✕</button>
-    <div class="vocab-popup-word">${escapeHtml(card.word)}${speakerBtn(card.word, 13)}</div>
+    <div class="vocab-popup-word">${escapeHtml(card.word)}${speakerBtn(card.word, 22)}</div>
     ${card.phonetics ? `<div class="vocab-popup-phon">${mdLinksToHtml(escapeHtml(card.phonetics))}</div>` : ''}
     <div class="vocab-popup-meaning">${escapeHtml(card.meaning)}</div>
     ${(card.examples||[]).map(ex=>`<div class="vocab-popup-example">${escapeHtml(stripBrackets(ex))}</div>`).join('')}
@@ -7255,9 +7265,16 @@ function pRenderStack(){
 
   document.getElementById('pStackTitleLabel').innerHTML =
     `<span style="font-family:var(--font-ui); font-size:var(--fs-lead); font-weight:500; color:#111;">${escapeHtml(item.titleEn)}</span>`
-    + speakRevealedBtn(13);
-  document.getElementById('pStackProgress').textContent = `${pStackPointer+1} / ${item.sentences.length}`;
-  setQuizProgress(pStackPointer + 1, item.sentences.length);
+    + speakRevealedBtn(22);
+  /* Count only what can actually be asked. With headings skipped, counting all
+     sentences made the tally jump by two and end short of its own total. */
+  const askable = pStackReading
+    ? item.sentences.map((_, i) => i)
+    : item.sentences.map((_, i) => i).filter(i => !pIsSubheadSentence(item.sentences[i]));
+  const askPos = Math.max(1, askable.indexOf(pStackPointer) + 1);
+  const askTotal = askable.length || item.sentences.length;
+  document.getElementById('pStackProgress').textContent = `${askPos} / ${askTotal}`;
+  setQuizProgress(askPos, askTotal);
   document.getElementById('pStackPrevBtn').disabled =
     (pStackPointer === 0 && (pStackReading || pStackRevealStage === 0));
   document.getElementById('pStackPrevBtn').style.opacity = '1';
@@ -7324,7 +7341,7 @@ function pRenderStack(){
       if(justRated !== undefined) color = RATING_COLORS[justRated];
     }
     const enStyle = color ? ` style="border-bottom-color:${color};"` : '';
-    prevHtml += `<span class="prev-sentence prev-en cur-answer${curSubCls}"${enStyle}>${escapeHtml(fullAnswer)}</span> ${renderVocabLinkRowTest(cur.vocabLinks)}${speakerBtn(fullAnswer, 13)}`;
+    prevHtml += `<span class="prev-sentence prev-en cur-answer${curSubCls}"${enStyle}>${escapeHtml(fullAnswer)}</span> ${renderVocabLinkRowTest(cur.vocabLinks)}${speakerBtn(fullAnswer, 22)}`;
   } else if(pStackRevealStage === 0){
     // Hint state: show the first 3 words highlighted, but keep the REST of the answer
     // rendered invisibly so the block occupies the SAME height as the revealed answer.
@@ -7396,8 +7413,23 @@ function pStackSkip(){
   pStackAdvance();
 }
 
+/* A line beginning with → is a heading inside the paragraph, not a sentence to
+   be answered. It still appears in the flow as the reader passes it, but it is
+   never made the question. Reading mode asks nothing, so it walks everything. */
+function pIsSubheadSentence(s){
+  return /^\s*→/.test((s && s.en) || '');
+}
+function pSkipSubheads(dir){
+  if(pStackReading || !pStackPara) return;
+  const list = pStackPara.sentences || [];
+  while(pStackPointer >= 0 && pStackPointer < list.length && pIsSubheadSentence(list[pStackPointer])){
+    pStackPointer += dir;
+  }
+}
+
 function pStackAdvance(){
   pStackPointer++;
+  pSkipSubheads(1);
   pStackFlipped = false;
   pStackRevealStage = 0;
   pStackCurrentRated = false;
@@ -7442,6 +7474,7 @@ function retryParaStackWeakOnly(){
   const subsetSentences = weakIdx.map(i => original.sentences[i]); // same object references — ratings still save back correctly
   pStackPara = {titleEn: original.titleEn + ' (Retry: Unsure+Blank)', titleKo: original.titleKo, sentences: subsetSentences};
   pStackPointer = 0;
+  pSkipSubheads(1);
   pStackFlipped = false;
   pStackRevealStage = 0;
   pStackCurrentRated = false;
@@ -7459,6 +7492,9 @@ function pStackPrev(){
   }
   if(pStackPointer > 0){
     pStackPointer--;
+    pSkipSubheads(-1);
+    // Only headings above: stay put rather than falling off the top.
+    if(pStackPointer < 0){ pStackPointer = 0; pSkipSubheads(1); }
     pStackFlipped = true;
     pStackRevealStage = 9999; // force full reveal regardless of this sentence's chunk count
     pStackCurrentRated = true; // treat a revisited earlier sentence as already settled
@@ -7617,6 +7653,7 @@ function pRestartSession(){
   if(pTestMode === 'pick'){
     if(!pStackPara) return;
     pStackPointer = 0;
+    pSkipSubheads(1);
     pStackFlipped = false;
     pStackRevealStage = 0;
     pStackCurrentRated = false;
@@ -7817,7 +7854,8 @@ function pGetFilteredParas(){
   // the indices of sentences that match. Paragraphs with no matching sentence drop out.
   return list.map(p=>{
     const scores = pLatestSentenceScores(p);
-    let indices = p.sentences.map((_,i)=>i);
+    // Headings show but are never asked, here as in the stack.
+    let indices = p.sentences.map((_,i)=>i).filter(i => !pIsSubheadSentence(p.sentences[i]));
     if(anyProf){
       indices = indices.filter(i=>{
         const sc = scores[i];
@@ -7868,7 +7906,8 @@ function testFilteredPara(){
   if(!pDayFilteredParas || pDayFilteredParas.length === 0) return;
   const items = pDayFilteredParas
     .filter(p => p.sentences && p.sentences.length > 0)
-    .map(p => ({para: p, indices: p.sentences.map((s,i)=>i)}));
+    .map(p => ({para: p, indices: p.sentences.map((s,i)=>i).filter(i => !pIsSubheadSentence(p.sentences[i]))}))
+    .filter(item => item.indices.length > 0);
   if(items.length === 0){
     alert('These paragraphs have no sentences to study.');
     return;
@@ -7941,7 +7980,7 @@ function pRenderCard(){
       if(justRated !== undefined) color = RATING_COLORS[justRated];
     }
     const enStyle = color ? ` style="border-bottom-color:${color};"` : '';
-    flowHtml = `<span class="prev-sentence prev-en cur-answer${curSubCls}"${enStyle}>${escapeHtml(fullAnswer)}</span> ${renderVocabLinkRowTest(sentence.vocabLinks)}${speakerBtn(fullAnswer, 13)}`;
+    flowHtml = `<span class="prev-sentence prev-en cur-answer${curSubCls}"${enStyle}>${escapeHtml(fullAnswer)}</span> ${renderVocabLinkRowTest(sentence.vocabLinks)}${speakerBtn(fullAnswer, 22)}`;
   } else if(pRevealStage === 0){
     const words = fullAnswer.split(/\s+/);
     const shown = words.slice(0,3).join(' ');
@@ -8713,7 +8752,7 @@ function pShowDayDetail(code){
 
     const header = document.createElement('div');
     header.className = 'day-word-header';
-    header.innerHTML = `<span class="word-label"><span class="status-dot ${colorClass}"></span>${escapeHtml(p.titleEn)}${speakParaBtn(p.id, 13)}</span><span class="chevron">${isOpen?'▲':'▼'}</span>`;
+    header.innerHTML = `<span class="word-label"><span class="status-dot ${colorClass}"></span>${escapeHtml(p.titleEn)}${speakParaBtn(p.id, 22)}</span><span class="chevron">${isOpen?'▲':'▼'}</span>`;
     header.onclick = () => pToggleOpen(p.id);
     wrap.appendChild(header);
 
@@ -8817,7 +8856,7 @@ function pShowDayDetail(code){
           const histLabel = (!s.testHistory || s.testHistory.length === 0) ? 'Untested' : s.testHistory.join(' / ');
           return `<div class="sent-row">
             <div class="sent-ko">${dotHtml}${escapeHtml(s.ko)}</div>
-            <div class="sent-en">${escapeHtml(s.en)}${speakerBtn((s.en||'').replace(/^\s*→\s*/, ''), 13)}${renderVocabLinkRow(s.vocabLinks)}</div>
+            <div class="sent-en">${escapeHtml(s.en)}${speakerBtn((s.en||'').replace(/^\s*→\s*/, ''), 22)}${renderVocabLinkRow(s.vocabLinks)}</div>
             <div class="dwc-history" style="text-align:left;">Test history<br>${histLabel}</div>
           </div>`;
         }).join('');
