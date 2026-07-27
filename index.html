@@ -156,7 +156,9 @@
      smaller labels together occupy the same height as the 46px title. */
   .brand-header{
     font-family:var(--font-ui);
-    font-size:38px;
+    /* Two thirds of the old 38px. The icons and the gaps below came down by the
+       same fraction so the header shrinks as one piece. */
+    font-size:25.3px;
     /* At this size the weight reads much heavier than the same number does in
        body copy, so the title sits a step below the rest of the UI. */
     font-weight:400;
@@ -171,7 +173,13 @@
   }
   /* No separator glyph — the two words are set apart by space alone. */
   /* Same gap as the header icons on the right. */
-  .brand-header .app-tab + .app-tab{margin-left:17.6px;}
+  .brand-header .app-tab + .app-tab{margin-left:11.7px;}
+  /* Brand and screen arrows travel together on the left of the header. */
+  .header-left{display:flex; align-items:center; gap:var(--sp-4); min-width:0;}
+  .head-arrows{display:flex; align-items:center; gap:6px;}
+  /* The rows the arrows came from keep their progress counts and buttons; only
+     the arrows themselves step out. */
+  .arrows-lifted{display:none !important;}
   /* Both app names stay black whether or not they're selected. */
   .app-tab{cursor:pointer; color:#111; opacity:1; transition:color .15s;}
   .app-tab.active{color:#111; opacity:1;}
@@ -198,7 +206,7 @@
     flex-direction:row;
     align-items:center;
     justify-content:flex-end;
-    gap:17.6px;
+    gap:11.7px;
     margin:0;
     padding:0;
     border:none;
@@ -244,8 +252,8 @@
   /* fill:currentColor lets the icon pick up the same active/inactive colour
      the text labels used to get. */
   .tab-icon{
-    width:26px;
-    height:26px;
+    width:17.3px;
+    height:17.3px;
     display:block;
     fill:currentColor;
   }
@@ -1671,9 +1679,18 @@
   <div id="topBar" class="theme-voca">
   <header class="top" id="mainHeader">
     <div class="header-row">
-      <p class="brand-header">
-        <span class="app-tab" id="appTabPara" onclick="onAppTabClick('para')" aria-label="Para" title="Para">P</span><span class="app-tab active" id="appTabVoca" onclick="onAppTabClick('voca')" aria-label="Voca" title="Voca">V</span><span class="app-tab" id="appTabMemo" onclick="openMemoSection()" aria-label="Memo" title="Memo">M</span>
-      </p>
+      <div class="header-left">
+        <p class="brand-header">
+          <span class="app-tab" id="appTabPara" onclick="onAppTabClick('para')" aria-label="Para" title="Para">P</span><span class="app-tab active" id="appTabVoca" onclick="onAppTabClick('voca')" aria-label="Voca" title="Voca">V</span><span class="app-tab" id="appTabMemo" onclick="openMemoSection()" aria-label="Memo" title="Memo">M</span>
+        </p>
+        <!-- The back / skip arrows for whichever screen is open. They live here
+             rather than at the top of each screen; headArrowsSync decides which
+             pair of functions they stand for. -->
+        <span class="head-arrows" id="headArrows" style="display:none;">
+          <button class="shuffle-btn" id="headPrevBtn" onclick="headArrowPrev()" aria-label="Back" title="Back"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+          <button class="shuffle-btn" id="headNextBtn" onclick="headArrowNext()" aria-label="Skip" title="Skip"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
+        </span>
+      </div>
       <nav class="tabs" id="mainNav">
         <button id="speechControlBtn" onclick="toggleSpeechPlayback()" aria-label="Pause reading" title="Playing — tap to pause" style="display:none;">
           <svg class="tab-icon" id="speechControlIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5 L18 12 L6 20.5 Z"/></svg>
@@ -1712,7 +1729,7 @@
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27f</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27g</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -1881,7 +1898,7 @@
     <!-- SESSION -->
     <div id="quizBody" style="display:none;">
       <div class="quiz-top">
-        <span class="nav-arrows">
+        <span class="nav-arrows arrows-lifted">
           <button class="shuffle-btn" id="prevCardBtn" onclick="prevCard()" aria-label="Previous card" title="Previous"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
           <button class="shuffle-btn" onclick="nextCard()" aria-label="Skip card" title="Skip"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
         </span>
@@ -2035,7 +2052,7 @@
 
       <div id="memoDetailWrap" style="display:none;">
         <div class="nav-arrows" id="memoDetailBar" style="display:flex; align-items:center; gap:6px; margin:0 0 var(--sp-3);">
-          <button class="shuffle-btn" onclick="closeMemo()" aria-label="Back to memo list" title="Back">
+          <button class="shuffle-btn arrows-lifted" onclick="closeMemo()" aria-label="Back to memo list" title="Back">
             <svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
           </button>
           <span style="flex:1;"></span>
@@ -2047,7 +2064,7 @@
              turn it over; the buttons appear once they are all turned. -->
         <div id="memoQuizWrap" style="display:none;">
           <div class="nav-arrows" style="display:flex; align-items:center; gap:6px; margin:0 0 var(--sp-3);">
-            <button class="shuffle-btn" onclick="endMemoQuiz()" aria-label="Back to memo" title="Back">
+            <button class="shuffle-btn arrows-lifted" onclick="endMemoQuiz()" aria-label="Back to memo" title="Back">
               <svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
             </button>
             <span class="memo-quiz-title" id="memoQuizTitle"></span>
@@ -2181,7 +2198,7 @@
 
     <div id="pQuizBody" style="display:none;">
       <div class="quiz-top">
-        <span class="nav-arrows">
+        <span class="nav-arrows arrows-lifted">
           <button class="shuffle-btn" id="pPrevBtn" onclick="pPrevSentence()" aria-label="Previous sentence" title="Previous"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
           <button class="shuffle-btn" onclick="pNextSentence()" aria-label="Skip sentence" title="Skip"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
         </span>
@@ -2230,7 +2247,7 @@
 
     <div id="pStackQuizBody" style="display:none;">
       <div class="quiz-top">
-        <span>
+        <span class="arrows-lifted">
           <button class="shuffle-btn" id="pStackPrevBtn" onclick="pStackPrev()" aria-label="Previous sentence" title="Previous"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
           &nbsp;
           <button class="shuffle-btn" onclick="pStackSkip()" aria-label="Skip sentence" title="Skip"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
@@ -2675,6 +2692,55 @@ function markMemoTab(){
     if(p) p.classList.remove('active');
   }
 }
+
+/* ---- Arrows in the header ----------------------------------------------
+   One pair of arrows serves every screen that has them. Rather than a copy in
+   each screen's first row, the header pair asks which screen is open and calls
+   that screen's own functions — so the behaviour still lives with the screen
+   and there is nothing to keep in step. */
+function isShown(el){
+  while(el && el !== document.body){
+    if(el.style && el.style.display === 'none') return false;
+    const cs = window.getComputedStyle(el);
+    if(cs && cs.display === 'none') return false;
+    el = el.parentElement;
+  }
+  return !!el;
+}
+
+function shownById(id){
+  const el = document.getElementById(id);
+  return !!el && isShown(el);
+}
+
+/* Innermost screen first: the memo quiz sits inside the memo, and the back
+   arrow there means "out of the quiz", not "out of the memo". */
+function headArrowSet(){
+  if(shownById('memoQuizWrap'))   return {prev: endMemoQuiz,    next: null};
+  if(shownById('memoDetailWrap')) return {prev: closeMemo,      next: null};
+  if(shownById('quizBody'))       return {prev: prevCard,       next: nextCard};
+  if(shownById('pStackQuizBody')) return {prev: pStackPrev,     next: pStackSkip};
+  if(shownById('pQuizBody'))      return {prev: pPrevSentence,  next: pNextSentence};
+  return null;
+}
+
+function headArrowPrev(){ const s = headArrowSet(); if(s && s.prev) s.prev(); headArrowsSync(); }
+function headArrowNext(){ const s = headArrowSet(); if(s && s.next) s.next(); headArrowsSync(); }
+
+/* Shows the pair only where there is something for it to do, and drops the
+   second arrow on the screens that only go back. */
+function headArrowsSync(){
+  const wrap = document.getElementById('headArrows');
+  if(!wrap) return;
+  const s = headArrowSet();
+  wrap.style.display = s ? 'flex' : 'none';
+  const next = document.getElementById('headNextBtn');
+  if(next) next.style.display = (s && s.next) ? '' : 'none';
+}
+
+/* The screens are shown and hidden from a dozen places, so rather than calling
+   the sync from each of them it runs just after anything the person does. */
+document.addEventListener('click', () => setTimeout(headArrowsSync, 0), true);
 
 function onAppTabClick(name){
   // Picking P or V leaves the memo section, so M gives up its selected state.

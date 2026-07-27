@@ -64,16 +64,9 @@
     justify-content:space-between;
     padding:2px 0;
   }
-  /* Only the running header keeps its rule. The idle one sits on the page with
-     nothing under it and nothing behind it. */
-  .hw-row::after{
-    content:'';
-    position:absolute;
-    left:calc(-50vw + 50%);
-    right:calc(-50vw + 50%);
-    bottom:0;
-    border-bottom:1px solid #111;
-  }
+  /* No rule under the header in either state. While the stopwatch runs the
+     colour block behind it is the separation; idle, there is nothing to
+     separate. */
   /* The two day arrows, in the slot the T used to hold. Same 11px chevron the
      rest of both apps uses; the padding is the press area, not the glyph. */
   .day-nav{display:flex; align-items:center; gap:var(--sp-2);}
@@ -269,6 +262,17 @@
   }
   /* Looking at some other day: the date speaks up, and pressing it comes home. */
   .clock-date.is-away{color:var(--text-dark); text-decoration:underline;}
+  /* The stopwatch, moved down out of the header and drawn as a plus. Same
+     pointer-events exception the date needs, for the same reason. */
+  .clock-add{
+    display:block;
+    margin:var(--sp-1) 0 0 auto;
+    padding:0;
+    border:none; background:none;
+    cursor:pointer; color:#111; line-height:0;
+    pointer-events:auto;
+  }
+  .clock-add svg{width:18px; height:18px; fill:currentColor;}
   .clock-total{
     font-family:var(--font-ui);
     font-size:72px;
@@ -558,6 +562,10 @@
   .todo-tools{display:flex; align-items:center; gap:var(--sp-1); flex-shrink:0;}
   /* 11px, the size every other glyph in this row-height sits at. The stock 18px
      ✕ is drawn for a modal corner and would tower over a 24px line. */
+  /* Black, not the usual delete red. Asked for: on a line of black text a red
+     ✕ on every row was the loudest thing on the screen. The two-press
+     confirmation is what makes it safe, and that is unchanged. */
+  .todo-tools .icon-x{color:var(--text-dark);}
   .todo-tools .icon-x svg{width:11px; height:11px;}
   .todo-tools .mini-toggle{padding:1px var(--sp-1);}
   /* The box that replaces the line while it is being reworded. */
@@ -701,7 +709,10 @@
     left:50%;
     top:50%;
     width:9px;
-    height:1px;
+    /* The ✕ above renders at 2/24 of 11px = 0.92px of stroke. Matched here by
+       hand because this cross is drawn from two rotated blocks rather than an
+       icon, and 1px was visibly the heavier of the two. */
+    height:0.92px;
     background:#111;
   }
   .check-cell.off::before{transform:translate(-50%,-50%) rotate(45deg);}
@@ -1031,9 +1042,6 @@
         </button>
       </div>
       <nav class="tabs">
-        <button onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">
-          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="10.8" y="7.5" width="2.4" height="6.5"/><rect x="9" y="1.8" width="6" height="2.4"/></svg>
-        </button>
         <button onclick="openOptions()" aria-label="Options" title="Options">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19.4" cy="12" r="1.6"/></svg>
         </button>
@@ -1164,7 +1172,7 @@
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27f</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27g</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2160,6 +2168,11 @@ function renderClock(){
       ` title="${code === todayCode() ? 'Today' : 'Back to today'}">${dateWithDow(code)}</button>` +
       `<div class="clock-total${(total+live)?'':' is-zero'}${live?' is-running':''}"` +
       ` id="clockTotal">${fmtDur(total + live) || '00:00'}</div>` +
+      `<button class="clock-add" onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">` +
+        `<svg viewBox="0 0 24 24" aria-hidden="true">` +
+        `<rect x="10.8" y="3" width="2.4" height="18"/>` +
+        `<rect x="3" y="10.8" width="18" height="2.4"/></svg>` +
+      `</button>` +
     `</div>`;
 
   // The dial is drawn even with nothing recorded — an empty day still shows
