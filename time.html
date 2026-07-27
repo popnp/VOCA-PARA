@@ -566,18 +566,6 @@
     background:transparent;
     cursor:pointer;
   }
-  /* A line about what was done. Bare like the activity name box, so it reads as
-     an optional aside rather than another required field. */
-  input[type="text"].act-note{
-    display:block; width:100%; box-sizing:border-box;
-    margin-top:7px;
-    font-family:var(--font-ui); font-size:12.5px;
-    padding:4px 6px;
-    border:0.5px solid transparent;
-    background:none;
-  }
-  input[type="text"].act-note:hover{border-color:#6B6B6B;}
-  input[type="text"].act-note:focus{border-color:#111; background:#fff; outline:none;}
   /* On the dial: the activity and its note. The size is set on each element at
      draw time — the dial scales, so a size written here would scale with it. */
   .clock-label{
@@ -644,7 +632,15 @@
   }
   /* Importance, written as stars in the text. Two: bold and red. One: bold.
      None: exactly as before, so the ordinary case gains no decoration. */
-  .todo-text.p2{font-weight:600; color:var(--rust);}
+  /* Two stars: white on black rather than red text. Red was already the delete
+     colour, and on a list of black lines it read as a warning about the item
+     rather than as its rank. */
+  .todo-text.p2{
+    font-weight:600;
+    color:#FFFFFF;
+    background:#111111;
+    padding:0 4px;
+  }
   .todo-text.p1{font-weight:600;}
   /* Struck through, not faded. Fading it would read as "can't press this" —
      that is what :disabled looks like everywhere else in both apps. */
@@ -653,6 +649,9 @@
      the importance, so a left-over urgent item stays bold. */
   .todo-row.is-past .todo-day,
   .todo-row.is-past .todo-text{color:var(--text-muted);}
+  /* The black plate outranks that: a left-over urgent line stays urgent, and
+     goes grey on black rather than losing its plate. */
+  .todo-row.is-past .todo-text.p2{color:#CFCFCF; background:#111111;}
   .todo-edit-row.is-done input[type="text"]{text-decoration:line-through;}
   /* Kept only inside the day editor, where the text is in a box being typed
      into and so can't double as the button. */
@@ -883,6 +882,17 @@
     margin-top:5px;
     flex-wrap:wrap;
   }
+  /* Bare like the activity name box: an aside on the row, not another field
+     that has to be filled in. */
+  input[type="text"].seg-note{
+    flex:1; min-width:90px;
+    font-family:var(--font-ui); font-size:12.5px;
+    padding:4px 6px;
+    border:0.5px solid transparent;
+    background:none;
+  }
+  input[type="text"].seg-note:hover{border-color:#6B6B6B;}
+  input[type="text"].seg-note:focus{border-color:#111; background:#fff; outline:none;}
   .seg-row .sep{font-size:12px; color:var(--text-muted);}
   /* A plain text field rather than <input type="time">, which renders as a
      12-hour AM/PM picker in some locales. This keeps it 24-hour everywhere. */
@@ -1227,7 +1237,7 @@
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27p</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27r</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -1317,8 +1327,6 @@
     <p class="hint" style="margin:-8px 0 14px;">Times for this one activity. Add a row if you paused and came back.</p>
     <div style="margin-bottom:14px; display:flex; gap:var(--sp-2); align-items:center;">
       <button class="mini-toggle" id="actPlanBtn" onclick="togglePlanFromActEditor()">To do</button>
-      <input type="text" class="act-note" id="actNoteInput" placeholder="note" maxlength="40"
-             onchange="setNoteFromActEditor(this.value)" aria-label="Note" style="margin:0;">
     </div>
     <div id="actSegRows"></div>
     <button class="mini-toggle" style="margin-top:7px;" onclick="addActSegRow()">+ add</button>
@@ -1518,7 +1526,6 @@ const DATA_KEY = 'time-entries';
 const TODO_KEY = 'time-todos';
 const PLAN_KEY = 'time-plans';
 const WEEK_KEY = 'time-weekplan';
-const NOTE_KEY = 'time-notes';
 /* Weekly rules start here and never reach back. A rule written today would
    otherwise sprout marks on every past Monday, and the record of a day that has
    already happened should show what happened, not what was meant to. */
@@ -1641,11 +1648,6 @@ let todos = {};
    changes every day that hasn't been touched by hand. */
 let plans = {};
 let weekPlans = {};
-/* A line of text about what was done: {code: {actId: 'tested it'}}. One per
-   activity per day, not per stretch — the dial draws one label for the
-   activity, and two stretches of the same thing on one day are one piece of
-   work told twice. */
-let notes = {};
 let currentGroup = 'all';
 let currentAct = 'all';   // second tier: a single activity within the group
 let currentMode = 'check';
@@ -2246,8 +2248,11 @@ function renderClock(){
     if(h * 60 < CLOCK_MARKS_FROM) continue;
     const deg = clockAngle(h * 60);
     const [ox,oy] = clockPoint(deg, CLOCK_R);
+    // A short mark at the rim instead of a spoke to the middle: a tenth of the
+    // radius, so the centre of the dial is left clear.
+    const [ix,iy] = clockPoint(deg, CLOCK_R * 0.9);
     ticks += `<line class="clock-tick"` +
-             ` x1="${CLOCK_CX}" y1="${CLOCK_CY}" x2="${ox.toFixed(1)}" y2="${oy.toFixed(1)}"/>`;
+             ` x1="${ix.toFixed(1)}" y1="${iy.toFixed(1)}" x2="${ox.toFixed(1)}" y2="${oy.toFixed(1)}"/>`;
     // The number sits just outside the rim, on the spoke's own angle.
     const [nx,ny] = clockPoint(deg, CLOCK_R + 6);
     nums += `<text class="clock-num" x="${nx.toFixed(1)}" y="${ny.toFixed(1)}">${h}</text>`;
@@ -2272,12 +2277,6 @@ function renderClock(){
      has no room. Anything under 40 minutes is left bare rather than overspilling
      its slice. */
   const LABEL_MIN = 40;
-  const bestByAct = {};
-  segs.forEach(seg => {
-    const len = Math.min(1440, seg.e) - Math.max(0, seg.s);
-    const cur = bestByAct[seg.act.id];
-    if(!cur || len > cur.len) bestByAct[seg.act.id] = {seg, len};
-  });
 
   /* Font size in viewBox units. The dial scales to the screen, so a size
      written here is multiplied by that scale on the way out; dividing by it
@@ -2287,14 +2286,16 @@ function renderClock(){
   /* Korean sits on a full square, Latin on about half of one. Close enough to
      size the plate behind the words, which is all this is for. */
   const textW = s => Array.from(String(s)).reduce(
-    (t, ch) => t + (/[\uAC00-\uD7A3\u3131-\u318E]/.test(ch) ? 1 : 0.55), 0) * fs;
+    (t, ch) => t + (/[\uAC00-\uD7A3\u3131-\u318E]/.test(ch) ? 0.95 : 0.48), 0) * fs;
 
-  const labels = Object.keys(bestByAct).map(id => {
-    const {seg, len} = bestByAct[id];
+  /* One label per stretch now, not one per activity: two sessions of the same
+     thing on one day are two pieces of work and carry their own notes. */
+  const labels = segs.map(seg => {
+    const len = Math.min(1440, seg.e) - Math.max(0, seg.s);
     if(len < LABEL_MIN) return '';
     const mid = clockAngle((Math.max(0, seg.s) + Math.min(1440, seg.e)) / 2);
     const [x, y] = clockPoint(mid, CLOCK_R * 0.62);
-    const note = noteFor(code, seg.act.id);
+    const note = seg.n || '';
     // The abbreviation alone, as the table head shows it — actDisplay prefixes
     // the group, which is more words than a slice has room for. The note goes
     // on its own line underneath rather than trailing off the same one.
@@ -2303,12 +2304,13 @@ function renderClock(){
     // same way whatever they happen to be lying on.
     const dark = isDarkColor(seg.act.color);
     const cls = 'clock-label' + (dark ? ' on-dark' : '');
-    const lh = fs * 1.35;
+    const lh = fs * 1.25;
     const top = y - ((lines.length - 1) * lh) / 2;
     return lines.map((line, i) => {
       const ly = top + i * lh;
-      const w = textW(line) + fs * 0.7;
-      const hgt = lh;
+      // Just enough on either side to keep the words off the edge.
+      const w = textW(line) + fs * 0.3;
+      const hgt = fs * 1.15;
       return `<rect class="clock-label-plate" x="${(x - w/2).toFixed(1)}"` +
              ` y="${(ly - hgt/2).toFixed(1)}" width="${w.toFixed(1)}"` +
              ` height="${hgt.toFixed(1)}" fill="${seg.act.color}"/>` +
@@ -2337,10 +2339,11 @@ function renderClock(){
       `<circle class="clock-base" cx="${CLOCK_CX}" cy="${CLOCK_CY}" r="${CLOCK_R}"/>` +
       offBands +
       wedges +
-      labels +
       `<g id="clockLive">` + liveWedge + `</g>` +
       ticks +
       nums +
+      // Last, so the hour spokes can't cut across the words.
+      labels +
       // Drawn last so the marker sits above the spokes and wedges. In its own
       // group so the tick can move it without redrawing the dial.
       `<g id="clockNowMark">` + nowMarkerHtml(code) + `</g>` +
@@ -2834,18 +2837,26 @@ async function openTodoDone(code, id){
      Thursday's time and Thursday's note — filing it under Tuesday put it on a
      dial nobody was looking at, which is why the time appeared to vanish. */
   const day = currentViewCode();
-  todoDoneTarget = {code: day, id, actId: a.id};
+  const text = todoDisplayText(t.text);
+  todoDoneTarget = {code: day, id, actId: a.id, note: text};
 
-  // Written now rather than on the way out: pressing either button, or closing
-  // the box, should leave the note in place.
-  await setNote(day, a.id, todoDisplayText(t.text));
+  /* A note belongs to a stretch of time, so it needs one to sit on. If the
+     activity already has time today the note goes on the latest stretch; if it
+     has none, it waits and is typed in beside the time on the way through. */
+  const segs = segmentsFor(day, a.id);
+  if(segs.length){
+    segs[segs.length - 1].n = text;
+    await saveData();
+    renderDays();
+  }
 
-  const mins = segmentsFor(day, a.id).reduce((s, g) => s + Math.max(0, g.e - g.s), 0);
+  const mins = segs.reduce((s, g) => s + Math.max(0, g.e - g.s), 0);
   document.getElementById('todoDoneTitle').innerHTML =
     `<span class="act-swatch" style="background:${a.color}; display:inline-block; margin-right:7px; vertical-align:0;"></span>` +
     escapeHtmlT(actDisplay(a));
   document.getElementById('todoDoneTime').textContent = mins ? fmtDur(mins) : '00:00';
-  document.getElementById('todoDoneNote').textContent = todoDisplayText(t.text);
+  document.getElementById('todoDoneNote').textContent = text +
+    (segs.length ? '' : '  —  add a time below to keep it');
   document.getElementById('todoDoneOverlay').classList.add('show');
 }
 
@@ -2854,11 +2865,17 @@ function closeTodoDone(){
   todoDoneTarget = null;
 }
 
-/* Straight into the times for that activity on that day. */
+/* Straight into the times for that activity on that day, with the note already
+   typed into the row that is about to be filled in. */
 function todoDoneAddTime(){
   const t = todoDoneTarget;
   closeTodoDone();
-  if(t) openActEditor(t.code, t.actId);
+  if(!t) return;
+  openActEditor(t.code, t.actId);
+  const rows = document.querySelectorAll('#actSegRows .seg-row');
+  const last = rows[rows.length - 1];
+  const box = last && last.querySelector('[data-role="note"]');
+  if(box && !box.value) box.value = t.note;
 }
 
 /* ---- The editor for one day ---- */
@@ -2973,8 +2990,6 @@ function openActEditor(code, actId){
     (segs.length ? segs : [null]).map(seg => segRowHtml(actId, 0, seg)).join('');
   document.getElementById('actWarn').textContent = '';
   syncActPlanBtn();
-  const nb = document.getElementById('actNoteInput');
-  if(nb) nb.value = noteFor(code, actId);
   document.getElementById('actOverlay').classList.add('show');
 }
 
@@ -2986,10 +3001,6 @@ function syncActPlanBtn(){
   const on = isPlanned(editingCode, editingAct);
   btn.classList.toggle('active', on);
   btn.title = on ? 'Marked to do — tap to unmark' : 'Mark as something to do';
-}
-
-async function setNoteFromActEditor(v){
-  await setNote(editingCode, editingAct, v);
 }
 
 async function togglePlanFromActEditor(){
@@ -3020,7 +3031,9 @@ async function saveActEditor(){
     const a = hhmmToMin(sv), b = hhmmToMin(ev);
     if(a === null || b === null){ problems.push(`"${sv}–${ev}" isn't a valid time.`); return; }
     if(b <= a){ problems.push(`${sv}–${ev} ends before it starts.`); return; }
-    list.push({s:a, e:b});
+    const nEl = row.querySelector('[data-role="note"]');
+    const note = nEl ? String(nEl.value || '').trim() : '';
+    list.push(note ? {s:a, e:b, n:note} : {s:a, e:b});
   });
   if(problems.length){ warn.textContent = problems.join('  '); return; }
 
@@ -3111,9 +3124,6 @@ function renderDayEditor(){
           <span class="act-sum">${sum?fmtDur(sum):''}</span>
         </div>
         <div id="segs-${a.id}">${rows}</div>
-        <input type="text" class="act-note" id="note-${a.id}" value="${escapeAttr(noteFor(code, a.id))}"
-               placeholder="note" maxlength="40"
-               onchange="setNote('${code}','${a.id}',this.value)" aria-label="Note">
         <div style="display:flex; gap:var(--sp-2); margin-top:7px; flex-wrap:wrap;">
           <button class="mini-toggle" onclick="addSegRow('${a.id}')">+ add</button>
           <button class="mini-toggle${isPlanned(code, a.id)?' active':''}"
@@ -3137,6 +3147,10 @@ async function togglePlanFromDayEditor(actId){
 function segRowHtml(actId, idx, seg){
   const s = seg ? minToHHMM(seg.s) : '';
   const e = seg ? minToHHMM(seg.e) : '';
+  const n = seg && seg.n ? seg.n : '';
+  /* The note belongs to the stretch, not to the activity: an hour after lunch
+     and an hour in the evening are two different pieces of work even when they
+     are filed under the same name. */
   return `
     <div class="seg-row">
       <input type="text" class="time-in" value="${s}" data-act="${actId}" data-role="start"
@@ -3144,6 +3158,8 @@ function segRowHtml(actId, idx, seg){
       <span class="sep">–</span>
       <input type="text" class="time-in" value="${e}" data-act="${actId}" data-role="end"
              placeholder="10:30" inputmode="numeric" maxlength="5" onblur="normalizeTimeInput(this)">
+      <input type="text" class="seg-note" value="${escapeAttr(n)}" data-act="${actId}" data-role="note"
+             placeholder="note" maxlength="40" aria-label="Note">
       <button class="btn btn-danger" style="padding:2px 6px;" onclick="this.parentNode.remove()">×</button>
     </div>`;
 }
@@ -3175,7 +3191,9 @@ function collectDayEditor(){
         problems.push(`${actDisplay(a)}: ${sv}–${ev} ends before it starts.`);
         return;
       }
-      list.push({s, e});
+      const nEl = row.querySelector('[data-role="note"]');
+      const note = nEl ? String(nEl.value || '').trim() : '';
+      list.push(note ? {s, e, n:note} : {s, e});
     });
     if(list.length){
       list.sort((x,y)=>x.s-y.s);
@@ -3545,7 +3563,9 @@ async function doConfirmSave(warn){
     const a = hhmmToMin(sv), b = hhmmToMin(ev);
     if(a === null || b === null){ problems.push(`"${sv}–${ev}" isn't a valid time.`); return; }
     if(b <= a){ problems.push(`${sv}–${ev} ends before it starts.`); return; }
-    list.push({s:a, e:b});
+    const nEl = row.querySelector('[data-role="note"]');
+    const note = nEl ? String(nEl.value || '').trim() : '';
+    list.push(note ? {s:a, e:b, n:note} : {s:a, e:b});
   });
 
   if(problems.length){ warn.textContent = problems.join('  '); return; }
@@ -3639,50 +3659,6 @@ async function loadPlans(){
     if(!plans[code] || typeof plans[code] !== 'object'){ delete plans[code]; return; }
     if(!Object.keys(plans[code]).length) delete plans[code];
   });
-}
-
-async function saveNotes(){
-  try{
-    await appStorage.set(NOTE_KEY, JSON.stringify(notes));
-  }catch(e){
-    alert('Could not save. Your data is still on this device.');
-  }
-}
-
-async function loadNotes(){
-  try{
-    const res = await appStorage.get(NOTE_KEY);
-    notes = res && res.value ? (JSON.parse(res.value) || {}) : {};
-  }catch(e){
-    console.warn('note load failed', e);
-    notes = {};
-  }
-  if(!notes || typeof notes !== 'object') notes = {};
-  Object.keys(notes).forEach(code => {
-    if(!notes[code] || typeof notes[code] !== 'object'){ delete notes[code]; return; }
-    Object.keys(notes[code]).forEach(id => {
-      const v = String(notes[code][id] || '').trim();
-      if(v) notes[code][id] = v; else delete notes[code][id];
-    });
-    if(!Object.keys(notes[code]).length) delete notes[code];
-  });
-}
-
-function noteFor(code, actId){
-  return (notes[code] && notes[code][actId]) || '';
-}
-
-async function setNote(code, actId, value){
-  const v = String(value || '').trim();
-  if(v){
-    if(!notes[code]) notes[code] = {};
-    notes[code][actId] = v;
-  } else if(notes[code]){
-    delete notes[code][actId];
-    if(!Object.keys(notes[code]).length) delete notes[code];
-  }
-  await saveNotes();
-  renderDays();
 }
 
 async function saveWeekPlans(){
@@ -3987,8 +3963,7 @@ function buildTxt(){
      filed under the day it is written beneath. */
   const codes = Object.keys(days)
     .concat(Object.keys(todos))
-    .concat(Object.keys(plans))
-    .concat(Object.keys(notes));
+    .concat(Object.keys(plans));
   Array.from(new Set(codes)).sort().forEach(code => {
     const d = days[code] || {};
     const body = ACTIVITIES
@@ -4010,11 +3985,15 @@ function buildTxt(){
     const planLines = [];
     if(on.length)  planLines.push('+ ' + on.join(' '));
     if(off.length) planLines.push('- ' + off.join(' '));
-    /* '= S tested it' — what was written about an activity on this day. */
-    const noteLines = Object.keys(notes[code] || {}).map(id => {
-      const a = actById(id);
-      return a ? '= ' + a.short + ' ' + notes[code][id] : '';
-    }).filter(Boolean);
+    /* '= S 09:00 tested it' — what was written about one stretch of one
+       activity. The start time is what ties it to its row, so two sessions of
+       the same activity keep their own notes. */
+    const noteLines = [];
+    ACTIVITIES.forEach(a => {
+      (d[a.id] || []).forEach(s => {
+        if(s.n) noteLines.push('= ' + a.short + ' ' + minToHHMM(s.s) + ' ' + s.n);
+      });
+    });
     if(!body.length && !todoLines.length && !planLines.length && !noteLines.length) return;
     lines.push('[' + code + ']');
     lines.push(...body);
@@ -4052,7 +4031,7 @@ function parseTxt(raw){
   const todoOut = {};
   const planOut = {};
   const weekOut = {};
-  const noteOut = {};
+  const pendingNotes = [];
   const errors = [];
   const defs = [];          // activity definitions found in the file
   let code = null;
@@ -4117,16 +4096,17 @@ function parseTxt(raw){
 
     // '+ S R PV' — squares marked to be done. Read before the activity match,
     // since '+' is not an activity name.
-    // '= S tested it' — a note about one activity on this day.
+    /* '= S 09:00 tested it' — a note about one stretch. Held aside until the
+       whole file is read, since the times it refers to may not have been seen
+       yet. An older file without the time attaches to the first stretch. */
     if(t.startsWith('=')){
-      const rest = t.replace(/^=\s*/, '');
-      const sp = rest.indexOf(' ');
-      const tok = sp === -1 ? rest : rest.slice(0, sp);
-      const body = sp === -1 ? '' : rest.slice(sp + 1).trim();
+      const m2 = /^=\s*(\S+)\s+(?:(\d{1,2}:\d{2})\s+)?(.*)$/.exec(t);
+      if(!m2){ errors.push('Line ' + (i+1) + ': could not read the note.'); return; }
+      const tok = m2[1], at = m2[2] ? hhmmToMin(m2[2]) : null, body = (m2[3] || '').trim();
       const fromFile = defs.find(dd => dd.short.toLowerCase() === tok.toLowerCase());
       const a = fromFile ? {id: fromFile.id || ('a_' + fromFile.short.toLowerCase())} : actByToken(tok);
       if(!a){ errors.push('Line ' + (i+1) + ': unknown activity "' + tok + '".'); return; }
-      if(body){ noteOut[code] = noteOut[code] || {}; noteOut[code][a.id] = body; }
+      if(body) pendingNotes.push({code, actId: a.id, at, body});
       return;
     }
 
@@ -4165,7 +4145,21 @@ function parseTxt(raw){
       out[code][act.id] = segs;
     }
   });
-  return {data:out, todoData:todoOut, planData:planOut, weekData:weekOut, noteData:noteOut, errors, defs};
+  /* Now that every day's stretches are in place, hang the notes on them. */
+  pendingNotes.forEach(n => {
+    const segs = (out[n.code] || {})[n.actId];
+    if(!segs || !segs.length){
+      errors.push('A note for "' + n.body + '" has no matching time.');
+      return;
+    }
+    const target = (n.at === null)
+      ? segs[0]
+      : segs.find(s => s.s === n.at);
+    if(target) target.n = n.body;
+    else errors.push('A note for "' + n.body + '" has no matching time.');
+  });
+
+  return {data:out, todoData:todoOut, planData:planOut, weekData:weekOut, errors, defs};
 }
 
 /* Rebuild ACTIVITIES from definition lines, keeping ids stable so the imported
@@ -4191,7 +4185,7 @@ function activitiesFromDefs(defs){
 }
 
 async function applyImport(){
-  const {data, todoData, planData, weekData, noteData, errors, defs} = parseTxt(document.getElementById('importArea').value);
+  const {data, todoData, planData, weekData, errors, defs} = parseTxt(document.getElementById('importArea').value);
   const msg = document.getElementById('importMsg');
   if(errors.length){
     msg.textContent = errors.slice(0,5).join('  ') + (errors.length>5 ? ` (+${errors.length-5} more)` : '');
@@ -4213,12 +4207,10 @@ async function applyImport(){
   todos = todoData;
   plans = planData;
   weekPlans = weekData;
-  notes = noteData;
   await saveData();
   await saveTodos();
   await savePlans();
   await saveWeekPlans();
-  await saveNotes();
   closeImport();
   refreshAll();
   msg.textContent = '';
@@ -4287,7 +4279,7 @@ if(sw.startedAt) swTimer = setInterval(swTick, 1000);
 // The current-time marker advances whether or not a stopwatch is running.
 setInterval(moveNowMarker, 30000);
 
-Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadNotes(), loadActivities()]).then(() => {
+Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActivities()]).then(() => {
   document.getElementById('mainHeader').style.display = '';
   renderGroupRow();
   setMode('check');
