@@ -1,7 +1,7 @@
 {
   "id": "./time.html",
-  "name": "Time",
-  "short_name": "Time",
+  "name": "TODO",
+  "short_name": "TODO",
   "description": "Daily time recording and to-dos.",
   "start_url": "./time.html",
   "scope": "./time.html",

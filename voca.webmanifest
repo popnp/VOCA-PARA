@@ -1,7 +1,7 @@
 {
   "id": "./index.html",
-  "name": "Voca / Para / Memo",
-  "short_name": "Voca",
+  "name": "VOCA PARA",
+  "short_name": "VOCA PARA",
   "description": "Vocabulary, paragraph and memo study.",
   "start_url": "./index.html",
   "scope": "./index.html",
