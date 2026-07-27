@@ -1,16 +1,26 @@
 {
-  "id": "/time.html",
+  "id": "./time.html",
   "name": "Time",
   "short_name": "Time",
   "description": "Daily time recording and to-dos.",
-  "start_url": "/time.html",
-  "scope": "/",
+  "start_url": "./time.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FFFFFF",
   "theme_color": "#FFFFFF",
   "icons": [
-    { "src": "/icon-time-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-time-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "./icon-time-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-time-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
