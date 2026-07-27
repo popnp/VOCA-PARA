@@ -646,6 +646,9 @@
      under the big word is prompt-text's margin-bottom (8px) PLUS this value.
      8 + 24 = 32px, matching the gap above the word (quiz-top 8 + flashcard 24). */
   .back-content.show{display:block; margin-top:24px;}
+  /* Example mode keeps the sentence on screen above the answer, so the gap
+     there is prompt-text's 8px plus this. 8 + 56 = 64, twice the 32 it was. */
+  .prompt-text.example-mode ~ .back-content.show{margin-top:56px;}
   .prompt-text.hidden-when-back{display:none;}
   .back-word{font-size:var(--fs-display); font-weight:500; letter-spacing:-0.01em; line-height:1.15; margin-bottom:36px;}
   .back-meaning{font-size:var(--fs-gloss); color:var(--text-dark); margin-bottom:0; line-height:1.5;}
@@ -684,6 +687,7 @@
   }
   .stack-prev .prev-en{ color:#111; font-size:var(--fs-body); }
   .stack-prev .hint{
+    background:#EFEFEF;
     border-bottom:2px solid transparent;
     font-size:var(--fs-body);
     font-weight:400;
@@ -1181,7 +1185,7 @@
   /* ---- Unified (Para + Voca) day table ---- */
   /* One row per date; Para chunk on the left, Voca chunk on the right.
      Each chunk is independently clickable and opens that app's detail panel. */
-  .day-table .day-col-para, .day-table .day-col-voca{
+  .day-table .day-col-para, .day-table .day-col-voca, .day-table .day-col-memo{
     font-family:var(--font-ui);
     font-size:var(--fs-list);
     color:var(--text-muted);
@@ -1189,8 +1193,9 @@
   }
   /* Widths follow slot count (Para 3, Voca 4) so a tag is the same width on
      either side of the table. */
-  .day-table .day-col-para{width:36%;}
-  .day-table .day-col-voca{width:46%;}
+  .day-table .day-col-para{width:30%;}
+  .day-table .day-col-voca{width:38%;}
+  .day-table .day-col-memo{width:12%;}
   /* Fixed sub-columns per category so the same letter always lands in the same
      horizontal slot: every R sits under every other R, W under W, and so on.
      Para has 3 slots (W/R/S); Voca has 4 (V/W/R/S). */
@@ -1203,6 +1208,7 @@
   }
   .para-slots{grid-template-columns:repeat(3, minmax(0, 1fr));}
   .voca-slots{grid-template-columns:repeat(4, minmax(0, 1fr));}
+  .memo-slots{grid-template-columns:repeat(1, minmax(0, 1fr));}
   .uni-chunk.is-empty{cursor:default;}
   .uni-chunk.is-active{outline:1px solid #111; outline-offset:2px;}
   /* An empty slot still occupies its column, which is what keeps the letters
@@ -1645,10 +1651,17 @@
     background-origin:content-box !important;
     background-clip:content-box !important;
   }
-  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:var(--fs-body); color:#111; margin-bottom:4px; padding-right:28px;}
-  .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:13.5px; color:#111; margin-bottom:6px;}
-  .vocab-popup-meaning{font-size:13.5px; color:#111; margin-bottom:6px;}
-  .vocab-popup-example{font-size:12.5px; color:#111; font-style:italic;}
+  /* Each gap is twice what it was: 4->8, 6->12, 6->12. */
+  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:var(--fs-body); color:#111; margin-bottom:8px; padding-right:28px;}
+  .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:13.5px; color:#111; margin-bottom:12px;}
+  .vocab-popup-meaning{font-size:13.5px; color:#111; margin-bottom:12px;}
+  /* Examples read as a list, so they are marked as one. The dash sits in the
+     margin and the text stays flush, the way a real list hangs. */
+  .vocab-popup-example{
+    font-size:12.5px; color:#111; font-style:italic;
+    padding-left:12px; position:relative;
+  }
+  .vocab-popup-example::before{content:'-'; position:absolute; left:0;}
   .vocab-popup-example + .vocab-popup-example{margin-top:6px;}
   .dwc-top{
     display:grid;
@@ -1783,7 +1796,7 @@
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27o</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27p</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -2020,6 +2033,7 @@
               <th>Date</th>
               <th class="uni-col-head">Para</th>
               <th class="uni-col-head">Voca</th>
+              <th class="uni-col-head">Memo</th>
             </tr>
           </thead>
           <tbody id="calTableBody"></tbody>
@@ -2357,6 +2371,7 @@
               <th>Date</th>
               <th class="uni-col-head">Para</th>
               <th class="uni-col-head">Voca</th>
+              <th class="uni-col-head">Memo</th>
             </tr>
           </thead>
           <tbody id="pCalTableBody"></tbody>
@@ -5040,29 +5055,33 @@ function showMemoDetail(){
     // <title> line, so it is rendered there; the tag and history are slotted in
     // just after it rather than being drawn twice.
     const tag = memoTagOf(m);
-    const head =
-      (tag ? '<div class="memo-tag-wrap">' +
+    /* Straight under the title: the one thing you might want to do with the
+       memo. Only worth offering when there is something to be tested on. */
+    const head = memoPairs(m).length
+      ? '<div style="margin-bottom:14px;">' +
+          '<button class="btn btn-ghost" onclick="startMemoQuiz()">Test</button>' +
+        '</div>'
+      : '';
+
+    /* The tag and the record of testing are about the memo rather than part of
+       it, so they wait until the end. They used to sit between the title and
+       the first line, which pushed the writing itself down the page. */
+    const tail =
+      (tag ? '<div class="memo-tag-wrap" style="margin-top:28px;">' +
                '<div class="lbl">Tag</div>' +
                '<div class="tagbadge">' + escapeHtml(tag) + '</div>' +
-             '</div>' : '') +
-      '<div class="dwc-history" style="text-align:left; margin-bottom:10px;">' +
+             '</div>' : '<div style="height:28px;"></div>') +
+      '<div class="dwc-history" style="text-align:left;">' +
         'Test history<br>' + memoHistoryLabel(m) +
-      '</div>' +
-      // Only worth offering when there is something to be tested on.
-      (memoPairs(m).length
-        ? '<div style="margin-bottom:14px;">' +
-            '<button class="btn btn-ghost" onclick="startMemoQuiz()">Test</button>' +
-          '</div>'
-        : '');
+      '</div>';
 
     const bodyHtml = String(m.body || '').trim()
       ? memoBodyToHtml(m.body, head)
       : head + '<span class="hint">Empty. Tap Edit to write.</span>';
 
-    // Slot the tag and history in after the title block, or at the top when
-    // the memo has no title.
+    // Title, Test, the memo itself, and only then what is known about it.
     document.getElementById('memoView').innerHTML =
-      '<div class="memo-body">' + bodyHtml + '</div>';
+      '<div class="memo-body">' + bodyHtml + tail + '</div>';
   }
 }
 
@@ -8079,11 +8098,51 @@ function uniVocaTags(dayData, cls){
 }
 
 // Union of every date that has Para or Voca data, newest first.
-function uniAllDates(pMap, vMap){
+function uniAllDates(pMap, vMap, mMap){
   const set = {};
   Object.keys(pMap).forEach(d => set[d] = 1);
   Object.keys(vMap).forEach(d => set[d] = 1);
+  if(mMap) Object.keys(mMap).forEach(d => set[d] = 1);
   return Object.keys(set).sort().reverse();
+}
+
+/* Memos by the day in their tag. A memo's date lives in the [YYMMDD M] line at
+   the top of its body, which memoTagOf already reads, so this takes the same
+   source the memo list does rather than a second one. */
+function buildMemoDayMap(){
+  const map = {};
+  memos.forEach(m => {
+    const code = String(memoTagOf(m)).slice(0, 6);
+    if(!/^\d{6}$/.test(code)) return;
+    (map[code] = map[code] || []).push(m);
+  });
+  return map;
+}
+
+/* One tag per day, counting the memos on it. The colour comes from the same
+   0-3 scale as everything else, averaged across that day's memos; memos with
+   no rating leave the day uncoloured, exactly as untested words do. */
+function uniMemoTags(list){
+  if(!list || !list.length) return '<span class="uni-slot"></span>';
+  const scores = list.map(memoScore).filter(s => s !== null);
+  const colorClass = scores.length
+    ? ['cal-blue','cal-green','cal-yellow','cal-red'][Math.round(
+        scores.reduce((a, b) => a + b, 0) / scores.length)]
+    : '';
+  const lacking = list.filter(memoUnderTested).length;
+  const utBadge = (lacking / list.length >= 0.25) ? '<span class="ut-badge">*</span>' : '';
+  return '<span class="uni-slot"><span class="day-cat-tag-wrap">' +
+         '<span class="day-cat-tag ' + colorClass + '">M' + list.length + '</span>' +
+         utBadge + '</span></span>';
+}
+
+/* Clicking a Memo chunk: into the memo section with that day's date already in
+   the search box, so the list arrives showing only those memos. */
+function uniOpenMemo(code){
+  openMemoSection();
+  const box = document.getElementById('memoSearchInput');
+  if(box) box.value = code;
+  renderMemoList();
 }
 
 // Clicking a Para chunk: jump to the Para app and open its day detail.
@@ -8125,11 +8184,12 @@ function uniRenderDayTable(tbodyId){
   if(!tbody) return;
   const pMap = buildParaDayMap();
   const vMap = buildVocaDayMap();
-  const dates = uniAllDates(pMap, vMap);
+  const mMap = buildMemoDayMap();
+  const dates = uniAllDates(pMap, vMap, mMap);
   tbody.innerHTML = '';
 
   if(dates.length === 0){
-    tbody.innerHTML = '<tr><td colspan="3" class="hint" style="padding:14px 8px;">No data yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="hint" style="padding:14px 8px;">No data yet.</td></tr>';
     return;
   }
 
@@ -8143,6 +8203,7 @@ function uniRenderDayTable(tbodyId){
       <td class="day-date">${formatDayLabel(code)}</td>
       <td class="day-col-para"><span class="uni-chunk para-slots${paraHtml ? '' : ' is-empty'}" data-app="para" data-code="${code}">${paraHtml}</span></td>
       <td class="day-col-voca"><span class="uni-chunk voca-slots${vocaHtml ? '' : ' is-empty'}" data-app="voca" data-code="${code}">${vocaHtml}</span></td>
+      <td class="day-col-memo"><span class="uni-chunk memo-slots${mMap[code] ? '' : ' is-empty'}" data-app="memo" data-code="${code}">${uniMemoTags(mMap[code])}</span></td>
     `;
     tbody.appendChild(tr);
   });
@@ -8154,6 +8215,7 @@ function uniRenderDayTable(tbodyId){
     el.onclick = (e)=>{
       e.stopPropagation();
       if(el.dataset.app === 'para') uniOpenPara(el.dataset.code);
+      else if(el.dataset.app === 'memo') uniOpenMemo(el.dataset.code);
       else uniOpenVoca(el.dataset.code);
     };
   });
