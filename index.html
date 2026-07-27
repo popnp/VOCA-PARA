@@ -1698,6 +1698,24 @@
     h1{font-size:28px;}
   }
 </style>
+<link rel="manifest" href="voca.webmanifest">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Voca">
+<script>
+/* Registers the service worker, which is what lets these pages be added to a
+   home screen and opened without a browser around them. It caches the page
+   files only — records are untouched and still sync as before. Wrapped in a
+   guard so nothing breaks when the page is opened from a file:// path or in a
+   browser without support. */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -1796,7 +1814,7 @@
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27r</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27s</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
