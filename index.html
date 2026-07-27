@@ -67,32 +67,39 @@
        own space above the glyph, so the same number reads as a wider gap. */
     --gap-top-nav:8px;
 
-    /* ---- Study text ----------------------------------------------------
-       Every size the learning content is read at, and nothing else. Each place
-       in the app that reads at one of these points here, so the whole thing
-       resizes from these eight lines rather than from thirty declarations
-       scattered through the file. To make the app bigger or smaller, change
-       the numbers here and nowhere else.
+    /* ---- Type scale -----------------------------------------------------
+       EVERY size in the app, study text and chrome alike. There is no second
+       scale hiding further down the file: outside these four names only the
+       brand-header (held for a later pass) and one icon button at 0 carry a
+       number of their own. To make the app bigger or smaller, change these
+       four and nothing else.
 
-       History: the originals were raised 1.2x on 2026-07-27, then a further
-       1.1x the same day, each time rounded to whole pixels. Two consequences
-       of that rounding are worth knowing —
-         · the old 14px and 14.5px met at one value, so the memo's body and its
-           sub-headings are now the same size and stand apart by weight alone;
-         · --fs-sub is meant to read as 70% of --fs-body. Keep that ratio if you
-           change one of them.                                                 */
-    --fs-display:clamp(38px, 12vw, 50px); /* card headword          from 26/7.5vw/32 */
-    --fs-lead:30px;                        /* blanked sentence, memo title      from 19 */
-    --fs-body:26px;                        /* paragraph sentences, popup headword from 17 */
-    --fs-gloss:22px;                       /* answer meaning, examples, memo headwords  from 14 / 14.5 */
-    --fs-sub:20px;                         /* Korean under a paragraph, memo entry text — 70% of body */
-    --fs-detail:20px;                      /* word detail: pronunciation, meaning, examples — one size */
+       History: the study sizes were raised 1.2x and then a further 1.1x on
+       2026-07-27, but the chrome was left behind, so a 26px sentence ended up
+       next to a 13.5px button. On 2026-07-27y the two scales were merged and
+       the eleven near-identical chrome sizes (15 / 14.5 / 13.5 / 13 / 12.5 /
+       12 / 11.5 / 11 / 10 / 9.5 / 9) collapsed into the bottom two steps. */
+    /* FOUR STEPS. 50 -> 30 -> 22 -> 16, i.e. 1.67x, 1.36x, 1.375x. The two
+       lower steps sit at the same interval on purpose: a step smaller than
+       about 1.3x does not read as a step, it reads as a mistake. The ratios
+       were taken off a reference page we measured (36 / 23 / 17).
+       These four govern EVERYTHING now, chrome included — there is no longer
+       a separate, smaller scale for buttons and labels. */
+    --fs-display:clamp(38px, 12vw, 50px); /* card headword, memo test word */
+    --fs-lead:30px;                        /* blanked sentence, memo title, paragraph sentences, popup headword */
+    --fs-body:22px;                        /* meanings, examples, memo headwords, Korean gloss — AND buttons, inputs, table cells, modal titles */
+    --fs-label:16px;                       /* whatever supports something else: labels, hints, table heads, tags, calendar */
 
-    /* ---- The day list --------------------------------------------------
-       Left where it is. The date column is deliberately set to 12.5px to match
-       the table head above it, so raising these would break that pairing. */
-    --fs-list:14px;                        /* the list's cells       from 12.5 */
-    --fs-list-tag:12px;                    /* its coloured tags and stars  from 11 */
+    /* ---- Leading --------------------------------------------------------
+       1.3 for every block of running text, whatever its size or role — read
+       off a page whose typography we liked and measured (32.5px of leading on
+       a 25px face). It now lives on `body` as the base, which is the part that
+       was missing: previously only about a quarter of the rules declared a
+       leading and the rest fell through to whatever the typeface happened to
+       define, so changing the font silently re-spaced them. Still not a
+       variable — inheritance already does that job, and the places that must
+       NOT be 1.3 (icon buttons at 0, single glyphs at 1, the pixel-locked rows
+       that hold a grid) override it where they sit. */
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -118,6 +125,12 @@
     background:#FFFFFF;
     color:var(--text-light);
     font-family:var(--font-ui);
+    /* The base leading for the whole app. Before this, every rule that set a
+       size but not a leading fell through to the font's own default — which
+       meant swapping the typeface silently re-spaced about seventy places.
+       The exceptions still override it: icon buttons at 0, single-glyph rows
+       at 1, and the pixel-locked rows that hold a grid. */
+    line-height:1.3;
     min-height:100vh;
     box-sizing:border-box;
     /* Body owns the gap under the header — one number for every screen. What
@@ -174,7 +187,7 @@
      no letter-spacing. --blueprint-blue is #111 despite the name. */
   .eyebrow{
     font-family:var(--font-ui);
-    font-size:12.5px;
+    font-size:var(--fs-label);
     font-weight:300;
     color:var(--blueprint-blue);
     margin:0 0 var(--sp-2);
@@ -212,17 +225,8 @@
   .app-tab.active{color:#111; opacity:1;}
   .app-tab:hover{color:#111;}
   .app-tab.active:hover{color:#111;}
-  h1{
-    font-family:var(--font-ui);
-    font-weight:500;
-    font-style:normal;
-    font-size:34px;
-    letter-spacing:-0.02em;
-    margin:0 0 4px;
-    color:var(--text-light);
-  }
   .sub{
-    font-size:13.5px;
+    font-size:var(--fs-body);
     color:var(--text-light-muted);
     margin:0;
   }
@@ -368,7 +372,7 @@
     display:flex; align-items:center; justify-content:center;
     background:transparent;
     border:none;
-    font-size:18px;
+    font-size:var(--fs-body);
     line-height:1;
     color:#111;
     cursor:pointer;
@@ -377,7 +381,7 @@
   .modal-close:hover{opacity:0.6;}
   .modal-title{
     font-family:var(--font-ui);
-    font-size:15px;
+    font-size:var(--fs-body);
     font-weight:500;
     color:#111;
     margin:0 0 var(--sp-4);
@@ -393,14 +397,14 @@
     display:block;
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:12.5px;
+    font-size:var(--fs-label);
     color:var(--text-dark);
     margin-bottom:6px;
   }
   textarea, input[type=text]{
     width:100%;
     font-family:var(--font-ui);
-    font-size:13.5px;
+    font-size:var(--fs-body);
     padding:var(--sp-1) var(--sp-4);
     border:0.5px solid #6B6B6B;
     background:transparent;
@@ -410,10 +414,10 @@
   }
   input[type=text]{border-radius:0;}
   textarea:focus, input[type=text]:focus{outline:2px solid var(--brass); outline-offset:1px;}
-  textarea{min-height:110px; line-height:1.45;}
+  textarea{min-height:110px; line-height:1.3;}
   /* Muted grey at weight 400 read as heavy for what is secondary text; 300
      is where Switzer's lighter cut sits without becoming faint. */
-  .hint{font-size:12.5px; font-weight:300; color:var(--text-muted); line-height:1.5; margin:6px 0 0;}
+  .hint{font-size:var(--fs-label); font-weight:300; color:var(--text-muted); line-height:1.3; margin:6px 0 0;}
 
   /* Range inputs render with the OS accent colour by default — bright blue here,
      which is the only saturated blue in an otherwise black-and-white UI. The
@@ -472,7 +476,7 @@
 
   .btn{
     font-family:var(--font-ui);
-    font-size:13.5px;
+    font-size:var(--fs-body);
     /* Matches .opt-btn (Choose a Paragraph) — light, but not as thin as the
        11px .mini-toggle chips. */
     font-weight:400;
@@ -489,7 +493,7 @@
   .btn-primary:hover{background:rgba(0,0,0,0.05);}
   .btn-ghost{background:transparent; border:1px solid #111; color:var(--text-dark);}
   .btn-ghost:hover{background:rgba(0,0,0,0.05);}
-  .btn-danger{background:transparent; color:var(--rust); border:none; font-size:12.5px; padding:6px 10px;}
+  .btn-danger{background:transparent; color:var(--rust); border:none; font-size:var(--fs-label); padding:6px 10px;}
   .btn-danger:hover{text-decoration:underline;}
   .btn:disabled{opacity:0.35; cursor:not-allowed;}
 
@@ -498,7 +502,7 @@
 
   .preview-list{margin-top:16px; padding-top:14px;}
   .preview-item{
-    font-size:13.5px;
+    font-size:var(--fs-body);
     padding:8px 0;
     border-bottom:1px solid var(--paper-line);
     display:flex; justify-content:space-between; gap:10px;
@@ -530,13 +534,13 @@
     gap:10px;
     box-shadow:none;
   }
-  .list-card .lw{font-weight:500; font-size:15px;}
-  .list-card .lm{font-size:12.5px; color:var(--text-muted); margin-top:2px;}
+  .list-card .lw{font-weight:500; font-size:var(--fs-body);}
+  .list-card .lm{font-size:var(--fs-label); color:var(--text-muted); margin-top:2px;}
 
   .empty{
     text-align:center;
     color:var(--text-light-muted);
-    font-size:13.5px;
+    font-size:var(--fs-body);
     padding:40px 20px;
     border:1px dashed var(--grid-line-strong);
   }
@@ -566,12 +570,12 @@
     line-height:0;
   }
   .progress{font-family:var(--font-ui);
-    font-weight:300; font-size:11px; color:#111; letter-spacing:0.05em;}
+    font-weight:300; font-size:var(--fs-label); color:#111; letter-spacing:0.05em;}
   .shuffle-btn{font-family:var(--font-ui);
-    font-weight:300; font-size:11px; color:#111; background:none; border:none; cursor:pointer; letter-spacing:0.05em;}
+    font-weight:300; font-size:var(--fs-label); color:#111; background:none; border:none; cursor:pointer; letter-spacing:0.05em;}
   .shuffle-btn:disabled{color:var(--text-muted); opacity:1; -webkit-text-fill-color:var(--text-muted); cursor:default;}
   .skip-btn{font-family:var(--font-ui);
-    font-weight:300; font-size:11px; color:#111; background:none; border:none; cursor:pointer; letter-spacing:0.05em;}
+    font-weight:300; font-size:var(--fs-label); color:#111; background:none; border:none; cursor:pointer; letter-spacing:0.05em;}
   .shuffle-btn:hover{text-decoration:underline;}
 
   .flashcard{
@@ -596,7 +600,7 @@
   .tag-corner{
     position:absolute; top:14px; right:16px;
     font-family:var(--font-ui);
-    font-size:11px;
+    font-size:var(--fs-label);
     font-weight:300;
     letter-spacing:0.02em;
     color:var(--text-muted);
@@ -611,7 +615,7 @@
     position:absolute; top:14px; left:16px;
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     letter-spacing:0.04em;
     color:var(--blueprint-blue);
     cursor:pointer;
@@ -623,7 +627,7 @@
   .card-face-label{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     letter-spacing:0.1em;
     color:var(--text-muted);
     margin-bottom:14px;
@@ -634,7 +638,7 @@
     font-size:var(--fs-display);
     font-weight:500;
     letter-spacing:-0.01em;
-    line-height:1.4;
+    line-height:1.3;
     position:relative;
     margin-bottom:var(--sp-2);
   }
@@ -646,7 +650,7 @@
   .flip-hint{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     color:var(--text-muted);
     text-align:center;
     margin-top:10px;
@@ -661,18 +665,18 @@
      there is prompt-text's 8px plus this. 8 + 56 = 64, twice the 32 it was. */
   .prompt-text.example-mode ~ .back-content.show{margin-top:56px;}
   .prompt-text.hidden-when-back{display:none;}
-  .back-word{font-size:var(--fs-display); font-weight:500; letter-spacing:-0.01em; line-height:1.15; margin-bottom:36px;}
-  .back-meaning{font-size:var(--fs-gloss); color:var(--text-dark); margin-bottom:0; line-height:1.5;}
-  .back-example{font-size:var(--fs-gloss); color:var(--text-muted); font-style:normal; line-height:1.5; margin-top:16px; padding-left:17.9px;}
+  .back-word{font-size:var(--fs-display); font-weight:500; letter-spacing:-0.01em; line-height:1.3; margin-bottom:36px;}
+  .back-meaning{font-size:var(--fs-body); color:var(--text-dark); margin-bottom:0; line-height:1.3;}
+  .back-example{font-size:var(--fs-body); color:var(--text-muted); font-style:normal; line-height:1.3; margin-top:16px; padding-left:17.9px;}
   .back-example-line{
     font-family:var(--font-ui);
     font-style:normal;
     font-weight:400;
-    font-size:var(--fs-gloss);
+    font-size:var(--fs-body);
     color:#111;
     margin-bottom:16px;
     padding-left:0;
-    line-height:1.5;
+    line-height:1.3;
     position:relative;
   }
 
@@ -685,8 +689,8 @@
     min-height:260px;
     padding:var(--sp-5) 0;
     font-family:var(--font-ui);
-    font-size:var(--fs-body);
-    line-height:1.6;
+    font-size:var(--fs-lead);
+    line-height:1.3;
     color:#111;
     cursor:pointer;
   }
@@ -696,16 +700,16 @@
     border-radius:0;
     border-bottom:2px solid transparent;
   }
-  .stack-prev .prev-en{ color:#111; font-size:var(--fs-body); }
+  .stack-prev .prev-en{ color:#111; font-size:var(--fs-lead); }
   .stack-prev .hint{
     background:#EFEFEF;
     border-bottom:2px solid transparent;
-    font-size:var(--fs-body);
+    font-size:var(--fs-lead);
     font-weight:400;
   }
   .stack-prev .cur-answer{
     background:#EFEFEF;
-    font-size:var(--fs-body);
+    font-size:var(--fs-lead);
   }
   /* Random quiz shows one sentence at a time rather than a growing stack, so
      there's no earlier text for the highlight to distinguish it from. */
@@ -717,7 +721,7 @@
   .stack-prev .stack-subhead{ font-weight:500; }
   .stack-prev .answer-space-holder{
     visibility:hidden;
-    font-size:var(--fs-body);
+    font-size:var(--fs-lead);
   }
   .stack-para-break{ height:14px; }
   /* Same gap as .back-word -> phonetics in the Voca card. */
@@ -729,9 +733,9 @@
   /* Matches .back-meaning in the Voca card so the Korean gloss reads the same
      in both apps. */
   .stack-current .cur-ko{
-    font-size:var(--fs-sub);
+    font-size:var(--fs-body);
     color:var(--text-dark);
-    line-height:1.5;
+    line-height:1.3;
   }
   .ko-sentence{
     padding:1px 3px 2px;
@@ -805,7 +809,7 @@
   .tagbadge{
     display:inline-block;
     font-family:var(--font-ui);
-    font-size:11px;
+    font-size:var(--fs-label);
     font-weight:300;
     letter-spacing:0.02em;
     color:var(--text-muted);
@@ -823,7 +827,7 @@
   .opt-btn{
     font-family:var(--font-ui);
     font-weight:400;
-    font-size:12.5px;
+    font-size:var(--fs-label);
     letter-spacing:0.01em;
     padding:var(--sp-1) var(--sp-4);
     border:1px solid transparent;
@@ -842,7 +846,7 @@
   .mini-toggle{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     letter-spacing:0.02em;
     padding:3px var(--sp-2);
     border:0.5px solid #6B6B6B;
@@ -856,7 +860,7 @@
   .day-pagination{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;}
   .day-pagination button{
     font-family:var(--font-ui);
-    font-size:12.5px;
+    font-size:var(--fs-label);
     padding:4px 6px;
     border:none;
     background:transparent;
@@ -868,7 +872,7 @@
     font-family:var(--font-ui);
     /* Matches .opt-btn — these sit on the same row as the Range buttons, so a
        1px size difference made the dropdowns look like a separate control set. */
-    font-size:12.5px;
+    font-size:var(--fs-label);
     font-weight:400;
     letter-spacing:0.01em;
     padding:var(--sp-1) var(--sp-4);
@@ -878,7 +882,7 @@
     border-radius:0;
   }
   .check-row{display:flex; column-gap:var(--sp-4); row-gap:var(--sp-2); flex-wrap:wrap; align-items:center;}
-  .check-row label{font-family:var(--font-ui); font-size:12.5px; font-weight:400; letter-spacing:0.01em; color:#111; display:flex; align-items:center; gap:6px; cursor:pointer;}
+  .check-row label{font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400; letter-spacing:0.01em; color:#111; display:flex; align-items:center; gap:6px; cursor:pointer;}
   .check-row input[type=checkbox]{
     appearance:none; -webkit-appearance:none;
     width:16px; height:16px;
@@ -906,7 +910,7 @@
     transform:rotate(45deg);
   }
   .check-row.small{column-gap:var(--sp-3); row-gap:var(--sp-1);}
-  .check-row.small label{font-size:12.5px; font-weight:300; gap:4px; line-height:1; color:var(--text-muted);}
+  .check-row.small label{font-size:var(--fs-label); font-weight:300; gap:4px; line-height:1; color:var(--text-muted);}
   /* The list filters keep the lighter original treatment — the settings panels
      are where the heavier outline was wanted, not here. */
   .check-row.small input[type=checkbox]{
@@ -1038,7 +1042,7 @@
   .back-link{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     color:#111;
     background:none;
     border:none;
@@ -1061,7 +1065,7 @@
   .cal-dow{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     text-align:center;
     color:var(--text-muted);
     padding-bottom:4px;
@@ -1071,14 +1075,14 @@
     border:none;
     border-radius:0;
     padding:4px 5px;
-    font-size:11px;
+    font-size:var(--fs-label);
     cursor:default;
     background:#fff;
     overflow:hidden;
   }
   .cal-cell.empty{border:none; background:none;}
   .cal-cell.has-data{cursor:pointer;}
-  .cal-daynum{font-family:var(--font-ui); font-weight:500; font-size:12.5px; color:#111; text-align:center; margin-bottom:3px;}
+  .cal-daynum{font-family:var(--font-ui); font-weight:500; font-size:var(--fs-label); color:#111; text-align:center; margin-bottom:3px;}
   .cal-marks{
     display:grid;
     grid-template-rows:repeat(2, auto);
@@ -1090,12 +1094,12 @@
   .cal-mark-wrap{display:inline-flex; align-items:flex-start; gap:0px; flex:0 0 auto;}
   .cal-mark{
     font-family:var(--font-ui);
-    font-size:11px;
+    font-size:var(--fs-label);
     /* Matches .day-cat-tag in the table view — these are the same tags shown
        two ways, so they shouldn't differ in weight. */
     font-weight:500;
     color:#111;
-    line-height:1.35;
+    line-height:1.3;
     white-space:nowrap;
     padding:1px 4px;
     border-radius:0;
@@ -1124,7 +1128,7 @@
        The reason grey was chosen — that a black head flattens a table whose
        rows are also black — no longer holds: the rows are 14px now and the head
        stayed at 12.5, so size carries the difference instead of colour. */
-    font-size:12.5px;
+    font-size:var(--fs-label);
     color:var(--text-dark);
     /* 300 sat noticeably lighter than the PARA/VOCA heads next to it, which
        read as a different typeface rather than a different emphasis. */
@@ -1142,7 +1146,7 @@
   .day-table tbody td{
     padding:var(--sp-2) var(--sp-2);
     border-bottom:none;
-    font-size:13.5px;
+    font-size:var(--fs-body);
     vertical-align:middle;
   }
   /* Matches .cal-daynum in the grid view. Without an explicit size this cell
@@ -1150,16 +1154,16 @@
      heavier here than in the grid. */
   /* The dates are set exactly like the heads: 12.5px, weight 300. The weekend
      grey below is untouched. */
-  .day-table .day-date{font-family:var(--font-ui); font-weight:300; font-size:12.5px; white-space:nowrap;}
+  .day-table .day-date{font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label); white-space:nowrap;}
   /* Saturdays and Sundays: the date text greys out so weeks are easy to scan. */
   .day-table tbody tr.is-weekend .day-date{color:var(--text-muted);}
-  .day-table .day-cats{font-family:var(--font-ui); font-size:var(--fs-list); color:var(--text-muted);}
+  .day-table .day-cats{font-family:var(--font-ui); font-size:var(--fs-label); color:var(--text-muted);}
   .day-table .day-perf{width:20px;}
   .day-table .day-perf .status-dot{width:14px; height:14px;}
   .day-table .day-test-btn{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     letter-spacing:0.02em;
     padding:3px var(--sp-2);
     border:0.5px solid #6B6B6B;
@@ -1179,7 +1183,7 @@
   }
   .day-cat-tag{
     font-family:var(--font-ui);
-    font-size:var(--fs-list-tag);
+    font-size:var(--fs-label);
     font-weight:500;
     color:#111;
     /* Half the old 2px/6px. The colour was carrying more empty space than
@@ -1198,7 +1202,7 @@
      Each chunk is independently clickable and opens that app's detail panel. */
   .day-table .day-col-para, .day-table .day-col-voca, .day-table .day-col-memo{
     font-family:var(--font-ui);
-    font-size:var(--fs-list);
+    font-size:var(--fs-label);
     color:var(--text-muted);
     vertical-align:top;
   }
@@ -1233,7 +1237,7 @@
     /* 12.5px like every other label in both apps. It sat at 11px because in
        capitals it looked larger than its neighbours, but that made it the one
        label in the app with a size of its own. */
-    font-size:12.5px;
+    font-size:var(--fs-label);
     /* Same weight as the other column heads — these are peers, not a level up. */
     font-weight:300;
     letter-spacing:0.04em;
@@ -1272,16 +1276,16 @@
   .cal-side:empty{cursor:default;}
   .cal-side-label{
     font-family:var(--font-ui);
-    font-size:9px;
+    font-size:var(--fs-label);
     font-weight:500;
     color:var(--text-muted);
     margin-right:2px;
-    line-height:1.6;
+    line-height:1.3;
   }
   .ut-badge{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:var(--fs-list-tag);
+    font-size:var(--fs-label);
     color:#FF4602;
     margin-left:1px;
     position:relative;
@@ -1290,11 +1294,11 @@
   }
 
   .preview-item.has-warning{border-left:3px solid var(--rust); padding-left:6px;}
-  .preview-warning{font-size:11px; color:var(--rust); display:block; margin-top:2px;}
+  .preview-warning{font-size:var(--fs-label); color:var(--rust); display:block; margin-top:2px;}
   /* Same treatment as the red warning, in the app's blue: this one is
      information (the word already exists), not a problem. */
   .preview-item.is-dupe{border-left:3px solid #2519FF; padding-left:6px;}
-  .preview-note{font-size:11px; color:#2519FF; display:block; margin-top:2px;}
+  .preview-note{font-size:var(--fs-label); color:#2519FF; display:block; margin-top:2px;}
   /* Skipped rows stay listed but visibly inert. */
   .preview-item.is-skipped .pw,
   .preview-item.is-skipped .pm{opacity:0.4; text-decoration:line-through;}
@@ -1302,7 +1306,7 @@
   .preview-skip{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     letter-spacing:0.05em;
     color:#111;
     background:none;
@@ -1315,7 +1319,7 @@
   .back-target{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:13.5px;
+    font-size:var(--fs-body);
     color:#2519FF;
     margin-bottom:22px;
   }
@@ -1357,7 +1361,7 @@
   .example-hint{
     font-family:var(--font-ui);
     font-style:normal;
-    font-size:13.5px;
+    font-size:var(--fs-body);
     color:var(--text-muted);
     margin-top:120px;
     position:relative;
@@ -1365,14 +1369,14 @@
   .back-phonetics{
     font-family:var(--font-serif);
     font-style:italic;
-    font-size:var(--fs-gloss);
-    line-height:1.5;
+    font-size:var(--fs-body);
+    line-height:1.3;
     color:var(--text-dark);
     margin-bottom:16px;
   }
   .back-phonetics a{color:var(--text-dark);}
 
-  .phonetics-preview{font-family:var(--font-serif); font-style:italic; font-size:var(--fs-detail); margin-top:4px;}
+  .phonetics-preview{font-family:var(--font-serif); font-style:italic; font-size:var(--fs-body); margin-top:4px;}
   .phonetics-preview a{color:var(--text-dark);}
 
   .day-word-wrap{margin-bottom:0;}
@@ -1397,7 +1401,7 @@
     width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0;
   }
   .day-word-header .chevron, .memo-row .chevron{
-    font-size:11px; color:var(--text-muted); font-weight:400;
+    font-size:var(--fs-label); color:var(--text-muted); font-weight:400;
   }
   .status-dot.cal-red{background:#FF4602;}
   .status-dot.cal-yellow{background:#F2FF00;}
@@ -1415,21 +1419,21 @@
   /* List-side inputs keep the original hairline; the heavier 1px outline is for
      the test-settings panels. */
   .day-word-detail input[type=text], .day-word-detail textarea{
-    width:100%; box-sizing:border-box; font-size:13.5px; padding:var(--sp-1) var(--sp-4);
+    width:100%; box-sizing:border-box; font-size:var(--fs-body); padding:var(--sp-1) var(--sp-4);
     border:0.5px solid #6B6B6B;
   }
   .quiz-edit-form input[type=text], .quiz-edit-form textarea{
-    width:100%; box-sizing:border-box; font-size:13.5px; padding:var(--sp-1) var(--sp-4);
+    width:100%; box-sizing:border-box; font-size:var(--fs-body); padding:var(--sp-1) var(--sp-4);
     border:0.5px solid #6B6B6B;
   }
   .quiz-edit-form .qe-example{margin-bottom:6px;}
   .day-word-detail .lbl, .memo-tag-wrap .lbl{
     font-family:var(--font-ui);
-    font-weight:300; font-size:11px; color:var(--text-muted);
+    font-weight:300; font-size:var(--fs-label); color:var(--text-muted);
     letter-spacing:0.06em; margin-bottom:4px;
   }
-  .meaning-view{font-size:var(--fs-detail); line-height:1.6;}
-  .ex-view-line{font-size:var(--fs-detail); color:#111; padding:4px 0; border-bottom:1px dashed var(--paper-line);}
+  .meaning-view{font-size:var(--fs-body); line-height:1.3;}
+  .ex-view-line{font-size:var(--fs-body); color:#111; padding:4px 0; border-bottom:1px dashed var(--paper-line);}
   .ex-view-line:last-child{border-bottom:none;}
   .sent-row{
     display:grid;
@@ -1437,10 +1441,10 @@
     gap:16px;
     padding:8px 0;
     border-bottom:1px dashed var(--paper-line);
-    font-size:13.5px;
+    font-size:var(--fs-body);
     align-items:start;
   }
-  .dwc-value{font-size:13.5px; line-height:1.5;}
+  .dwc-value{font-size:var(--fs-body); line-height:1.3;}
   .sent-ko{color:#111;}
   .sent-en{color:#111;}
   .sent-row:last-child{border-bottom:none;}
@@ -1450,7 +1454,7 @@
 
   .voca-link{
     color:#2519FF;
-    font-size:0.9em;
+    font-size:var(--fs-label);
     text-decoration:underline;
     text-decoration-style:dotted;
     text-underline-offset:3px;
@@ -1459,7 +1463,7 @@
   .voca-link-missing{color:var(--text-muted); text-decoration-style:dashed;}
   .vocab-link-row{
     font-family:var(--font-ui);
-    font-size:12.5px;
+    font-size:var(--fs-label);
     margin-top:4px;
     margin-bottom:10px;
   }
@@ -1468,15 +1472,15 @@
      size it was whatever the body does. */
   .vocab-link-row-test{
     font-family:var(--font-ui);
-    font-size:14.5px;
+    font-size:var(--fs-body);
     color:var(--text-muted);
   }
-  .vocab-link-row-test .voca-link{font-size:0.75em;}
+  .vocab-link-row-test .voca-link{font-size:var(--fs-label);}
   .linked-word-chip{
     display:flex;
     align-items:center;
     gap:8px;
-    font-size:13.5px;
+    font-size:var(--fs-body);
     color:#111;
     margin-bottom:4px;
   }
@@ -1486,7 +1490,7 @@
     border-bottom:1px dashed var(--paper-line);
   }
   .sent-edit-row:last-child{border-bottom:none;}
-  .sent-edit-row textarea{width:100%; box-sizing:border-box; font-size:13.5px;}
+  .sent-edit-row textarea{width:100%; box-sizing:border-box; font-size:var(--fs-body);}
   .result-grid{
     display:flex;
     flex-wrap:wrap;
@@ -1527,16 +1531,16 @@
   }
   /* A sub-heading inside the memo, written with an arrow. */
   .memo-head{
-    font-family:var(--font-ui); font-weight:600; font-size:var(--fs-gloss); color:#111;
+    font-family:var(--font-ui); font-weight:600; font-size:var(--fs-body); color:#111;
     margin:var(--sp-4) 0 var(--sp-1);
   }
-  .memo-line{font-size:var(--fs-sub); line-height:1.75; color:#111;}
+  .memo-line{font-size:var(--fs-body); line-height:1.3; color:#111;}
   /* The headword of an entry, set on its own line above its description.
      Uses .memo-head's size and weight (14.5px / 600) so the memo keeps one
      type scale rather than gaining a new one. */
   .memo-word{
     font-family:var(--font-ui);
-    font-size:var(--fs-gloss); line-height:1.75;
+    font-size:var(--fs-body); line-height:1.3;
     margin-top:var(--sp-3);
   }
   .memo-word .memo-link, .memo-word .memo-missing{font-weight:600;}
@@ -1579,10 +1583,10 @@
     margin-top:var(--sp-4);
   }
   .memo-missing-title{
-    font-family:var(--font-ui); font-weight:600; font-size:13.5px;
+    font-family:var(--font-ui); font-weight:600; font-size:var(--fs-body);
     color:#111; margin-bottom:var(--sp-2);
   }
-  .memo-missing-body{font-size:12.5px; color:#111; line-height:1.9;}
+  .memo-missing-body{font-size:var(--fs-label); color:#111; line-height:1.3;}
 
   /* ---- Memo quiz --------------------------------------------------------- */
   /* Cards size themselves to the column, so a memo of five entries and one of
@@ -1595,7 +1599,7 @@
   /* Names the memo being tested, in the same key as the other tests' counters. */
   .memo-quiz-title{
     font-family:var(--font-ui);
-    font-weight:300; font-size:11px; color:#111; letter-spacing:0.05em;
+    font-weight:300; font-size:var(--fs-label); color:#111; letter-spacing:0.05em;
     margin-left:var(--sp-2);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     max-width:55%;
@@ -1634,13 +1638,13 @@
     font-size:var(--fs-display);
     font-weight:500;
     letter-spacing:-0.01em;
-    line-height:1.4;
+    line-height:1.3;
     color:#111;
   }
   /* Turned over, the word gives way entirely to its description. */
   .memo-quiz-desc{
-    font-size:var(--fs-body);
-    line-height:1.6;
+    font-size:var(--fs-lead);
+    line-height:1.3;
     color:#111;
   }
   /* A button waiting for its second press, used where the browser suppresses
@@ -1663,13 +1667,13 @@
     background-clip:content-box !important;
   }
   /* Each gap is twice what it was: 4->8, 6->12, 6->12. */
-  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:var(--fs-body); color:#111; margin-bottom:8px; padding-right:28px;}
-  .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:13.5px; color:#111; margin-bottom:12px;}
-  .vocab-popup-meaning{font-size:13.5px; color:#111; margin-bottom:12px;}
+  .vocab-popup-word{font-family:var(--font-ui); font-weight:600; font-size:var(--fs-lead); color:#111; margin-bottom:8px; padding-right:28px;}
+  .vocab-popup-phon{font-family:var(--font-serif); font-style:italic; font-size:var(--fs-body); color:#111; margin-bottom:12px;}
+  .vocab-popup-meaning{font-size:var(--fs-body); color:#111; margin-bottom:12px;}
   /* Examples read as a list, so they are marked as one. The dash sits in the
      margin and the text stays flush, the way a real list hangs. */
   .vocab-popup-example{
-    font-size:12.5px; color:#111; font-style:italic;
+    font-size:var(--fs-label); color:#111; font-style:italic;
     padding-left:12px; position:relative;
   }
   .vocab-popup-example::before{content:'-'; position:absolute; left:0;}
@@ -1695,19 +1699,16 @@
   .dwc-history{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     letter-spacing:0.06em;
     text-align:right;
     color:var(--text-muted);
-    line-height:1.6;
+    line-height:1.3;
   }
   @media (max-width:640px){
     .dwc-top{grid-template-columns:1fr;}
   }
 
-  @media (max-width:420px){
-    h1{font-size:28px;}
-  }
 </style>
 <link rel="manifest" href="voca.webmanifest">
 <meta name="theme-color" content="#FFFFFF">
@@ -1771,7 +1772,7 @@ if('serviceWorker' in navigator){
   </div>
 </div>
 
-  <div id="cloudBanner" style="display:none; background:var(--rust); color:#fff; font-family:var(--font-ui); font-size:12px; padding:6px 10px; text-align:center;">Offline — changes are saved on this device and will need a reload to sync.</div>
+  <div id="cloudBanner" style="display:none; background:var(--rust); color:#fff; font-family:var(--font-ui); font-size:var(--fs-label); padding:6px 10px; text-align:center;">Offline — changes are saved on this device and will need a reload to sync.</div>
   <div id="topBar" class="theme-voca">
   <header class="top" id="mainHeader">
     <div class="header-row">
@@ -1825,11 +1826,11 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27w</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-27y</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
-          <input type="text" id="syncIdInput" style="flex:1; min-width:220px; font-size:12.5px;">
+          <input type="text" id="syncIdInput" style="flex:1; min-width:220px; font-size:var(--fs-label);">
           <button class="btn btn-ghost" onclick="copySyncId()">Copy</button>
           <button class="btn btn-primary" onclick="applySyncId()">Use this code</button>
         </div>
@@ -1843,10 +1844,10 @@ if('serviceWorker' in navigator){
         <div id="voicePickerWrap" style="margin-top:8px;">
           <select id="voiceSelect" onchange="setPreferredVoice(this.value)" style="width:100%; max-width:340px;"></select>
           <div style="display:flex; align-items:center; gap:var(--sp-3); margin-top:var(--sp-2); flex-wrap:wrap;">
-            <label style="font-size:12.5px; color:#111;">Speed</label>
+            <label style="font-size:var(--fs-label); color:#111;">Speed</label>
             <input type="range" id="voiceRate" min="0.6" max="1.2" step="0.05" value="0.95"
               oninput="setSpeechRate(this.value)" style="flex:1; min-width:140px; max-width:200px;">
-            <span id="voiceRateOut" style="font-size:12.5px; color:#111;">0.95×</span>
+            <span id="voiceRateOut" style="font-size:var(--fs-label); color:#111;">0.95×</span>
             <button class="mini-toggle" onclick="previewVoice()">Preview</button>
           </div>
           <p class="hint" style="margin-top:var(--sp-2);">Voices come from your device. Look for ones named Siri, Google, Enhanced, Premium or Natural — they sound far better for full paragraphs than the default. On iPhone you can download extra voices in Settings › Accessibility › Spoken Content › Voices.</p>
@@ -1874,7 +1875,7 @@ if('serviceWorker' in navigator){
 
 <div id="memoManualEditPanel" style="display:none; margin-top:16px;">
           <label class="field-label">Edit memos (raw text)</label>
-          <textarea id="memoManualEditArea" style="min-height:320px; font-family:var(--font-ui); font-weight:300; font-size:12.5px;"></textarea>
+          <textarea id="memoManualEditArea" style="min-height:320px; font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);"></textarea>
           <p class="hint">Each memo starts with its rating line <code>&#10214;3,1,0&#10215;</code>. Leave the brackets empty for a memo that has never been rated. Everything under that line is the memo itself. Saving replaces all memos with what is written here.</p>
           <div class="actions" style="margin-top:8px;">
             <button class="btn btn-primary" onclick="saveMemoManualEdit(this)">Save &amp; Update App</button>
@@ -1893,7 +1894,7 @@ if('serviceWorker' in navigator){
             <label><input type="checkbox" id="pManualEditCatR" onchange="pRefreshManualEditArea()"> R (Reading)</label>
             <label><input type="checkbox" id="pManualEditCatS" onchange="pRefreshManualEditArea()"> S (Speaking)</label>
           </div>
-          <textarea id="pManualEditArea" style="min-height:320px; font-family:var(--font-ui); font-weight:300; font-size:12.5px;"></textarea>
+          <textarea id="pManualEditArea" style="min-height:320px; font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);"></textarea>
           <p class="hint">Editing this text and saving will replace the paragraphs shown above (only the selected date, or everything if "All Dates" is selected) with what's written here.</p>
           <div class="actions" style="margin-top:8px;">
             <button class="btn btn-primary" onclick="pSaveManualEdit()">Save & Update App</button>
@@ -1913,7 +1914,7 @@ if('serviceWorker' in navigator){
             <label><input type="checkbox" id="manualEditCatR" onchange="refreshManualEditArea()"> R (Reading)</label>
             <label><input type="checkbox" id="manualEditCatS" onchange="refreshManualEditArea()"> S (Speaking)</label>
           </div>
-          <textarea id="manualEditArea" style="min-height:320px; font-family:var(--font-ui); font-weight:300; font-size:12.5px;"></textarea>
+          <textarea id="manualEditArea" style="min-height:320px; font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);"></textarea>
           <p class="hint">Editing this text and saving will replace the words shown above (only the selected date, or everything if "All Dates" is selected) with what's written here. Anything you delete from this text will be removed from the app.</p>
           <div class="actions" style="margin-top:8px;">
             <button class="btn btn-primary" onclick="saveManualEdit()">Save & Update App</button>
@@ -1959,7 +1960,7 @@ if('serviceWorker' in navigator){
             </div>
             <div class="subcontrols" id="periodSubcontrol" style="display:none;">
               <select id="periodStart"></select>
-              <span style="color:var(--text-muted); font-size:13.5px;">~</span>
+              <span style="color:var(--text-muted); font-size:var(--fs-body);">~</span>
               <select id="periodEnd"></select>
             </div>
           </div>
@@ -2071,7 +2072,7 @@ if('serviceWorker' in navigator){
         <div id="calGridWrap" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
             <button class="shuffle-btn cal-nav" onclick="shiftCalMonth(-1)" aria-label="Previous month" title="Previous month"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
-            <span id="calLabel" style="font-family:var(--font-ui); font-weight:500; font-size:18px; letter-spacing:0.01em;"></span>
+            <span id="calLabel" style="font-family:var(--font-ui); font-weight:500; font-size:var(--fs-body); letter-spacing:0.01em;"></span>
             <button class="shuffle-btn cal-nav" onclick="shiftCalMonth(1)" aria-label="Next month" title="Next month"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
           </div>
           <div id="calGrid" class="cal-grid"></div>
@@ -2086,7 +2087,7 @@ if('serviceWorker' in navigator){
     <div id="dayDetail" style="display:none; margin-top:20px;">
       <div class="divider-bleed"></div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <p id="dayDetailTitle" style="margin:0; font-family:var(--font-ui); font-weight:500; font-size:15px; color:var(--text-dark);"></p>
+        <p id="dayDetailTitle" style="margin:0; font-family:var(--font-ui); font-weight:500; font-size:var(--fs-body); color:var(--text-dark);"></p>
         <span style="display:flex; gap:var(--sp-2);">
           <button class="mini-toggle" id="showAllBtn" onclick="toggleShowAll()">All</button>
           <button class="mini-toggle" id="showSimilarBtn" onclick="toggleShowSimilar()">Similar</button>
@@ -2112,7 +2113,7 @@ if('serviceWorker' in navigator){
       </div>
       <div style="display:flex; align-items:center; gap:6px; margin-bottom:var(--sp-2);">
         <input type="text" id="wordSearchInput" placeholder="Search word or meaning…" oninput="wordSearchChanged()"
-          style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:13.5px; border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
+          style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-body); border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
         <button class="mini-toggle" id="wordSearchClearBtn" onclick="clearWordSearch()" style="display:none;">✕</button>
       </div>
       <div style="margin-bottom:var(--sp-4);">
@@ -2141,7 +2142,7 @@ if('serviceWorker' in navigator){
         </div>
         <div style="display:flex; align-items:center; gap:6px; margin:0 0 var(--sp-3);">
           <input type="text" id="memoSearchInput" placeholder="Search memos…" oninput="renderMemoList()"
-            style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:13.5px; border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
+            style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-body); border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
           <button class="btn btn-ghost" onclick="newMemo()">+ New</button>
         </div>
         <div id="memoList"></div>
@@ -2186,7 +2187,7 @@ if('serviceWorker' in navigator){
         <div id="memoMissingBox" style="display:none;"></div>
         <div id="memoEditWrap" style="display:none;">
           <textarea id="memoBodyInput" rows="18" placeholder="[260718 M]&#10;&lt;착수하다&gt;&#10;&#10;→ 격식의 차이&#10;[commence]는 공식 절차의 개시…"
-            style="width:100%; box-sizing:border-box; font-size:13.5px; line-height:1.7; padding:var(--sp-2) var(--sp-4); border:0.5px solid #6B6B6B; border-radius:0; background:transparent;"></textarea>
+            style="width:100%; box-sizing:border-box; font-size:var(--fs-body); line-height:1.3; padding:var(--sp-2) var(--sp-4); border:0.5px solid #6B6B6B; border-radius:0; background:transparent;"></textarea>
           <p class="hint" style="margin:var(--sp-1) 0 var(--sp-3);">
             <code>&lt;제목&gt;</code> 제목 · <code>→</code> 굵은 소제목 · <code>[단어]</code> 단어 링크 · <code>[260718 M]</code> 날짜 구분
           </p>
@@ -2235,7 +2236,7 @@ if('serviceWorker' in navigator){
               </div>
               <div class="subcontrols" id="pPickPeriodSubcontrol" style="display:none;">
                 <select id="pPickPeriodStart"></select>
-                <span style="color:var(--text-muted); font-size:13.5px;">~</span>
+                <span style="color:var(--text-muted); font-size:var(--fs-body);">~</span>
                 <select id="pPickPeriodEnd"></select>
               </div>
             </div>
@@ -2265,7 +2266,7 @@ if('serviceWorker' in navigator){
               </div>
               <div class="subcontrols" id="pPeriodSubcontrol" style="display:none;">
                 <select id="pPeriodStart"></select>
-                <span style="color:var(--text-muted); font-size:13.5px;">~</span>
+                <span style="color:var(--text-muted); font-size:var(--fs-body);">~</span>
                 <select id="pPeriodEnd"></select>
               </div>
             </div>
@@ -2302,7 +2303,7 @@ if('serviceWorker' in navigator){
         <span class="progress" id="pQuizProgress">0 / 0</span>
       </div>
 
-      <p style="font-family:var(--font-ui); font-weight:300; font-size:11px; color:var(--text-muted); margin:0 0 8px;" id="pTitleLabel"></p>
+      <p style="font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label); color:var(--text-muted); margin:0 0 8px;" id="pTitleLabel"></p>
 
       <div class="flashcard" id="pFlashcard" onclick="pFlipCard()">
         <div id="pRandomFlow" class="stack-prev"></div>
@@ -2409,7 +2410,7 @@ if('serviceWorker' in navigator){
         <div id="pCalGridWrap" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
             <button class="shuffle-btn cal-nav" onclick="pShiftCalMonth(-1)" aria-label="Previous month" title="Previous month"><svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
-            <span id="pCalLabel" style="font-family:var(--font-ui); font-weight:500; font-size:18px; letter-spacing:0.01em;"></span>
+            <span id="pCalLabel" style="font-family:var(--font-ui); font-weight:500; font-size:var(--fs-body); letter-spacing:0.01em;"></span>
             <button class="shuffle-btn cal-nav" onclick="pShiftCalMonth(1)" aria-label="Next month" title="Next month"><svg class="nav-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button>
           </div>
           <div id="pCalGrid" class="cal-grid"></div>
@@ -2424,7 +2425,7 @@ if('serviceWorker' in navigator){
     <div id="pDayDetail" style="display:none; margin-top:20px;">
       <div class="divider-bleed"></div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <p id="pDayDetailTitle" style="margin:0; font-family:var(--font-ui); font-weight:500; font-size:15px; color:var(--text-dark);"></p>
+        <p id="pDayDetailTitle" style="margin:0; font-family:var(--font-ui); font-weight:500; font-size:var(--fs-body); color:var(--text-dark);"></p>
         <button class="mini-toggle" id="pShowAllBtn" onclick="pToggleShowAll()">All</button>
       </div>
       <div class="check-row small" id="pDayFilterCatRow" style="margin-bottom:var(--sp-1);">
@@ -2441,7 +2442,7 @@ if('serviceWorker' in navigator){
       </div>
       <div style="display:flex; align-items:center; gap:6px; margin-bottom:var(--sp-2);">
         <input type="text" id="pWordSearchInput" placeholder="Search title or text…" oninput="pWordSearchChanged()"
-          style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:13.5px; border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
+          style="flex:1; box-sizing:border-box; padding:var(--sp-1) var(--sp-4); font-size:var(--fs-body); border:0.5px solid #6B6B6B; border-radius:0; background:transparent;">
         <button class="mini-toggle" id="pWordSearchClearBtn" onclick="pClearWordSearch()" style="display:none;">✕</button>
       </div>
       <div style="margin-bottom:var(--sp-4);">
@@ -6988,7 +6989,7 @@ function showVocabPopup(word){
       ${memoLinkChip(card.word)}
     </div>
     <div id="popupEditWrap-${card.id}" style="display:none; margin-top:8px;">
-      <textarea rows="4" id="popupEditArea-${card.id}" style="width:100%; box-sizing:border-box; font-size:13.5px; padding:var(--sp-1) var(--sp-4);">${escapeHtml(cardToMiniBlock(card))}</textarea>
+      <textarea rows="4" id="popupEditArea-${card.id}" style="width:100%; box-sizing:border-box; font-size:var(--fs-body); padding:var(--sp-1) var(--sp-4);">${escapeHtml(cardToMiniBlock(card))}</textarea>
       <button class="btn btn-ghost" style="margin-top:6px;" onclick="savePopupEdit(${card.id})">Save Word</button>
     </div>
   `;
@@ -7141,7 +7142,7 @@ function pRenderStack(){
   if(editWrap) editWrap.style.display = 'none';
 
   document.getElementById('pStackTitleLabel').innerHTML =
-    `<span style="font-family:var(--font-ui); font-size:var(--fs-body); font-weight:500; color:#111;">${escapeHtml(item.titleEn)}</span>`
+    `<span style="font-family:var(--font-ui); font-size:var(--fs-lead); font-weight:500; color:#111;">${escapeHtml(item.titleEn)}</span>`
     + speakRevealedBtn(13);
   document.getElementById('pStackProgress').textContent = `${pStackPointer+1} / ${item.sentences.length}`;
   setQuizProgress(pStackPointer + 1, item.sentences.length);
@@ -7802,7 +7803,7 @@ function pRenderCard(){
   document.getElementById('pQuizProgress').textContent = `${doneBefore+1} / ${totalInSession}`;
   setQuizProgress(doneBefore + 1, totalInSession);
   document.getElementById('pTitleLabel').innerHTML =
-    `<span style="font-family:var(--font-ui); font-size:var(--fs-body); font-weight:500; color:#111;">${escapeHtml(item.para.titleEn)}</span>`;
+    `<span style="font-family:var(--font-ui); font-size:var(--fs-lead); font-weight:500; color:#111;">${escapeHtml(item.para.titleEn)}</span>`;
   const atStart = (pParaIndex===0 && pSentenceIndex===0 && pRevealStage === 0);
   document.getElementById('pPrevBtn').disabled = atStart;
   document.getElementById('pPrevBtn').style.opacity = '1';
@@ -8616,7 +8617,7 @@ function pShowDayDetail(code){
         detail.innerHTML = `
           <div class="lbl">Edit as raw text</div>
           <p class="hint" style="margin:2px 0 8px;">Edit the whole paragraph in paste format. Sentence history ⟦…⟧ and linked words […] are preserved if you leave them in place. The tag stays <strong>${escapeHtml(p.tag || '—')}</strong>.</p>
-          <textarea id="pManualOne-${p.id}" rows="16" style="width:100%; box-sizing:border-box; font-family:var(--font-ui); font-size:13px; line-height:1.6;">${escapeHtml(blockText)}</textarea>
+          <textarea id="pManualOne-${p.id}" rows="16" style="width:100%; box-sizing:border-box; font-family:var(--font-ui); font-size:var(--fs-body); line-height:1.3;">${escapeHtml(blockText)}</textarea>
           <div id="pManualOneError-${p.id}" class="preview-warning" style="display:none; margin-top:6px;"></div>
           <div class="dwc-bottom">
             <div class="actions">
@@ -8636,14 +8637,14 @@ function pShowDayDetail(code){
             const card = cards.find(c=>c.word.trim().toLowerCase()===w.trim().toLowerCase());
             const safeWord = w.replace(/'/g,"\\'");
             if(!card){
-              return `<div class="linked-word-chip">${escapeHtml(w)} <span class="hint" style="display:inline;">(not found in Voca)</span> <button type="button" class="btn btn-danger" style="padding:2px 8px; font-size:11px;" onclick="removeVocabLink(${p.id}, ${i}, '${safeWord}')">✕</button></div>`;
+              return `<div class="linked-word-chip">${escapeHtml(w)} <span class="hint" style="display:inline;">(not found in Voca)</span> <button type="button" class="btn btn-danger" style="padding:2px 8px; font-size:var(--fs-label);" onclick="removeVocabLink(${p.id}, ${i}, '${safeWord}')">✕</button></div>`;
             }
             const uid = `${p.id}-${i}-${card.id}`;
             return `
               <div class="linked-word-chip">
                 <span>${escapeHtml(card.word)}</span>
                 <button type="button" class="mini-toggle" onclick="const el=document.getElementById('wordEditBlock-${uid}'); el.style.display = (el.style.display==='none'?'block':'none');">Edit</button>
-                <button type="button" class="btn btn-danger" style="padding:2px 8px; font-size:11px;" onclick="removeVocabLink(${p.id}, ${i}, '${safeWord}')">✕ Unlink</button>
+                <button type="button" class="btn btn-danger" style="padding:2px 8px; font-size:var(--fs-label);" onclick="removeVocabLink(${p.id}, ${i}, '${safeWord}')">✕ Unlink</button>
               </div>
               <div id="wordEditBlock-${uid}" style="display:none; margin:6px 0 12px;">
                 <textarea rows="4" id="wordEditArea-${uid}">${escapeHtml(cardToMiniBlock(card))}</textarea>
