@@ -1721,7 +1721,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29n</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29o</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2760,6 +2760,24 @@ function shiftCode(code, delta){
   const d = codeToDate(code);
   const n = new Date(d.getFullYear(), d.getMonth(), d.getDate() + delta);
   return ymdToCode(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+/* A stretch that runs past midnight is written as two records, one on each
+   date, because a record belongs to one day. The strip, which turns the day
+   over at four, draws the pair as the one stretch it was typed as. Returns
+   [thisDay, nextDay|null]. */
+function splitOverMidnight(s, e, note){
+  const head = note ? {s:s, e:1440, n:note} : {s:s, e:1440};
+  const tail = note ? {s:0, e:e, n:note}   : {s:0, e:e};
+  return [head, tail];
+}
+
+/* Adds to a date without throwing away what is already filed there. */
+function appendSpans(code, actId, spans){
+  if(!spans.length) return;
+  if(!days[code]) days[code] = {};
+  const have = days[code][actId] || [];
+  days[code][actId] = have.concat(spans).sort((a,b) => a.s - b.s);
 }
 
 function stripSegments(code, onlyVisible){
@@ -4062,6 +4080,7 @@ async function saveActEditor(){
   const warn = document.getElementById('actWarn');
   const rows = Array.from(document.querySelectorAll('#actSegRows .seg-row'));
   const list = [];
+  const spill = [];          // the part that lands on the next date
   const problems = [];
   rows.forEach(row => {
     const sv = row.querySelector('[data-role="start"]').value;
@@ -4069,9 +4088,14 @@ async function saveActEditor(){
     if(!sv && !ev) return;
     const a = hhmmToMin(sv), b = hhmmToMin(ev);
     if(a === null || b === null){ problems.push(`"${sv}–${ev}" isn't a valid time.`); return; }
-    if(b <= a){ problems.push(`${sv}–${ev} ends before it starts.`); return; }
+    if(b === a){ problems.push(`${sv}–${ev} is no time at all.`); return; }
     const nEl = row.querySelector('[data-role="note"]');
     const note = nEl ? String(nEl.value || '').trim() : '';
+    if(b < a){
+      const [head, tail] = splitOverMidnight(a, b, note);
+      list.push(head); spill.push(tail);
+      return;
+    }
     list.push(note ? {s:a, e:b, n:note} : {s:a, e:b});
   });
   if(problems.length){ warn.textContent = problems.join('  '); return; }
@@ -4101,6 +4125,17 @@ async function saveActEditor(){
     delete days[editingCode][editingAct];
   }
   if(!Object.keys(days[editingCode]).length) delete days[editingCode];
+
+  /* The far side of midnight. Anything already sitting in the small hours of
+     that date for this activity came from an earlier crossing and is replaced;
+     the rest of its day is left alone. */
+  if(spill.length){
+    const nxt = shiftCode(editingCode, 1);
+    if(days[nxt] && days[nxt][editingAct]){
+      days[nxt][editingAct] = days[nxt][editingAct].filter(seg => seg.s >= DAY_START);
+    }
+    appendSpans(nxt, editingAct, spill);
+  }
 
   await saveData();
   closeActEditor();
@@ -4212,6 +4247,7 @@ function addSegRow(actId){
    than silently dropping it. */
 function collectDayEditor(){
   const out = {};
+  const spill = {};        // per activity, the piece that lands on the next date
   const problems = [];
   ACTIVITIES.forEach(a => {
     const holder = document.getElementById('segs-' + a.id);
@@ -4226,12 +4262,18 @@ function collectDayEditor(){
         problems.push(`${actDisplay(a)}: fill in both times.`);
         return;
       }
-      if(e <= s){
-        problems.push(`${actDisplay(a)}: ${sv}–${ev} ends before it starts.`);
+      if(e === s){
+        problems.push(`${actDisplay(a)}: ${sv}–${ev} is no time at all.`);
         return;
       }
       const nEl = row.querySelector('[data-role="note"]');
       const note = nEl ? String(nEl.value || '').trim() : '';
+      if(e < s){
+        const [head, tail] = splitOverMidnight(s, e, note);
+        list.push(head);
+        (spill[a.id] = spill[a.id] || []).push(tail);
+        return;
+      }
       list.push(note ? {s, e, n:note} : {s, e});
     });
     if(list.length){
@@ -4239,11 +4281,11 @@ function collectDayEditor(){
       out[a.id] = list;
     }
   });
-  return {day:out, problems};
+  return {day:out, spill, problems};
 }
 
 function saveDayEditor(){
-  const {day, problems} = collectDayEditor();
+  const {day, spill, problems} = collectDayEditor();
   const warn = document.getElementById('dayWarn');
 
   if(problems.length){
@@ -4270,6 +4312,16 @@ function saveDayEditor(){
 
   if(Object.keys(day).length) days[editingCode] = day;
   else delete days[editingCode];
+
+  /* The far side of midnight, activity by activity. The small hours of that
+     date are replaced for those activities and the rest of its day left be. */
+  const nxt = shiftCode(editingCode, 1);
+  Object.keys(spill).forEach(id => {
+    if(days[nxt] && days[nxt][id]){
+      days[nxt][id] = days[nxt][id].filter(seg => seg.s >= DAY_START);
+    }
+    appendSpans(nxt, id, spill[id]);
+  });
 
   saveData();
   closeDayEditor();
@@ -4596,6 +4648,7 @@ async function doConfirmSave(warn){
 
   const rows = Array.from(document.querySelectorAll('#swConfirmRows .seg-row'));
   const list = [];
+  const spill = [];
   const problems = [];
   rows.forEach(row => {
     const sv = row.querySelector('[data-role="start"]').value;
@@ -4603,14 +4656,19 @@ async function doConfirmSave(warn){
     if(!sv && !ev) return;
     const a = hhmmToMin(sv), b = hhmmToMin(ev);
     if(a === null || b === null){ problems.push(`"${sv}–${ev}" isn't a valid time.`); return; }
-    if(b <= a){ problems.push(`${sv}–${ev} ends before it starts.`); return; }
+    if(b === a){ problems.push(`${sv}–${ev} is no time at all.`); return; }
     const nEl = row.querySelector('[data-role="note"]');
     const note = nEl ? String(nEl.value || '').trim() : '';
+    if(b < a){
+      const [head, tail] = splitOverMidnight(a, b, note);
+      list.push(head); spill.push(tail);
+      return;
+    }
     list.push(note ? {s:a, e:b, n:note} : {s:a, e:b});
   });
 
   if(problems.length){ warn.textContent = problems.join('  '); return; }
-  if(!list.length){ warn.textContent = 'Nothing to save — add at least one row, or discard.'; return; }
+  if(!list.length && !spill.length){ warn.textContent = 'Nothing to save — add at least one row, or discard.'; return; }
 
   // Check against what's already on that day, including other activities.
   const existing = flatSegments(code, false);
@@ -4631,6 +4689,7 @@ async function doConfirmSave(warn){
     if(!days[code][act.id]) days[code][act.id] = [];
     list.forEach(x => days[code][act.id].push(x));
     days[code][act.id].sort((a,b)=>a.s-b.s);
+    appendSpans(shiftCode(code, 1), act.id, spill);
 
     await saveData();
     if(swTimer){ clearInterval(swTimer); swTimer = null; }
