@@ -344,6 +344,30 @@
     line-height:1;
     font-family:var(--font-ui); font-size:var(--fs-cell); color:var(--text-muted);
   }
+  /* ---- The absolute strip ------------------------------------------------
+     One calendar behind every bar at a set width a day, so two projects can be
+     compared by eye rather than by their own percentages. */
+  .proj-abs-scroll{
+    display:block; overflow-x:auto; overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+  }
+  .proj-abs{
+    display:block; position:relative;
+    height:16px; box-sizing:border-box;
+  }
+  /* The project's own run, inside the calendar. */
+  .pa-run{position:absolute; top:0; bottom:0; border:1px solid #111; box-sizing:border-box;}
+  .pa-run .proj-fill{left:0; top:0; bottom:0;}
+  /* Mondays hairline, the first of a month darker and named. */
+  .pa-tick{position:absolute; top:0; bottom:0; width:0.5px; background:#D8D8D8;}
+  .pa-tick.is-month{background:#6B6B6B; width:1px;}
+  .pa-mon{
+    position:absolute; top:1px;
+    font-family:var(--font-ui); font-size:var(--fs-abbr); line-height:1;
+    color:var(--text-muted);
+  }
+  .mode-toggle.is-on{color:var(--text-muted);}
+
   .proj-form-row{display:flex; align-items:center; gap:var(--sp-4);}
   .proj-empty{
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:300;
@@ -535,7 +559,23 @@
      Time and the activities in Check. Both modes share the corner cell and the
      totals row so the shape does not change when the mode is switched. */
   .axis-corner{width:40px;}
-  .day-table th.tl-axis, .day-table th.act-row-head{width:40px;}
+  .day-table th.tl-axis{width:40px;}
+  /* The activities sit at the right-hand end and hold that place while the
+     dates scroll past under them. White behind, or the cells would show
+     through as they pass. */
+  .axis-right,
+  .day-table th.act-row-head{
+    width:76px;
+    position:sticky; right:0; z-index:2;
+    background:#FFFFFF;
+  }
+  /* The hours do the same at the other end, for the same reason. */
+  .axis-corner, .day-table th.tl-axis{
+    position:sticky; left:0; z-index:2;
+    background:#FFFFFF;
+  }
+  /* One height, used under the dates and between the two halves. */
+  .day-table tr.spacer-row td{height:20px; padding:0; border:none;}
   .day-table th.date-col{
     font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);
     color:var(--text-muted); text-align:center;
@@ -567,7 +607,7 @@
   .day-table th.act-row-head{
     font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);
     color:var(--text-muted); text-align:left;
-    padding:2px var(--sp-1) 2px 0; cursor:pointer;
+    padding:2px 0 2px var(--sp-2); cursor:pointer;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .day-table th.act-row-head.picked{color:#111; font-weight:500;}
@@ -1553,6 +1593,13 @@ if('serviceWorker' in navigator){
       <div id="projList"></div>
       <div class="proj-head">
         <span style="flex:1;"></span>
+        <button class="mode-toggle" id="projScaleBtn" onclick="toggleProjScale()" aria-label="Switch scale" title="Each bar its own length / all bars on one calendar">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6.4 7.2 L2.8 10.8 L6.4 14.4 Z"/>
+            <path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>
+            <rect x="4.6" y="9.6" width="14.8" height="2.4"/>
+          </svg>
+        </button>
         <button class="mode-toggle" onclick="openProjEditor('')" aria-label="Add a project" title="Add a project">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
         </button>
@@ -1664,7 +1711,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29k</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29m</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2408,6 +2455,92 @@ function projDateShort(code){
   return parseInt(s.slice(2,4),10) + '. ' + parseInt(s.slice(4,6),10);
 }
 
+/* Two ways to draw the bars.
+     'rel'  — each bar is its own run: the start at the left edge, the deadline
+              at the right, whatever the length. Reads "how far along".
+     'abs'  — every bar on one calendar at a set number of pixels a day, so two
+              projects can be compared by eye. Today sits at the left of the
+              window and about six weeks fill it; anything longer runs off to
+              the right, anything begun earlier off to the left, and the strip
+              scrolls. All rows scroll together. */
+let projScale = 'rel';
+const PROJ_DAY_PX = 8;        // about 40 days across a phone's width
+
+function toggleProjScale(){
+  projScale = (projScale === 'rel') ? 'abs' : 'rel';
+  const b = document.getElementById('projScaleBtn');
+  if(b) b.classList.toggle('is-on', projScale === 'abs');
+  renderProjects();
+}
+
+/* The span every absolute bar is drawn against: the earliest start (or today,
+   whichever is earlier) to the latest deadline. Counted in days before today,
+   so 0 is today and a positive number is the past. */
+function projAbsRange(){
+  let back = 0, fwd = 0;
+  projects.forEach(p => {
+    if(/^\d{6}$/.test(String(p.start || ''))) back = Math.max(back, daysBefore(String(p.start)));
+    if(/^\d{6}$/.test(String(p.end || '')))   fwd  = Math.max(fwd, -daysBefore(String(p.end)));
+  });
+  // A few days of air at either end so a bar never ends flush against nothing.
+  return {back: back + 2, fwd: Math.max(fwd, 42) + 2};
+}
+
+/* Week and month marks. Mondays get a hairline; the first of a month gets a
+   darker one and says which month it is. */
+function projAbsTicks(range){
+  const total = range.back + range.fwd;
+  let out = '';
+  for(let i = 0; i <= total; i++){
+    const d = new Date(codeToDate(todayCode()).getTime());
+    d.setDate(d.getDate() - range.back + i);
+    const x = i * PROJ_DAY_PX;
+    if(d.getDate() === 1){
+      out += `<span class="pa-tick is-month" style="left:${x}px"></span>` +
+             `<span class="pa-mon" style="left:${x + 3}px">${d.getMonth() + 1}</span>`;
+    } else if(d.getDay() === 1){
+      out += `<span class="pa-tick" style="left:${x}px"></span>`;
+    }
+  }
+  return out;
+}
+
+function projAbsBar(p, a, pct, range){
+  const total = range.back + range.fwd;
+  const width = total * PROJ_DAY_PX;
+  const hasDates = /^\d{6}$/.test(String(p.start || '')) && /^\d{6}$/.test(String(p.end || ''));
+  let bar = '';
+  if(hasDates){
+    const x0 = (range.back - daysBefore(String(p.start))) * PROJ_DAY_PX;
+    const x1 = (range.back - daysBefore(String(p.end))) * PROJ_DAY_PX;
+    const w = Math.max(x1 - x0, 2);
+    bar = `<span class="pa-run" style="left:${x0}px; width:${w}px">` +
+            `<span class="proj-fill" style="width:${pct}%` +
+              (a ? '; background:' + a.color : '') + `"></span>` +
+          `</span>`;
+  }
+  const todayX = range.back * PROJ_DAY_PX;
+  return '<span class="proj-abs-scroll" onscroll="syncProjScroll(this)">' +
+    `<span class="proj-abs" style="width:${width}px">` +
+      projAbsTicks(range) +
+      bar +
+      `<span class="proj-now" style="left:${todayX}px"></span>` +
+    '</span>' +
+  '</span>';
+}
+
+/* One row scrolls, they all scroll — otherwise the same date sits at a
+   different place on every line and the whole point of the view is lost. */
+let projSyncing = false;
+function syncProjScroll(el){
+  if(projSyncing) return;
+  projSyncing = true;
+  document.querySelectorAll('.proj-abs-scroll').forEach(o => {
+    if(o !== el) o.scrollLeft = el.scrollLeft;
+  });
+  projSyncing = false;
+}
+
 function renderProjects(){
   const wrap = document.getElementById('projList');
   if(!wrap) return;
@@ -2418,6 +2551,7 @@ function renderProjects(){
   /* Whatever order they have been put in, kept as it is — the two chevrons on
      each line are what changes it. */
   const sorted = projects;
+  const absRange = projAbsRange();
   wrap.innerHTML = sorted.map((p, idx) => {
     const a = p.actId ? actById(p.actId) : null;
     const n = daysUntil(p.end);
@@ -2449,15 +2583,17 @@ function renderProjects(){
         // The bar and the two dates share one column, so the deadline ends
         // exactly where the bar does instead of running out past the box.
         '<span class="proj-barcol">' +
-          '<span class="proj-bar">' +
-            '<span class="proj-fill" style="width:' + pct + '%' +
-              (a ? '; background:' + a.color : '') + '"></span>' +
-            nowMark +
-          '</span>' +
-          '<span class="proj-dates">' +
-            '<span>' + escapeHtmlT(projDateShort(p.start)) + '</span>' +
-            '<span>' + escapeHtmlT(projDateShort(p.end)) + '</span>' +
-          '</span>' +
+          (projScale === 'abs'
+            ? projAbsBar(p, a, pct, absRange)
+            : '<span class="proj-bar">' +
+                '<span class="proj-fill" style="width:' + pct + '%' +
+                  (a ? '; background:' + a.color : '') + '"></span>' +
+                nowMark +
+              '</span>' +
+              '<span class="proj-dates">' +
+                '<span>' + escapeHtmlT(projDateShort(p.start)) + '</span>' +
+                '<span>' + escapeHtmlT(projDateShort(p.end)) + '</span>' +
+              '</span>') +
         '</span>' +
         // Figure, sign and the two arrows on one line to the right of the bar.
         '<span class="proj-right">' +
@@ -2469,6 +2605,11 @@ function renderProjects(){
       '</div>' +
     '</div>';
   }).join('');
+  // Opens with today at the left edge, which is where the eye starts.
+  if(projScale === 'abs'){
+    const x = absRange.back * PROJ_DAY_PX;
+    wrap.querySelectorAll('.proj-abs-scroll').forEach(el => { el.scrollLeft = x; });
+  }
 }
 
 async function moveProject(id, delta){
@@ -2717,6 +2858,9 @@ function renderDayHead(range){
       return `<th class="${cls}" onclick="openDayEditor('${code}')"` +
              ` title="${dateWithDow(code)}">${formatDayLabel(code) || 'Today'}</th>`;
     }).join('') +
+    // The activities live at the right-hand end and stay there while the dates
+    // scroll past underneath them.
+    '<th class="axis-right"></th>' +
     '</tr>';
 }
 
@@ -2780,6 +2924,11 @@ function renderDays(){
     (isWeekendCode(code) ? ' is-weekend' : '');
 
   let rows = '';
+  // The same breath in two places: under the dates, and between the check half
+  // and the time half. One number, so the two gaps cannot drift apart.
+  const spacer = `<tr class="spacer-row"><td colspan="${codes.length + 2}"></td></tr>`;
+
+  rows += spacer;
 
   /* Check on top, one row per activity, in the order the options screen puts
      them. Time underneath, sharing the same date columns — one table rather
@@ -2787,13 +2936,16 @@ function renderDays(){
   ACTIVITIES.forEach((a, i) => {
     const newGroup = i > 0 && ACTIVITIES[i-1].group !== a.group;
     rows += `<tr class="${newGroup ? 'group-start' : ''}">` +
+      '<th class="axis-corner"></th>' +
+      codes.map(code => `<td class="grid-cell${colCls(code)}">${checkCellHtml(code, a)}</td>`).join('') +
       `<th class="act-row-head${isVisibleAct(a) ? '' : ' dimmed'}` +
       `${currentAct === a.id ? ' picked' : ''}"` +
       ` title="${actDisplay(a)}" onclick="toggleActFilter('${a.id}','${a.group}')">` +
       `${a.short}</th>` +
-      codes.map(code => `<td class="grid-cell${colCls(code)}">${checkCellHtml(code, a)}</td>`).join('') +
       '</tr>';
   });
+
+  rows += spacer;
 
   const span = range.hi - range.lo;
   let ticks = '';
@@ -2804,6 +2956,7 @@ function renderDays(){
   rows += '<tr class="tl-row">' +
     `<th class="tl-axis"><span class="tlv-wrap" style="height:${TL_HEIGHT}px">${ticks}</span></th>` +
     codes.map(code => `<td class="tl-cell${colCls(code)}">${timelineColHtml(code, range)}</td>`).join('') +
+    '<th class="axis-right"></th>' +
     '</tr>';
 
   // The totals run along the bottom, one per date rather than one per row.
@@ -2813,6 +2966,7 @@ function renderDays(){
       const total = dayTotal(code);
       return `<td class="day-total${total ? ' has-time' : ''}${colCls(code)}">${fmtDur(total)}</td>`;
     }).join('') +
+    '<th class="axis-right"></th>' +
     '</tr>';
 
   body.innerHTML = rows;
