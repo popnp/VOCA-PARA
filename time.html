@@ -246,6 +246,9 @@
   }
   .pane-dot.is-on{background:#111;}
 
+  /* Below the dial and to the left, clear of the list that follows. */
+  .clock-add{display:flex; justify-content:flex-start; margin-top:var(--sp-4);}
+
   .proj-block{margin-top:var(--sp-6);}
   .proj-head{
     display:flex; align-items:center; justify-content:space-between;
@@ -1577,7 +1580,7 @@ if('serviceWorker' in navigator){
         <div class="group-row" id="actRow" style="display:none; margin-top:0;"></div>
       </div>
       <div class="table-top">
-        <button class="mode-toggle" onclick="openAddDate()" aria-label="Add a day" title="Add / edit a day">
+        <button class="mode-toggle" onclick="openAddTime()" aria-label="Add time" title="Add time">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
         </button>
       </div>
@@ -1585,6 +1588,13 @@ if('serviceWorker' in navigator){
       </section>
       <section class="pane">
         <div class="clock-wrap" id="clockWrap"></div>
+        <!-- Under the dial, on the left: the quickest way to write down time
+             for the day being looked at. -->
+        <div class="clock-add">
+          <button class="mode-toggle" onclick="openDayEditor(currentViewCode())" aria-label="Add time" title="Add time">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
+          </button>
+        </div>
 
         <div class="todo-wrap" id="todoWrap"></div>
       </section>
@@ -1711,7 +1721,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29m</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29n</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2737,17 +2747,46 @@ function flatSegments(code, onlyVisible){
    Timeline range. Starts from the 9-21 default but widens to fit whatever is
    actually recorded, so an early morning or late night session is never cut off.
    ------------------------------------------------------------------------- */
+/* The day turns over at four in the morning, not at midnight: work that runs
+   past twelve belongs to the evening it started in, which is how it is
+   remembered. Everything on the strip is measured in minutes from midnight of
+   the day it is filed under, so anything before 04:00 is carried up past 1440
+   and drawn at the bottom of the day before. */
+const DAY_START = 4 * 60;
+
+/* One day on from a code. Kept beside the strip that needs it rather than
+   bolted onto the date helpers, since nothing else asks for it. */
+function shiftCode(code, delta){
+  const d = codeToDate(code);
+  const n = new Date(d.getFullYear(), d.getMonth(), d.getDate() + delta);
+  return ymdToCode(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+function stripSegments(code, onlyVisible){
+  const out = [];
+  // This day, from 04:00 on.
+  flatSegments(code, onlyVisible).forEach(seg => {
+    if(seg.s >= DAY_START) out.push(seg);
+  });
+  // And the small hours of the next day, drawn on the end of this one.
+  const nxt = shiftCode(code, 1);
+  flatSegments(nxt, onlyVisible).forEach(seg => {
+    if(seg.e <= DAY_START) out.push({...seg, s: seg.s + 1440, e: seg.e + 1440});
+  });
+  return out;
+}
+
 function timelineRange(){
   let lo = 9*60, hi = 21*60;
   allCodes().forEach(code => {
     // Measured across ALL activities so the axis doesn't jump when filtering.
-    flatSegments(code, false).forEach(seg => {
+    stripSegments(code, false).forEach(seg => {
       if(seg.s < lo) lo = seg.s;
       if(seg.e > hi) hi = seg.e;
     });
   });
-  lo = Math.floor(lo/60)*60;
-  hi = Math.ceil(hi/60)*60;
+  lo = Math.max(DAY_START, Math.floor(lo/60)*60);
+  hi = Math.min(DAY_START + 1440, Math.ceil(hi/60)*60);
   if(hi - lo < 120) hi = lo + 120;
   return {lo, hi};
 }
@@ -2883,7 +2922,7 @@ function checkCellHtml(code, a){
 /* One date's column in Time mode: the day laid out top to bottom. */
 function timelineColHtml(code, range){
   const span = range.hi - range.lo;
-  const segs = flatSegments(code, true);
+  const segs = stripSegments(code, true);
   const clashing = new Set();
   findOverlaps(segs).forEach(([A,B]) => { clashing.add(A); clashing.add(B); });
 
@@ -2903,7 +2942,7 @@ function timelineColHtml(code, range){
     const top = ((seg.s - range.lo) / span) * 100;
     const h = ((seg.e - seg.s) / span) * 100;
     const cls = clashing.has(seg) ? ' is-overlap' : '';
-    const tip = `${actDisplay(seg.act)} ${minToHHMM(seg.s)}–${minToHHMM(seg.e)}`;
+    const tip = `${actDisplay(seg.act)} ${minToHHMM(seg.s % 1440)}–${minToHHMM(seg.e % 1440)}`;
     return `<span class="tlv-bar${cls}" style="top:${top}%; height:${Math.max(h,0.8)}%;` +
            ` background:${seg.act.color}" title="${tip}"` +
            ` onclick="openActEditor('${code}','${seg.act.id}')"></span>`;
@@ -2951,7 +2990,8 @@ function renderDays(){
   let ticks = '';
   for(let m = range.lo; m <= range.hi; m += 60){
     const pct = ((m - range.lo) / span) * 100;
-    ticks += `<span class="timeline-tick" style="top:${pct}%">${Math.floor(m/60)}</span>`;
+    // Past midnight the number rolls over rather than counting on to 28.
+    ticks += `<span class="timeline-tick" style="top:${pct}%">${Math.floor(m/60) % 24}</span>`;
   }
   rows += '<tr class="tl-row">' +
     `<th class="tl-axis"><span class="tlv-wrap" style="height:${TL_HEIGHT}px">${ticks}</span></th>` +
@@ -3494,6 +3534,18 @@ function renderDatePicker(){
    editors; picking a day and only then being asked would mean the calendar had
    to be shown without knowing what it was for. */
 let dpAddKind = 'time';
+
+/* Straight to the calendar, with no question first: this button is on the
+   table of recorded time, so time is the only thing it could be adding. */
+function openAddTime(){
+  dpAddKind = 'time';
+  dpTargetId = null;          // null target = jump to an editor on pick
+  const cur = currentViewCode();
+  dpYear = 2000 + parseInt(cur.slice(0,2),10);
+  dpMonth = parseInt(cur.slice(2,4),10) - 1;
+  renderDatePicker();
+  document.getElementById('dateOverlay').classList.add('show');
+}
 
 function openAddDate(){
   document.getElementById('addKindOverlay').classList.add('show');
