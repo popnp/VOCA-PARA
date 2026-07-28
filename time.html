@@ -22,6 +22,7 @@
     --fs-tick:9px;      /* the timeline's hour marks */
     --icon:16px;        /* every mark in the two control columns */
     --icon-box:24px;    /* and the box each one stands in */
+    --date-col:56px;    /* how wide one day reads in the table */
     --font-ui:'Switzer','Pretendard Variable','Pretendard',
               'Helvetica Neue',Helvetica,Arial,
               'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
@@ -513,7 +514,87 @@
     /* fixed, so the activity columns divide what is left equally instead of each
      being widened by however long its own name is. Without it a single long
      name held the whole table open and the columns stopped being even. */
-  .day-table{width:100%; table-layout:fixed; border-collapse:collapse; margin-top:var(--sp-2);}
+  /* The date columns are a set width now rather than a share of the screen, so
+     twenty of them keep their shape and the strip scrolls instead of squeezing.
+     --date-col is the one number that changes how wide a day reads. */
+  .day-scroll{
+    overflow-x:auto; overflow-y:hidden;
+    margin-top:var(--sp-2);
+    -webkit-overflow-scrolling:touch;
+  }
+  .day-table{
+    table-layout:fixed; border-collapse:collapse;
+    width:max-content; min-width:100%;
+  }
+  .day-table th.date-col,
+  .day-table td.grid-cell,
+  .day-table td.tl-cell,
+  .day-table tr.total-row td{width:var(--date-col);}
+  /* ---- The table, read across in dates -----------------------------------
+     Dates along the top with today at the right; down the side, the hours in
+     Time and the activities in Check. Both modes share the corner cell and the
+     totals row so the shape does not change when the mode is switched. */
+  .axis-corner{width:40px;}
+  .day-table th.tl-axis, .day-table th.act-row-head{width:40px;}
+  .day-table th.date-col{
+    font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);
+    color:var(--text-muted); text-align:center;
+    padding:0 1px 5px; cursor:pointer;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .day-table th.date-col.is-today{color:#111; font-weight:500;}
+  /* The column being looked at, boxed — the same outline the row used to get,
+     turned on its side. Drawn as backgrounds so it adds no width. */
+  .day-table th.date-col.is-viewed,
+  .day-table td.is-viewed{
+    background:
+      linear-gradient(#111,#111) left top/1px 100% no-repeat,
+      linear-gradient(#111,#111) right top/1px 100% no-repeat;
+  }
+  .day-table th.date-col.is-viewed{
+    background:
+      linear-gradient(#111,#111) left top/1px 100% no-repeat,
+      linear-gradient(#111,#111) right top/1px 100% no-repeat,
+      linear-gradient(#111,#111) left top/100% 1px no-repeat;
+  }
+  .day-table tr.total-row td.is-viewed{
+    background:
+      linear-gradient(#111,#111) left top/1px 100% no-repeat,
+      linear-gradient(#111,#111) right top/1px 100% no-repeat,
+      linear-gradient(#111,#111) left bottom/100% 1px no-repeat;
+  }
+  /* Down the side in Check: the activity, pressable to narrow to it alone. */
+  .day-table th.act-row-head{
+    font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);
+    color:var(--text-muted); text-align:left;
+    padding:2px var(--sp-1) 2px 0; cursor:pointer;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .day-table th.act-row-head.picked{color:#111; font-weight:500;}
+  .day-table th.act-row-head.dimmed{opacity:0.35;}
+  /* A hair of air where one family of activities ends and the next begins. */
+  .day-table tr.group-start th,
+  .day-table tr.group-start td{padding-top:6px;}
+  .day-table td.grid-cell{padding:1px; text-align:center; vertical-align:middle;}
+  .day-table td.tl-cell{padding:0 1px; vertical-align:top;}
+  .day-table th.tl-axis{padding:0; vertical-align:top; position:relative;}
+
+  /* The day, top to bottom. Same parts as the old sideways strip, turned. */
+  .tlv-wrap{display:block; position:relative; width:100%;}
+  .tlv-grid{position:absolute; left:-4px; right:-4px; height:0.5px; background:#6B6B6B;}
+  .tlv-off{position:absolute; left:0; right:0; background:rgba(0,0,0,0.05);}
+  .tlv-bar{position:absolute; left:1px; right:1px; cursor:pointer;}
+  .tlv-bar.is-overlap{outline:1px solid var(--rust); outline-offset:-1px;}
+  .day-table th.tl-axis .timeline-tick{
+    position:absolute; right:4px; top:0;
+    transform:translateY(-50%);
+    font-size:var(--fs-label); line-height:1; height:auto;
+    color:var(--text-muted); white-space:nowrap;
+  }
+  .day-table tr.total-row td.day-total{
+    text-align:center; padding-top:5px;
+    font-size:var(--fs-label);
+  }
   .day-table thead th{
     font-family:var(--font-ui);
     font-weight:300;
@@ -1432,19 +1513,20 @@ if('serviceWorker' in navigator){
   <!-- Two pages, and the whole screen moves between them: the dial and the
        list belong to the day, which is what the first page is about, and the
        second page is about work that runs across many days. -->
+  <!-- Three pages. The day itself is the middle one, since that is what the app
+       is for; the table of recent days is to its left and the projects, which
+       run across many days, to its right. The whole screen moves. -->
   <div class="pane-view" id="paneView">
     <div class="pane-track" id="paneTrack">
       <section class="pane">
-        <div class="clock-wrap" id="clockWrap"></div>
-
-        <!-- The list sits above the table, with space between the two. It
-             always shows: the blank add line is content, so this is not the
-             empty-box case. -->
-        <div class="todo-wrap" id="todoWrap"></div>
-    <table class="day-table">
-      <thead id="dayHead"></thead>
-      <tbody id="dayBody"></tbody>
-    </table>
+        <!-- Twenty days do not fit across a phone, so the table scrolls
+             sideways and opens at today. -->
+        <div class="day-scroll" id="dayScroll">
+          <table class="day-table">
+            <thead id="dayHead"></thead>
+            <tbody id="dayBody"></tbody>
+          </table>
+        </div>
 
     <!-- The filters and the two view buttons share a line: filters left, buttons
          right. The buttons stay pinned to the first row even when the activity
@@ -1458,22 +1540,16 @@ if('serviceWorker' in navigator){
         <button class="mode-toggle" onclick="openAddDate()" aria-label="Add a day" title="Add / edit a day">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
         </button>
-        <button class="mode-toggle" id="modeToggleBtn" onclick="toggleMode()" aria-label="Switch view" title="Check / Time">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6.4 7.2 L2.8 10.8 L6.4 14.4 Z"/>
-            <path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>
-            <rect x="4.6" y="9.6" width="14.8" height="2.4"/>
-          </svg>
-        </button>
       </div>
     </div>
       </section>
       <section class="pane">
-    <!-- ================= Projects =================
-         Longer-running work: what kind it is, what it is called, when it runs and
-         how far along it is. Below the table because it is the slowest-moving
-         thing on the screen. -->
-    <div class="proj-block">
+        <div class="clock-wrap" id="clockWrap"></div>
+
+        <div class="todo-wrap" id="todoWrap"></div>
+      </section>
+      <section class="pane">
+        <div class="proj-block">
       <div id="projList"></div>
       <div class="proj-head">
         <span style="flex:1;"></span>
@@ -1486,8 +1562,9 @@ if('serviceWorker' in navigator){
     </div>
   </div>
   <div class="pane-dots" id="paneDots">
-    <button class="pane-dot is-on" onclick="setPane(0)" aria-label="Check / Time"></button>
-    <button class="pane-dot" onclick="setPane(1)" aria-label="Projects"></button>
+    <button class="pane-dot" onclick="setPane(0)" aria-label="Check / Time"></button>
+    <button class="pane-dot is-on" onclick="setPane(1)" aria-label="Today"></button>
+    <button class="pane-dot" onclick="setPane(2)" aria-label="Projects"></button>
   </div>
 </section>
 
@@ -1587,7 +1664,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29h</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29k</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2202,7 +2279,7 @@ function dayTotal(code){
    last N days ending today, not a list of days that happen to hold something —
    an empty day has to appear or a square marked to be done would have nowhere
    to be drawn. Older records are untouched and still reachable through +. */
-const TABLE_DAYS = 7;
+const TABLE_DAYS = 20;
 const TODO_DAYS  = 3;
 
 /* The last n calendar days ending at `from` (today unless told otherwise),
@@ -2235,10 +2312,12 @@ function allCodes(){
    mostly-vertical drag is a scroll and is left alone. Nothing is hidden, so
    both pages keep rendering and neither arrives stale.
    ------------------------------------------------------------------------- */
-let currentPane = 0;
+/* The middle page is where the app opens: the table is a look back and the
+   projects a look forward, and the day itself sits between them. */
+let currentPane = 1;
 
 function setPane(i){
-  currentPane = Math.max(0, Math.min(1, i));
+  currentPane = Math.max(0, Math.min(2, i));
   const track = document.getElementById('paneTrack');
   if(track) track.style.transform = 'translateX(-' + (currentPane * 100) + '%)';
   const dots = document.querySelectorAll('#paneDots .pane-dot');
@@ -2612,71 +2691,137 @@ function isVisibleAct(a){
   return visibleActivities().some(v => v.id === a.id);
 }
 
+/* The table reads across in dates and down in whatever the mode is about: the
+   hours of the day in Time, the list of activities in Check. Today is the
+   rightmost column, so the newest work is where a right-handed thumb lands and
+   the past runs away to the left. */
+const TL_HEIGHT = 330;        // the vertical hour strip, in pixels — 1.5x
+
+function tableCodes(){
+  // allCodes() hands them back newest first; the table wants the opposite.
+  return allCodes().slice().reverse();
+}
+
 function renderDayHead(range){
   const head = document.getElementById('dayHead');
-
-  if(currentMode !== 'check'){
-    // Same two-row shell as check mode — an empty band row, then the hour
-    // scale — so switching modes never shifts the table up or down.
-    const span = range.hi - range.lo;
-    let ticks = '';
-    for(let m = range.lo; m <= range.hi; m += 60){
-      const pct = ((m - range.lo) / span) * 100;
-      ticks += `<span class="timeline-tick" style="left:${pct}%">${Math.floor(m/60)}</span>`;
-    }
-    head.innerHTML =
-      `<tr><th style="width:64px;"></th>` +
-      `<th class="tick-head"><span class="tick-wrap">${ticks}</span></th>` +
-      `<th style="width:58px;"></th></tr>`;
-    return;
-  }
-
+  const codes = tableCodes();
+  const today = todayCode(), viewed = currentViewCode();
   head.innerHTML =
-    `<tr>` +
-    `<th style="width:64px;"></th>` +
-    ACTIVITIES.map((a,i) => {
-      const newGroup = i > 0 && ACTIVITIES[i-1].group !== a.group;
-      const gap = newGroup ? '<th class="group-gap"></th>' : '';
-      // Pressing a head narrows everything — table, dial, and the total beside
-      // each row — to that one activity. Pressing it again widens it back.
-      const on = currentAct === a.id;
-      return gap + `<th class="act-col${isVisibleAct(a)?'':' dimmed'}${on?' picked':''}"` +
-        ` title="${actDisplay(a)}" onclick="toggleActFilter('${a.id}','${a.group}')">` +
-        `<span class="tick-wrap"><span class="act-abbr">${a.short}</span></span></th>`;
+    '<tr>' +
+    '<th class="axis-corner"></th>' +
+    codes.map(code => {
+      const cls = 'date-col' +
+        (code === today ? ' is-today' : '') +
+        (code === viewed ? ' is-viewed' : '') +
+        (isWeekendCode(code) ? ' is-weekend' : '');
+      return `<th class="${cls}" onclick="openDayEditor('${code}')"` +
+             ` title="${dateWithDow(code)}">${formatDayLabel(code) || 'Today'}</th>`;
     }).join('') +
-    `<th style="width:58px;"></th>` +
-    `</tr>`;
+    '</tr>';
+}
+
+/* One cell of the check grid: filled with the activity's colour when there is
+   time, an empty black box when the day asked for it, a cross when neither. */
+function checkCellHtml(code, a){
+  const shown = isVisibleAct(a);
+  const segs = segmentsFor(code, a.id);
+  const has = shown && segs.length > 0;
+  const mins = segs.reduce((t,x) => t + Math.max(0, x.e - x.s), 0);
+  const planned = !has && shown && isPlanned(code, a.id);
+  const cls = 'check-cell' + (has ? '' : (planned ? ' planned' : ' off')) +
+              (shown ? '' : ' dimmed');
+  const tip = actDisplay(a) + (segs.length ? ' — ' + fmtDur(mins) : ' — none');
+  const label = has ? tip : (planned ? actDisplay(a) + ' — to do' : tip);
+  return `<span class="${cls}" style="${has ? `background:${a.color}` : ''}"` +
+         ` title="${label}" onclick="openActEditor('${code}','${a.id}')"></span>`;
+}
+
+/* One date's column in Time mode: the day laid out top to bottom. */
+function timelineColHtml(code, range){
+  const span = range.hi - range.lo;
+  const segs = flatSegments(code, true);
+  const clashing = new Set();
+  findOverlaps(segs).forEach(([A,B]) => { clashing.add(A); clashing.add(B); });
+
+  let grid = '';
+  for(let m = range.lo; m <= range.hi; m += 60){
+    const pct = ((m - range.lo) / span) * 100;
+    grid += `<span class="tlv-grid" style="top:${pct}%"></span>`;
+  }
+  const offs = OFF_HOURS.map(b => {
+    const s = Math.max(range.lo, b.s), e = Math.min(range.hi, b.e);
+    if(e <= s) return '';
+    const top = ((s - range.lo) / span) * 100;
+    const h = ((e - s) / span) * 100;
+    return `<span class="tlv-off" style="top:${top}%; height:${h}%"></span>`;
+  }).join('');
+  const bars = segs.map(seg => {
+    const top = ((seg.s - range.lo) / span) * 100;
+    const h = ((seg.e - seg.s) / span) * 100;
+    const cls = clashing.has(seg) ? ' is-overlap' : '';
+    const tip = `${actDisplay(seg.act)} ${minToHHMM(seg.s)}–${minToHHMM(seg.e)}`;
+    return `<span class="tlv-bar${cls}" style="top:${top}%; height:${Math.max(h,0.8)}%;` +
+           ` background:${seg.act.color}" title="${tip}"` +
+           ` onclick="openActEditor('${code}','${seg.act.id}')"></span>`;
+  }).join('');
+  return `<span class="tlv-wrap" style="height:${TL_HEIGHT}px">${offs}${grid}${bars}</span>`;
 }
 
 function renderDays(){
   const body = document.getElementById('dayBody');
-  const codes = allCodes();
+  const codes = tableCodes();
   const range = timelineRange();
   renderDayHead(range);
 
-  body.innerHTML = '';
+  const today = todayCode(), viewed = currentViewCode();
+  const colCls = code =>
+    (code === today ? ' is-today' : '') +
+    (code === viewed ? ' is-viewed' : '') +
+    (isWeekendCode(code) ? ' is-weekend' : '');
 
-  codes.forEach(code => {
-    const tr = document.createElement('tr');
-    if(code === todayCode()) tr.classList.add('is-today');
-    // The day the arrows point at. Marked separately so stepping back through
-    // the week still says which row is being looked at.
-    if(code === currentViewCode()) tr.classList.add('is-viewed');
-    if(isWeekendCode(code)) tr.classList.add('is-weekend');
+  let rows = '';
 
-    const total = dayTotal(code);
-    const mid = currentMode === 'check'
-      ? checkCellsHtml(code)
-      : `<td class="tick-head">${timelineHtml(code, range)}</td>`;
-
-    tr.innerHTML =
-      `<td class="day-date" onclick="openDayEditor('${code}')">${formatDayLabel(code)}</td>` +
-      mid +
-      `<td class="day-total${total?' has-time':''}">${fmtDur(total)}</td>`;
-    body.appendChild(tr);
+  /* Check on top, one row per activity, in the order the options screen puts
+     them. Time underneath, sharing the same date columns — one table rather
+     than two, so the two halves cannot drift out of step. */
+  ACTIVITIES.forEach((a, i) => {
+    const newGroup = i > 0 && ACTIVITIES[i-1].group !== a.group;
+    rows += `<tr class="${newGroup ? 'group-start' : ''}">` +
+      `<th class="act-row-head${isVisibleAct(a) ? '' : ' dimmed'}` +
+      `${currentAct === a.id ? ' picked' : ''}"` +
+      ` title="${actDisplay(a)}" onclick="toggleActFilter('${a.id}','${a.group}')">` +
+      `${a.short}</th>` +
+      codes.map(code => `<td class="grid-cell${colCls(code)}">${checkCellHtml(code, a)}</td>`).join('') +
+      '</tr>';
   });
 
-  // The clock rides along with the table — same data, same filter, both modes.
+  const span = range.hi - range.lo;
+  let ticks = '';
+  for(let m = range.lo; m <= range.hi; m += 60){
+    const pct = ((m - range.lo) / span) * 100;
+    ticks += `<span class="timeline-tick" style="top:${pct}%">${Math.floor(m/60)}</span>`;
+  }
+  rows += '<tr class="tl-row">' +
+    `<th class="tl-axis"><span class="tlv-wrap" style="height:${TL_HEIGHT}px">${ticks}</span></th>` +
+    codes.map(code => `<td class="tl-cell${colCls(code)}">${timelineColHtml(code, range)}</td>`).join('') +
+    '</tr>';
+
+  // The totals run along the bottom, one per date rather than one per row.
+  rows += '<tr class="total-row">' +
+    '<th class="axis-corner"></th>' +
+    codes.map(code => {
+      const total = dayTotal(code);
+      return `<td class="day-total${total ? ' has-time' : ''}${colCls(code)}">${fmtDur(total)}</td>`;
+    }).join('') +
+    '</tr>';
+
+  body.innerHTML = rows;
+  // Twenty days is more than fits, so the strip opens at today and the older
+  // days wait off to the left.
+  const sc = document.getElementById('dayScroll');
+  if(sc) sc.scrollLeft = sc.scrollWidth;
+
+  // The clock rides along with the table — same data, same filter.
   renderClock();
   // So does the to-do list. Hanging it here rather than on the callers means a
   // screen can't be drawn with the table refreshed and the list stale.
@@ -5005,6 +5150,8 @@ setInterval(moveNowMarker, 30000);
 
 Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActivities(),
              loadProjects()]).then(() => {
+  // The middle page is the one that opens.
+  setPane(1);
   document.getElementById('mainHeader').style.display = '';
   renderGroupRow();
   setMode('check');
