@@ -236,11 +236,12 @@
     /* Dropped clear of the dial's top edge. Expressed as a percentage because
        the dial scales with the screen — a fixed pixel offset would sit at a
        different height on every device. 23% is 100px at a 430px width. */
-    /* Flush with the dial's top: the headline figure and the dial start on the
-       same line now. */
-    top:0; right:4px;
+    /* Dead centre of the ring's hole. The wrap is square and the dial is drawn
+       to it, so the middle of one is the middle of the other. */
+    top:50%; left:50%; right:auto;
+    transform:translate(-50%, -50%);
     z-index:2;
-    text-align:right;
+    text-align:center;
     pointer-events:none;
   }
   /* 70% of the previous 39px. The weekday and wall clock sit on the same line,
@@ -252,8 +253,8 @@
      so this one element turns them back on for itself. */
   .clock-date{
     display:block;
-    /* 8px under the total — the gap, by number. */
-    margin:8px 0 0 auto;
+    /* 8px above the total, and centred with it rather than pushed right. */
+    margin:0 auto 8px;
     padding:0;
     border:none;
     background:none;
@@ -273,7 +274,11 @@
      pointer-events exception the date needs, for the same reason. */
   .clock-total{
     font-family:var(--font-ui);
-    font-size:72px;
+    /* Sized to the hole. It is 124 of the 260-unit square, so 47.7% of however
+       wide the dial is drawn — about 186px on a 390px phone. Five tabular
+       digits run about 2.7 times the font size, so 16vw (62px there, 167px
+       wide) sits inside it with room to spare. */
+    font-size:clamp(36px, 16vw, 76px);
     /* One step up from the 300 it was — the headline of the screen. */
     font-weight:400;
     line-height:0.95;
@@ -459,6 +464,9 @@
     display:inline-block;
     vertical-align:middle;
     border:1px solid transparent;
+    /* Round. The second exception to the app's square corners after the dot on
+       a to-do line — and it is the same thing being shown, so the two match. */
+    border-radius:50%;
   }
   /* A button styled as a field, standing in for <input type="date"> — the
      native picker is drawn by the OS, so its language and look can't be
@@ -621,8 +629,19 @@
   /* The same three dots the header's Options button uses, at 13px so it sits
      inside a 24px line. Its own class rather than .mini-toggle: this is an
      icon now, and the chip's border and padding no longer apply. */
-  .todo-edit-btn svg{width:13px; height:13px;}
-  .todo-edit-btn.is-on{color:var(--text-muted);}
+  /* The two marks on a row are the same control as the two under the list:
+     same glyph size, same press area. They were 13px and 11px against 15.4px,
+     which read as a different, lesser pair. */
+  .todo-tools .todo-btn,
+  .todo-tools .icon-x{padding:var(--sp-2) var(--sp-1);}
+  .todo-tools svg{width:15.4px; height:15.4px;}
+  /* The box stays black in both states; only the tick appears. */
+  .todo-check{color:#111;}
+  /* .todo-btn svg sets fill:currentColor for the solid glyphs beside it, and a
+     stylesheet beats a fill="none" written on the shape — so the box and the
+     tick were both being filled in solid. Outlines only here. */
+  .todo-check svg rect,
+  .todo-check svg path{fill:none;}
   /* The box that replaces the line while it is being reworded. */
   .todo-edit-input{flex:1; min-width:0;}
   /* Same width, size and weight as .day-date in the table, so the two columns
@@ -1278,7 +1297,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28j</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28u</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2092,6 +2111,10 @@ function renderDays(){
    these are proportions rather than pixels. */
 const CLOCK_VB_W = 260, CLOCK_VB_H = 260;
 const CLOCK_CX = 130, CLOCK_CY = 130, CLOCK_R = 118;
+/* The hole: 62 of the 118, so 124 across. That leaves a band 56 wide — still
+   room for two lines of label — and gives the figure in the middle enough
+   width to be set large. Set to 0 and the dial goes back to a pie. */
+const CLOCK_R_IN = 62;
 
 /* The small hours are left completely blank on the dial — no shading, no hour
    spokes, no numbers. Nothing is ever recorded there, and drawing it only made
@@ -2132,15 +2155,26 @@ function clockPoint(deg, r){
 /* A full-circle wedge can't be drawn as a single arc (start and end points
    coincide), so a whole day falls back to a two-arc circle. */
 function clockWedgePath(a0, a1, r){
+  const ri = CLOCK_R_IN;
   if(a1 - a0 >= 359.99){
+    // A ring, drawn as two circles wound in opposite directions so the inner
+    // one punches a hole rather than covering it.
     return `M ${CLOCK_CX} ${CLOCK_CY - r} ` +
-           `A ${r} ${r} 0 1 1 ${(CLOCK_CX - 0.01).toFixed(3)} ${CLOCK_CY - r} Z`;
+           `A ${r} ${r} 0 1 1 ${(CLOCK_CX - 0.01).toFixed(3)} ${CLOCK_CY - r} Z ` +
+           `M ${CLOCK_CX} ${CLOCK_CY - ri} ` +
+           `A ${ri} ${ri} 0 1 0 ${(CLOCK_CX - 0.01).toFixed(3)} ${CLOCK_CY - ri} Z`;
   }
   const [x0,y0] = clockPoint(a0, r);
   const [x1,y1] = clockPoint(a1, r);
+  const [i0,j0] = clockPoint(a0, ri);
+  const [i1,j1] = clockPoint(a1, ri);
   const large = (a1 - a0) > 180 ? 1 : 0;
-  return `M ${CLOCK_CX} ${CLOCK_CY} L ${x0.toFixed(2)} ${y0.toFixed(2)} ` +
-         `A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
+  // Out along the start edge, round the outside, in along the end edge, back
+  // round the inside the other way.
+  return `M ${x0.toFixed(2)} ${y0.toFixed(2)} ` +
+         `A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} ` +
+         `L ${i1.toFixed(2)} ${j1.toFixed(2)} ` +
+         `A ${ri} ${ri} 0 ${large} 0 ${i0.toFixed(2)} ${j0.toFixed(2)} Z`;
 }
 
 /* The clock always shows today. It used to fall back to the most recent day
@@ -2339,7 +2373,9 @@ function renderClock(){
        but a note was typed on purpose and is kept whatever the length. */
     const tooShort = len < LABEL_MIN;
     const mid = clockAngle((Math.max(0, seg.s) + Math.min(1440, seg.e)) / 2);
-    const [x, y] = clockPoint(mid, CLOCK_R * 0.62);
+    // The middle of the 62–118 band is 0.76 of the radius; a touch outside it
+    // puts the words where the slice is widest.
+    const [x, y] = clockPoint(mid, CLOCK_R * 0.79);
     const note = seg.n || '';
     // The abbreviation alone, as the table head shows it — actDisplay prefixes
     // the group, which is more words than a slice has room for. The note goes
@@ -2372,10 +2408,10 @@ function renderClock(){
   const live = clockLiveMins(code);
   const heading =
     `<div class="clock-head">` +
-      `<div class="clock-total${(total+live)?'':' is-zero'}${live?' is-running':''}"` +
-      ` id="clockTotal">${fmtDur(total + live) || '00:00'}</div>` +
       `<button class="clock-date${code === todayCode() ? '' : ' is-away'}" onclick="goToToday()"` +
       ` title="${code === todayCode() ? 'Today' : 'Back to today'}">${dateWithDow(code)}</button>` +
+      `<div class="clock-total${(total+live)?'':' is-zero'}${live?' is-running':''}"` +
+      ` id="clockTotal">${fmtDur(total + live) || '00:00'}</div>` +
     `</div>`;
 
   // The dial is drawn even with nothing recorded — an empty day still shows
@@ -2702,8 +2738,8 @@ function renderTodos(){
             ' onblur="todoRenameCommit(this,\'' + r.code + '\',\'' + r.t.id + '\')"' +
             ' aria-label="Reword this item">'
         : '<span class="todo-text' + (r.level ? ' p' + r.level : '') + '"' +
-            ' onclick="toggleTodo(\'' + r.code + '\',\'' + r.t.id + '\')"' +
-            ' role="button" tabindex="0">' +
+            ' onclick="todoStartEdit(\'' + r.code + '\',\'' + r.t.id + '\')"' +
+            ' role="button" tabindex="0" title="Reword">' +
             escapeHtmlT(todoDisplayText(r.t.text)) +
           '</span>';
       return '<div class="todo-row' + (r.t.done ? ' is-done' : '') +
@@ -2712,12 +2748,23 @@ function renderTodos(){
         dot +
         middle +
         '<span class="todo-tools">' +
-          '<button class="todo-btn todo-edit-btn' + (todoEditingKey === key ? ' is-on' : '') + '"' +
-            ' onclick="todoStartEdit(\'' + r.code + '\',\'' + r.t.id + '\')"' +
-            ' aria-label="Reword" title="Reword">' +
+          /* Ticking is its own mark now. The wording is edited by pressing the
+             wording, which is where a finger goes to change it anyway. */
+          /* Box and tick in one drawing, both inside the 24-unit square, so the
+             tick lands in the box instead of hanging off its corner. Empty box
+             until it is done — the mark the check table uses for "to do". */
+          '<button class="todo-btn todo-check' + (r.t.done ? ' is-done' : '') + '"' +
+            ' onclick="toggleTodo(\'' + r.code + '\',\'' + r.t.id + '\')"' +
+            ' aria-label="' + (r.t.done ? 'Undo' : 'Done') + '"' +
+            ' title="' + (r.t.done ? 'Done — tap to undo' : 'Mark done') + '">' +
             '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-            '<circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/>' +
-            '<circle cx="19.4" cy="12" r="1.6"/></svg>' +
+            '<rect x="3" y="3" width="18" height="18" fill="none"' +
+            ' stroke="currentColor" stroke-width="2"/>' +
+            (r.t.done
+              ? '<path d="M7 12.4 L10.6 16 L17 8.4" fill="none" stroke="currentColor"' +
+                ' stroke-width="2.6" stroke-linecap="square"/>'
+              : '') +
+            '</svg>' +
           '</button>' +
           '<button class="icon-x" onclick="todoDeleteRow(\'' + r.code + '\',\'' + r.t.id + '\', this)"' +
             ' aria-label="Delete" title="Delete">' +

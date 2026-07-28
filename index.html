@@ -45,6 +45,16 @@
     --paper-line:#D8D8D8;
     --brass:#111111;
     --rust:#FF4602;
+    /* The four rating colours. Everything that paints a result reads these, so
+       changing one here changes it on the cards, the bar, the list, the
+       calendar and the dots at once. Options writes over them at runtime. */
+    --rate-0:var(--rate-0);
+    --rate-1:var(--rate-1);
+    --rate-2:var(--rate-2);
+    --rate-3:#FF4602;
+    /* The one blue every link in the app uses. Editable in Options beside the
+       four rating colours. */
+    --link-blue:#2519FF;
     --text-dark:#111111;
     --text-muted:#6B6B6B;
     --text-light:#111111;
@@ -253,7 +263,7 @@
   }
   #drawerHandle::after{
     content:'';
-    width:0.5px; height:56px; background:#6B6B6B;
+    width:3px; height:56px; background:#111;
   }
   body.drawer-open #drawerHandle{display:none;}
 
@@ -265,14 +275,19 @@
   #headDrawer{
     position:fixed; top:0; right:0; height:100vh;
     box-sizing:border-box;
-    /* No panel: nothing is drawn but the marks themselves. */
-    background:transparent;
+    /* A white plate behind the marks and nothing else — over a page of text
+       the transparent version left them unreadable. No border: the plate's
+       edge is the edge. */
+    background:#FFFFFF;
     border:none;
     padding:var(--sp-5);
     z-index:70;
     /* One column, so the two groups read as a single run of marks. The gap is
        the same one that separated them side by side. */
-    display:flex; flex-direction:column; gap:var(--sp-4);
+    display:flex; flex-direction:column;
+    /* Between the three groups. Inside a group the marks keep the 16px they
+       had, so the grouping reads as grouping rather than as a longer list. */
+    gap:40px;
     justify-content:center;
     /* Parked just off-screen rather than hidden, so it can be dragged. */
     transform:translateX(100%);
@@ -1126,14 +1141,14 @@
   /* The blocks are transparent hit areas; the dot carries the colour. */
   /* color is set on the button so the ripple (::after, currentColor) matches
      the dot without repeating each hex twice. */
-  .rate-easy{color:#00E5FF;}
-  .rate-medium{color:#2CE17A;}
-  .rate-unsure{color:#F2FF00;}
-  .rate-unknown{color:#FF4602;}
-  .rate-easy::before{background:#00E5FF;}
-  .rate-medium::before{background:#2CE17A;}
-  .rate-unsure::before{background:#F2FF00;}
-  .rate-unknown::before{background:#FF4602;}
+  .rate-easy{color:var(--rate-0);}
+  .rate-medium{color:var(--rate-1);}
+  .rate-unsure{color:var(--rate-2);}
+  .rate-unknown{color:var(--rate-3);}
+  .rate-easy::before{background:var(--rate-0);}
+  .rate-medium::before{background:var(--rate-1);}
+  .rate-unsure::before{background:var(--rate-2);}
+  .rate-unknown::before{background:var(--rate-3);}
   @media (max-width:420px){
     /* Height now follows the dot, so the mobile adjustment is on the row's
        padding instead — keeping total bar height near the previous 118px. */
@@ -1206,15 +1221,15 @@
     border-radius:0;
     display:inline-block;
   }
-  .cal-mark.cal-red{background:#FF4602;}
-  .cal-mark.cal-yellow{background:#F2FF00;}
-  .cal-mark.cal-green{background:#2CE17A;}
-  .cal-mark.cal-blue{background:#00E5FF;}
+  .cal-mark.cal-red{background:var(--rate-3);}
+  .cal-mark.cal-yellow{background:var(--rate-2);}
+  .cal-mark.cal-green{background:var(--rate-1);}
+  .cal-mark.cal-blue{background:var(--rate-0);}
 
-  .cal-cell.cal-red{background:#FF4602; border:none;}
-  .cal-cell.cal-yellow{background:#F2FF00; border:none;}
-  .cal-cell.cal-green{background:#2CE17A; border:none;}
-  .cal-cell.cal-blue{background:#00E5FF; border:none;}
+  .cal-cell.cal-red{background:var(--rate-3); border:none;}
+  .cal-cell.cal-yellow{background:var(--rate-2); border:none;}
+  .cal-cell.cal-green{background:var(--rate-1); border:none;}
+  .cal-cell.cal-blue{background:var(--rate-0); border:none;}
 
   .day-table{width:100%; margin:0; border-collapse:collapse;}
   /* Aligned with the list rows below (.day-word-header uses --sp-1 side
@@ -1259,6 +1274,16 @@
   /* Saturdays and Sundays: the date text greys out so weeks are easy to scan. */
   .day-table tbody tr.is-weekend .day-date{color:var(--text-muted);}
   .day-table .day-cats{font-family:var(--font-ui); font-size:var(--fs-label); color:var(--text-muted);}
+  /* Eight slots across the three app columns (3 + 4 + 1). The columns take
+     3/8, 4/8 and 1/8 of what is left after the date, so every slot lands at
+     the same width. fixed layout is what makes the percentages binding. */
+  #calTable, #pCalTable{table-layout:fixed;}
+  /* All four in percent. A fixed 64px date column plus three percentages came
+     to more than the table, and the overflow landed on top of the date. */
+  #calTable .day-date, #pCalTable .day-date{width:16%;}
+  td.day-col-para{width:31.5%;}
+  td.day-col-voca{width:42%;}
+  td.day-col-memo{width:10.5%;}
   .day-table .day-perf{width:20px;}
   .day-table .day-perf .status-dot{width:14px; height:14px;}
   .day-table .day-test-btn{
@@ -1293,10 +1318,10 @@
     border-radius:0;
     display:inline-block;
   }
-  .day-cat-tag.cal-red{background:#FF4602;}
-  .day-cat-tag.cal-yellow{background:#F2FF00;}
-  .day-cat-tag.cal-green{background:#2CE17A;}
-  .day-cat-tag.cal-blue{background:#00E5FF;}
+  .day-cat-tag.cal-red{background:var(--rate-3);}
+  .day-cat-tag.cal-yellow{background:var(--rate-2);}
+  .day-cat-tag.cal-green{background:var(--rate-1);}
+  .day-cat-tag.cal-blue{background:var(--rate-0);}
 
   /* ---- Unified (Para + Voca) day table ---- */
   /* One row per date; Para chunk on the left, Voca chunk on the right.
@@ -1315,12 +1340,15 @@
   /* Fixed sub-columns per category so the same letter always lands in the same
      horizontal slot: every R sits under every other R, W under W, and so on.
      Para has 3 slots (W/R/S); Voca has 4 (V/W/R/S). */
+  /* stretch, not start: the slots are coloured boxes now and must fill the
+     row's height for the colour to read as a cell. */
   .uni-chunk{
     display:grid;
-    gap:0 3px;
+    /* 2px, so neighbouring cells read as two cells and not one long bar. */
+    gap:0 2px;
     cursor:pointer;
-    min-height:18px;
-    align-items:start;
+    min-height:24px;
+    align-items:stretch;
   }
   .para-slots{grid-template-columns:repeat(3, minmax(0, 1fr));}
   .voca-slots{grid-template-columns:repeat(4, minmax(0, 1fr));}
@@ -1329,7 +1357,13 @@
   .uni-chunk.is-active{outline:1px solid #111; outline-offset:2px;}
   /* An empty slot still occupies its column, which is what keeps the letters
      vertically aligned when a date is missing a category. */
-  .uni-slot{min-width:0; text-align:center;}
+  /* The slot itself carries the rating colour now, so it is a visible cell:
+     it fills the row's height and centres its letter. Empty slots stay bare. */
+  .uni-slot{
+    min-width:0; text-align:center;
+    display:flex; align-items:center; justify-content:center;
+    min-height:24px;
+  }
   .uni-slot .day-cat-tag-wrap{margin-bottom:0; margin-right:0;}
   /* The group label sits centred over its own set of slots; Date stays left. */
   .day-table thead th.uni-col-head{text-align:center;}
@@ -1398,8 +1432,8 @@
   .preview-warning{font-size:var(--fs-label); color:var(--rust); display:block; margin-top:2px;}
   /* Same treatment as the red warning, in the app's blue: this one is
      information (the word already exists), not a problem. */
-  .preview-item.is-dupe{border-left:3px solid #2519FF; padding-left:6px;}
-  .preview-note{font-size:var(--fs-label); color:#2519FF; display:block; margin-top:2px;}
+  .preview-item.is-dupe{border-left:3px solid var(--link-blue); padding-left:6px;}
+  .preview-note{font-size:var(--fs-label); color:var(--link-blue); display:block; margin-top:2px;}
   /* Skipped rows stay listed but visibly inert. */
   .preview-item.is-skipped .pw,
   .preview-item.is-skipped .pm{opacity:0.4; text-decoration:line-through;}
@@ -1421,7 +1455,7 @@
     font-family:var(--font-ui);
     font-weight:300;
     font-size:var(--fs-body);
-    color:#2519FF;
+    color:var(--link-blue);
     margin-bottom:22px;
   }
 
@@ -1448,7 +1482,7 @@
     white-space:nowrap;
   }
   .blank-slot.filled{
-    color:#2519FF;
+    color:var(--link-blue);
   }
   /* Once filled, the answer itself is what shows — the sizer stays hidden and
      the overlay is dropped so the text sits in normal flow. */
@@ -1511,10 +1545,49 @@
   .day-word-header .chevron, .memo-row .chevron{
     font-size:var(--fs-label); color:var(--text-muted); font-weight:400;
   }
-  .status-dot.cal-red{background:#FF4602;}
-  .status-dot.cal-yellow{background:#F2FF00;}
-  .status-dot.cal-green{background:#2CE17A;}
-  .status-dot.cal-blue{background:#00E5FF;}
+  .status-dot.cal-red{background:var(--rate-3);}
+  /* The list's cells. Every other colour class in the file is paired with the
+     thing it paints, so a bare .cal-blue matched nothing and the cells came
+     out blank — this is the pairing for the slot. */
+  .uni-slot.cal-blue{background:var(--rate-0);}
+  .uni-slot.cal-green{background:var(--rate-1);}
+  .uni-slot.cal-yellow{background:var(--rate-2);}
+  .uni-slot.cal-red{background:var(--rate-3);}
+  /* The three app columns carry no side padding of their own. With it, each
+     column's slots divided a different leftover width — 31.5% minus padding
+     over three against 42% minus the same padding over four — so a Para cell
+     came out wider than a Voca cell and the colour read as hugging its text
+     instead of filling a cell. Without it the percentages divide cleanly and
+     all eight cells come out identical. */
+  .day-table td.day-col-para,
+  .day-table td.day-col-voca,
+  .day-table td.day-col-memo{padding-left:0; padding-right:0;}
+  /* And the same 1px top and bottom, so the white between two rows measures the
+     same 2px as the white between two cells. The cells' own min-height is what
+     sets the row height now, not the padding. */
+  #calTable tbody td, #pCalTable tbody td{padding-top:1px; padding-bottom:1px;}
+
+  /* ---- Rating colour editor (Options) ---------------------------------
+     Built like Time's activity editor: a row per entry, the swatch first, the
+     name beside it, nothing boxed. */
+  /* 12px under the note above — the step every other control in Options
+     keeps from its own description. */
+  .rate-color-row{display:flex; flex-direction:column; gap:var(--sp-2); margin-top:var(--sp-3);}
+  .rate-color-line{display:flex; align-items:center; gap:var(--sp-4);}
+  .rate-color-line input[type=color]{
+    /* The swatch itself is the control. Same 0.5px Layer B edge every chip in
+       both apps carries; the browser's own frame is removed so it does not
+       arrive with a rounded box of its own. */
+    width:26px; height:26px; flex:0 0 auto;
+    padding:0; border:0.5px solid #6B6B6B; border-radius:0;
+    background:none; cursor:pointer; -webkit-appearance:none; appearance:none;
+  }
+  .rate-color-line input[type=color]::-webkit-color-swatch-wrapper{padding:0;}
+  .rate-color-line input[type=color]::-webkit-color-swatch{border:none;}
+  .rate-color-line span{font-family:var(--font-ui); font-size:var(--fs-label); color:#111;}
+  .status-dot.cal-yellow{background:var(--rate-2);}
+  .status-dot.cal-green{background:var(--rate-1);}
+  .status-dot.cal-blue{background:var(--rate-0);}
   .day-word-header:hover{opacity:0.9;}
 
   .day-word-detail{
@@ -1561,7 +1634,7 @@
   }
 
   .voca-link{
-    color:#2519FF;
+    color:var(--link-blue);
     font-size:var(--fs-label);
     text-decoration:underline;
     text-decoration-style:dotted;
@@ -1671,9 +1744,9 @@
   /* Blue where the word has a card behind it, grey where it hasn't — the
      colour carries the distinction, so no underline is needed. */
   .memo-link{
-    /* The same blue .voca-link uses. These were #1B4FD8 and #2519FF — two blues
+    /* The same blue .voca-link uses. These were #1B4FD8 and var(--link-blue) — two blues
        for one meaning, which read as a mistake once the two sat side by side. */
-    color:#2519FF;
+    color:var(--link-blue);
     text-decoration:none;
     cursor:pointer;
   }
@@ -1721,18 +1794,21 @@
        and eight sit close. border-box keeps the bottom padding — the room the
        fixed rating bar needs — from eating into that shared height. */
     box-sizing:border-box;
-    min-height:calc(100vh - var(--header-h, 60px) - 90px);
-    /* The rating bar only appears once every card has been seen, so its height
-       is reserved then rather than from the start — the words get the whole
-       screen during the part that matters. */
-    padding:var(--sp-2) 0 var(--sp-5);
+    /* No screen-filling any more: the spacing is a set measurement, taken off
+       the layout that read best, so a memo with three words and one with ten
+       are set the same way and only the page gets longer. */
+    /* 40px in, then the cards' own fixed height does the rest. */
+    padding:40px 0 var(--sp-5);
+    gap:0;
     text-align:center;
   }
   .memo-quiz-card{
     cursor:pointer;
-    /* At least an equal share of the column, but free to grow — a description
-       running to several lines must not be cut off. */
-    flex:1 0 auto;
+    /* A FIXED box, so word tops land 148px apart whatever is written inside
+       and turning a card cannot move its neighbours by a pixel. Measured off
+       the layout that read best. */
+    flex:0 0 148px;
+    height:148px;
     /* Content sits in the middle of its own slot, so turning a card over
        changes what is written without moving where it is written. */
     display:flex;
@@ -1749,12 +1825,16 @@
     letter-spacing:-0.01em;
     line-height:1.3;
     color:#111;
+    /* Both faces centre on one axis, so turning a card changes the words
+       without moving where they sit. */
+    text-align:center;
   }
   /* Turned over, the word gives way entirely to its description. */
   .memo-quiz-desc{
     font-size:var(--fs-lead);
     line-height:1.3;
     color:#111;
+    text-align:center;
   }
   /* A button waiting for its second press, used where the browser suppresses
      native confirm dialogs. */
@@ -1894,22 +1974,27 @@ if('serviceWorker' in navigator){
   <button id="drawerHandle" onclick="toggleDrawer()" aria-label="Open menu" title="Menu"></button>
   <div id="drawerScrim" onclick="setDrawer(false)"></div>
   <aside id="headDrawer" aria-label="Menu">
+    <!-- Three groups, spaced apart: which app, what to do in it, and the
+         playback control, which only appears while something is being read. -->
     <p class="brand-header">
           <span class="app-tab" id="appTabPara" onclick="onAppTabClick('para')" aria-label="Para" title="Para">P</span><span class="app-tab active" id="appTabVoca" onclick="onAppTabClick('voca')" aria-label="Voca" title="Voca">V</span><span class="app-tab" id="appTabMemo" onclick="openMemoSection()" aria-label="Memo" title="Memo">M</span>
         </p>
-    <nav class="tabs" id="mainNav">        <button id="unified-tab-add" class="active" onclick="switchTab('add')" aria-label="Add" title="Add">
-          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
-        </button>
-        <button id="unified-tab-cal" onclick="switchTab('cal')" aria-label="List" title="List">
-          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.8" width="18" height="2.4"/><rect x="3" y="10.8" width="18" height="2.4"/><rect x="3" y="17.8" width="18" height="2.4"/></svg>
-        </button>
-        <button id="unified-tab-edit" onclick="switchTab('edit')" aria-label="Edit" title="Backup / edit by text">
-          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19.4" cy="12" r="1.6"/></svg>
-        </button>
-        <button id="speechControlBtn" onclick="toggleSpeechPlayback()" aria-label="Pause reading" title="Playing — tap to pause" style="display:none;">
-          <svg class="tab-icon" id="speechControlIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5 L18 12 L6 20.5 Z"/></svg>
-        </button>
-      </nav>
+    <nav class="tabs" id="mainNav">
+      <button id="unified-tab-add" class="active" onclick="switchTab('add')" aria-label="Add" title="Add">
+      <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
+      </button>
+      <button id="unified-tab-cal" onclick="switchTab('cal')" aria-label="List" title="List">
+      <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.8" width="18" height="2.4"/><rect x="3" y="10.8" width="18" height="2.4"/><rect x="3" y="17.8" width="18" height="2.4"/></svg>
+      </button>
+      <button id="unified-tab-edit" onclick="switchTab('edit')" aria-label="Edit" title="Backup / edit by text">
+      <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="4.6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19.4" cy="12" r="1.6"/></svg>
+      </button>
+    </nav>
+    <nav class="tabs" id="playNav">
+      <button id="speechControlBtn" onclick="toggleSpeechPlayback()" aria-label="Pause reading" title="Playing — tap to pause" style="display:none;">
+      <svg class="tab-icon" id="speechControlIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5 L18 12 L6 20.5 Z"/></svg>
+      </button>
+    </nav>
   </aside>
 
   <!-- Back / skip. No longer part of the header: the header is now only the
@@ -1940,7 +2025,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28j</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28u</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -1967,6 +2052,19 @@ if('serviceWorker' in navigator){
             <button class="mini-toggle" onclick="previewVoice()">Preview</button>
           </div>
           <p class="hint" style="margin-top:var(--sp-2);">Voices come from your device. Look for ones named Siri, Google, Enhanced, Premium or Natural — they sound far better for full paragraphs than the default. On iPhone you can download extra voices in Settings › Accessibility › Spoken Content › Voices.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider-bleed"></div>
+
+    <div class="card-panel">
+      <div class="panel-inner">
+        <label class="field-label">Colours</label>
+        <p class="hint">The four results are painted with these everywhere — the cards, the bar under a test, the list and the calendar. The last is the blue every linked word uses.</p>
+        <div class="rate-color-row" id="rateColorRow"></div>
+        <div style="display:flex; gap:var(--sp-2); margin-top:var(--sp-4);">
+          <button class="mini-toggle" onclick="resetRatingColors()">Reset to default</button>
         </div>
       </div>
     </div>
@@ -2174,14 +2272,6 @@ if('serviceWorker' in navigator){
     <div class="card-panel" id="calListPanel">
       <div class="panel-inner">
         <table class="day-table" id="calTable">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th class="uni-col-head">Para</th>
-              <th class="uni-col-head">Voca</th>
-              <th class="uni-col-head">Memo</th>
-            </tr>
-          </thead>
           <tbody id="calTableBody"></tbody>
         </table>
 
@@ -2265,13 +2355,10 @@ if('serviceWorker' in navigator){
       </div>
 
       <div id="memoDetailWrap" style="display:none;">
-        <div class="nav-arrows" id="memoDetailBar" style="display:flex; align-items:center; gap:6px; margin:0 0 var(--sp-3);">
-          <button class="shuffle-btn arrows-lifted" onclick="closeMemo()" aria-label="Back to memo list" title="Back">
-            <svg class="nav-chev flip" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
-          </button>
-          <span style="flex:1;"></span>
-          <button class="mini-toggle" id="memoAddWordBtn" onclick="addMissingWordsFromMemo(this)">Add word</button>
-        </div>
+        <!-- Kept only so the quiz can hide "the memo's own bar"; both of the
+             controls that lived here moved into the body, where they no longer
+             sit under the header's fixed arrows. -->
+        <div class="nav-arrows" id="memoDetailBar" style="display:none;"></div>
 
         <!-- MEMO QUIZ — every word in the memo laid out at once. Tap a card to
              turn it over; the buttons appear once they are all turned. -->
@@ -2511,14 +2598,6 @@ if('serviceWorker' in navigator){
     <div class="card-panel">
       <div class="panel-inner">
         <table class="day-table" id="pCalTable">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th class="uni-col-head">Para</th>
-              <th class="uni-col-head">Voca</th>
-              <th class="uni-col-head">Memo</th>
-            </tr>
-          </thead>
           <tbody id="pCalTableBody"></tbody>
         </table>
 
@@ -3022,6 +3101,7 @@ function switchTab(name){
   document.getElementById('view-edit').classList.toggle('active', name==='edit');
   if(name === 'edit') refreshSyncIdField();
   if(name==='edit') renderBackupStatus();
+  if(name==='edit') renderRatingColorRow();
 
   const isPara = document.getElementById('appTabPara').classList.contains('active');
   document.getElementById('view-quiz').classList.toggle('active', !isPara && name==='quiz');
@@ -5023,7 +5103,12 @@ function startMemoQuiz(){
   if(titleEl) titleEl.textContent = memoTitleOf(m) || '';
   document.getElementById('memoQuizWrap').style.display = 'block';
   document.getElementById('memoView').style.display = 'none';
-  setMemoRateVisible(false);
+  // A fade left over from a previous visit would arrive with three of the four
+  // already dead.
+  clearRateJelly();
+  /* The four ratings belong to the act of testing, so they ride with the quiz
+     and stay off the reading screen. */
+  setMemoRateVisible(true);
   // The quiz has its own back arrow, so the memo's header row steps aside —
   // two back buttons at once was the confusion.
   document.getElementById('memoDetailBar').style.display = 'none';
@@ -5034,7 +5119,7 @@ function startMemoQuiz(){
 
 function endMemoQuiz(){
   document.getElementById('memoQuizWrap').style.display = 'none';
-  document.getElementById('memoDetailBar').style.display = 'flex';
+  document.getElementById('memoDetailBar').style.display = 'none';
   memoQuizPairs = [];
   memoQuizFlipped = new Set();
   memoQuizSeen = new Set();
@@ -5071,7 +5156,7 @@ function flipMemoQuizCard(i){
   renderMemoQuiz();
 }
 
-async function rateMemo(value){
+function rateMemo(value){
   const m = currentMemo();
   if(!m) return;
   if(!Array.isArray(m.history)) m.history = [];
@@ -5080,9 +5165,25 @@ async function rateMemo(value){
   // averages over.
   if(m.history.length > 5) m.history = m.history.slice(-5);
   m.updated = Date.now();
-  await saveMemos();
-  // Stay on the memo. The history line at the top redraws with the new result.
-  showMemoDetail();
+
+  const inQuiz = shownById('memoQuizWrap');
+  if(inQuiz){
+    /* Exactly the Voca card's ending, in the same order and on the same clock:
+       the colour goes on under the finger FIRST, the other three fade over
+       RATE_JELLY_MS, and only then does anything move. The two are sequential,
+       not simultaneous — the fade plays while the colour is up.
+       The save is deliberately not awaited. It was, and the whole sequence sat
+       waiting on the network before the colour even appeared. */
+    setRateTint(value);
+    afterRateJelly(function(){
+      clearRateTint();
+      endMemoQuiz();
+      closeMemo();
+    });
+  }
+  // Fire-and-forget, as saveCards() is on the Voca side.
+  saveMemos();
+  if(!inQuiz) showMemoDetail();
 }
 
 /* Every bracketed word in this memo that has no card behind it. */
@@ -5188,7 +5289,8 @@ function showMemoDetail(){
   document.getElementById('memoDetailWrap').style.display = 'block';
   document.getElementById('memoEditWrap').style.display = memoEditing ? 'block' : 'none';
   document.getElementById('memoView').style.display = memoEditing ? 'none' : 'block';
-  setMemoRateVisible(!memoEditing && !!String(m.body || '').trim());
+  // Reading is not answering: the bar belongs to the quiz alone now.
+  setMemoRateVisible(false);
   // Drawn inside the memo body now, so it is simply absent while editing.
   const editBtn = document.getElementById('memoEditBtn');
   if(editBtn) editBtn.style.display = memoEditing ? 'none' : '';
@@ -5219,8 +5321,9 @@ function showMemoDetail(){
     /* Edit belongs with the facts about the memo rather than with the back
        arrow: last on the page, above the tag, on the left margin. */
     const tail =
-      '<div style="margin-top:72px;">' +
+      '<div style="margin-top:72px; display:flex; gap:var(--sp-2);">' +
         '<button class="mini-toggle" id="memoEditBtn" onclick="toggleMemoEdit()">Edit</button>' +
+        '<button class="mini-toggle" id="memoAddWordBtn" onclick="addMissingWordsFromMemo(this)">Add word</button>' +
       '</div>' +
       (tag ? '<div class="memo-tag-wrap" style="margin-top:24px;">' +
                '<div class="lbl">Tag</div>' +
@@ -5651,10 +5754,10 @@ function showDayDetail(code){
   if(showSimilarOnly) totalList = findSimilarCards(totalList);
   document.getElementById('dayDetail').style.display = 'block';
   document.getElementById('dayDetailTitle').textContent = showSimilarOnly
-    ? `SIMILAR — ${totalList.length} word(s)`
+    ? `SIMILAR • ${totalList.length}`
     : (showAllWords
-        ? `ALL — ${totalList.length} word(s)`
-        : `${formatDayLabel(code)} — ${totalList.length} word(s)`);
+        ? `ALL • ${totalList.length}`
+        : `${formatDayLabel(code)} • ${totalList.length}`);
   const showAllBtnEl = document.getElementById('showAllBtn');
   if(showAllBtnEl){
     showAllBtnEl.style.display = 'inline-block';
@@ -5704,7 +5807,7 @@ function showDayDetail(code){
       (c.meaning && c.meaning.toLowerCase().includes(q))
     );
     document.getElementById('dayDetailTitle').textContent =
-      `Search "${wordSearchQuery.trim()}" — ${list.length} word(s)`;
+      `Search "${wordSearchQuery.trim()}" • ${list.length}`;
   }
 
   if(sortMode === 'recent' || sortMode === 'old'){
@@ -6814,7 +6917,72 @@ function pStartStackForPara(para, reading){
   pRenderStack();
 }
 
-const RATING_COLORS = {0:'#00E5FF', 1:'#2CE17A', 2:'#F2FF00', 3:'#FF4602'};
+const RATING_DEFAULTS = {0:'#00E5FF', 1:'#2CE17A', 2:'#F2FF00', 3:'#FF4602'};
+const RATING_COLORS = Object.assign({}, RATING_DEFAULTS);
+const RATING_NAMES = {0:'Easy', 1:'Good', 2:'Unsure', 3:'Blank'};
+const LINK_DEFAULT = '#2519FF';
+let linkColor = LINK_DEFAULT;
+
+/* The colours live in one custom property each, so writing them here repaints
+   every card, bar, tag, dot and calendar cell at once — nothing else has to
+   know the colours changed. */
+function applyRatingColors(){
+  for(let i = 0; i < 4; i++){
+    document.documentElement.style.setProperty('--rate-' + i, RATING_COLORS[i]);
+  }
+  document.documentElement.style.setProperty('--link-blue', linkColor);
+}
+function loadRatingColors(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('ratingColors') || 'null');
+    if(saved) for(let i = 0; i < 4; i++){
+      if(/^#[0-9a-fA-F]{6}$/.test(saved[i] || '')) RATING_COLORS[i] = saved[i];
+    }
+    const savedLink = localStorage.getItem('linkColor');
+    if(/^#[0-9a-fA-F]{6}$/.test(savedLink || '')) linkColor = savedLink;
+  }catch(e){ /* a corrupt entry just means the defaults stand */ }
+  applyRatingColors();
+}
+function saveRatingColors(){
+  try{
+    localStorage.setItem('ratingColors', JSON.stringify(RATING_COLORS));
+    localStorage.setItem('linkColor', linkColor);
+  }catch(e){}
+}
+function setRatingColor(i, value){
+  if(!/^#[0-9a-fA-F]{6}$/.test(value)) return;
+  RATING_COLORS[i] = value;
+  applyRatingColors();
+  saveRatingColors();
+}
+function setLinkColor(value){
+  if(!/^#[0-9a-fA-F]{6}$/.test(value)) return;
+  linkColor = value;
+  applyRatingColors();
+  saveRatingColors();
+}
+function resetRatingColors(){
+  for(let i = 0; i < 4; i++) RATING_COLORS[i] = RATING_DEFAULTS[i];
+  linkColor = LINK_DEFAULT;
+  applyRatingColors();
+  saveRatingColors();
+  renderRatingColorRow();
+}
+function renderRatingColorRow(){
+  const row = document.getElementById('rateColorRow');
+  if(!row) return;
+  row.innerHTML = [0,1,2,3].map(i =>
+    '<div class="rate-color-line">' +
+      '<input type="color" value="' + RATING_COLORS[i] + '"' +
+      ' oninput="setRatingColor(' + i + ', this.value)" aria-label="' + RATING_NAMES[i] + '">' +
+      '<span>' + RATING_NAMES[i] + '</span>' +
+    '</div>').join('') +
+    '<div class="rate-color-line">' +
+      '<input type="color" value="' + linkColor + '"' +
+      ' oninput="setLinkColor(this.value)" aria-label="Linked word">' +
+      '<span>Linked word</span>' +
+    '</div>';
+}
 
 /* Page tint on rating — the pure dot colour, straight onto the page. */
 function tintForRating(value){
@@ -8254,7 +8422,8 @@ function uniParaTags(dayData, cls){
     if(!catData) return '<span class="uni-slot"></span>';
     const colorClass = pCategoryColorClass(catData.paras);
     const utBadge = catData.undertested > 0 ? '<span class="ut-badge">*</span>' : '';
-    return `<span class="uni-slot"><span class="day-cat-tag-wrap"><span class="day-cat-tag ${colorClass}">${cat}${catData.count}</span>${utBadge}</span></span>`;
+    // The colour fills the whole slot now; the letter sits on it uncoloured.
+    return `<span class="uni-slot ${colorClass}"><span class="day-cat-tag-wrap"><span class="day-cat-tag">${cat}${catData.count}</span>${utBadge}</span></span>`;
   }).join('');
 }
 
@@ -8278,7 +8447,7 @@ function uniVocaTags(dayData, cls){
     const catCards = dayData.byCategory[cat];
     if(!catCards) return '<span class="uni-slot"></span>';
     const b = build(catCards, cat);
-    return `<span class="uni-slot"><span class="day-cat-tag-wrap"><span class="day-cat-tag ${b.colorClass}">${cat}${b.n}</span>${b.utBadge}</span></span>`;
+    return `<span class="uni-slot ${b.colorClass}"><span class="day-cat-tag-wrap"><span class="day-cat-tag">${cat}${b.n}</span>${b.utBadge}</span></span>`;
   }).join('');
 }
 
@@ -8316,8 +8485,8 @@ function uniMemoTags(list){
     : '';
   const lacking = list.filter(memoUnderTested).length;
   const utBadge = (lacking / list.length >= 0.25) ? '<span class="ut-badge">*</span>' : '';
-  return '<span class="uni-slot"><span class="day-cat-tag-wrap">' +
-         '<span class="day-cat-tag ' + colorClass + '">M' + list.length + '</span>' +
+  return '<span class="uni-slot ' + colorClass + '"><span class="day-cat-tag-wrap">' +
+         '<span class="day-cat-tag">M' + list.length + '</span>' +
          utBadge + '</span></span>';
 }
 
@@ -8690,8 +8859,8 @@ function pShowDayDetail(code){
   const totalList = pShowAllWords ? paras.slice() : paras.filter(p => parseTag(p.tag).date === code);
   document.getElementById('pDayDetail').style.display = 'block';
   document.getElementById('pDayDetailTitle').textContent = pShowAllWords
-    ? `ALL — ${totalList.length} paragraph(s)`
-    : `${formatDayLabel(code)} — ${totalList.length} paragraph(s)`;
+    ? `ALL • ${totalList.length}`
+    : `${formatDayLabel(code)} • ${totalList.length}`;
   const pShowAllBtnEl = document.getElementById('pShowAllBtn');
   if(pShowAllBtnEl){
     pShowAllBtnEl.style.display = 'inline-block';
@@ -9349,6 +9518,26 @@ function syncViewportWidth(){
 }
 
 
+/* ---- Tap anywhere to go on -----------------------------------------------
+   A short sentence leaves most of the screen empty, and the card's own tap
+   target shrinks with it. During a test, a press on that empty ground now does
+   what pressing the card does. Anything that is itself pressable — buttons,
+   links, inputs, the cards themselves, the drawer, the fixed bars — keeps its
+   own meaning and is left alone. */
+document.addEventListener('click', e => {
+  if(drawerIsOpen()) return;
+  if(e.target.closest(
+    'button, a, input, textarea, select, label, svg, ' +
+    '#flashcard, #pFlashcard, #pStackContainer, .memo-quiz-card, ' +
+    '.modal-overlay, .modal-box, .rate-row, .vocab-popup, ' +
+    '#headDrawer, #drawerHandle, .head-arrows, .quiz-edit-form'
+  )) return;
+  if(shownById('memoQuizWrap')) return;             // its cards carry the meaning
+  if(shownById('quizBody'))       { flipCard();   return; }
+  if(shownById('pStackQuizBody')) { pStackFlip(); return; }
+  if(shownById('pQuizBody'))      { pFlipCard();  return; }
+});
+
 /* ---- Header drawer -------------------------------------------------------
    Open by dragging in from the right edge or pressing the handle; close by
    dragging back, pressing outside, or Escape. The app is installed to the home
@@ -9422,11 +9611,16 @@ document.getElementById('mainHeader').style.display = 'none';
 document.getElementById('view-add').classList.remove('active');
 document.getElementById('app-voca').style.display = 'none';
 document.getElementById('app-para').style.display = 'none';
+// The saved rating colours have to be on before anything is painted, or the
+// first frame shows the defaults and then jumps.
+loadRatingColors();
 Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs(), loadMemos()]).then(()=>{
   document.getElementById('mainHeader').style.display = '';
   syncHeaderOffset();
   switchApp('para');
-  switchTab('quiz');
+  // Opens on the list, not on a test. The list is the way in to everything,
+  // and a test that starts by itself is a test nobody asked for.
+  switchTab('cal');
   // Content is now in place; re-measure in case the first pass ran before the
   // layout settled.
   syncViewportWidth();
