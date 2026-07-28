@@ -221,13 +221,39 @@
      Built from parts already here: the to-do line's coloured dot, the day
      table's date size, the check cell's black outline for the bar. Nothing new
      is invented, so a project reads as the same app as everything above it. */
+  /* ---- The two pages ----------------------------------------------------
+     One window, two sections side by side inside it, moved by a transform.
+     Both are always in the document, so a redraw of either one lands whether
+     it is the page on screen or not. */
+  .pane-view{overflow:hidden;}
+  .pane-track{
+    display:flex;
+    align-items:flex-start;
+    transition:transform .24s cubic-bezier(.4,0,.2,1);
+    will-change:transform;
+  }
+  .pane{flex:0 0 100%; min-width:0;}
+  /* Which page, and a way to get there without swiping. Two short rules rather
+     than circles: the app draws one round thing only, the activity dot. */
+  .pane-dots{
+    display:flex; justify-content:center; gap:var(--sp-2);
+    margin-top:var(--sp-5);
+  }
+  .pane-dot{
+    width:20px; height:2px; padding:0; border:none; border-radius:0;
+    background:#D8D8D8; cursor:pointer;
+  }
+  .pane-dot.is-on{background:#111;}
+
   .proj-block{margin-top:var(--sp-6);}
   .proj-head{
     display:flex; align-items:center; justify-content:space-between;
     margin-top:var(--sp-2);
   }
-  /* No rule between them: the block of four lines is its own grouping. */
+  /* No rule between them: the block of lines is its own grouping. */
   .proj-row{padding:var(--sp-4) 0;}
+  /* Cleared past the count's column so the two never collide. */
+  .proj-head-line{margin-left:calc(74px + var(--sp-4));}
   .proj-line{display:flex; align-items:center; gap:var(--sp-2);}
   .proj-name{
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
@@ -237,10 +263,17 @@
   }
   /* The count to the deadline. Past it the number keeps counting and turns to
      the colour this app uses for nothing but deletion and overrun. */
-  /* The same size as the name it belongs to. */
+  /* Read first, so it is set large and given a fixed column of its own — the
+     numbers line up down the block whatever the names beside them do. */
+  /* On the bar's own line, so the two are centred against each other exactly
+     rather than approximately. The column is fixed, so the figures line up
+     down the block whatever the names beside them do. */
   .proj-dday{
-    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
+    font-family:var(--font-ui); font-size:var(--fs-lead); font-weight:400;
+    line-height:1;
     color:#111; white-space:nowrap;
+    flex:0 0 74px;
+    font-variant-numeric:tabular-nums;
   }
   .proj-move{width:var(--icon-box); display:flex; align-items:center; justify-content:center;}
   .proj-move .nav-chev{width:11px; height:11px;}
@@ -250,12 +283,16 @@
   .proj-note{
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:300;
     color:var(--text-muted); line-height:1.3;
-    margin:var(--sp-1) 0 0;
+    margin:var(--sp-1) 0 0 calc(74px + var(--sp-4));
   }
+  /* Centred, which is what puts the count and the bar on one axis. The dates
+     under the bar are inside the bar's own column and ride with it. */
   .proj-bar-row{
-    display:flex; align-items:flex-start; gap:var(--sp-2);
+    display:flex; align-items:center; gap:var(--sp-4);
     margin:var(--sp-2) 0 0;
   }
+  /* One line: figure, sign, then the two arrows. */
+  .proj-right{display:flex; align-items:center; gap:var(--sp-1); flex:0 0 auto;}
   /* Both are spans, and a span is inline until told otherwise — which is why
      the bar had no height and the fill and the today mark had nothing to sit
      inside. They were direct flex items before this column was introduced, and
@@ -287,15 +324,23 @@
   input[type="text"].proj-pct{
     width:44px; flex:0 0 auto; text-align:right;
     font-family:var(--font-ui); font-size:var(--fs-label);
-    padding:2px 4px; box-sizing:border-box;
+    line-height:20px; height:20px;
+    padding:0 4px; box-sizing:border-box;
     border:0.5px solid transparent;
     background:none;
   }
   input[type="text"].proj-pct:focus{border-color:#111; outline:none;}
-  .proj-pct-sign{font-family:var(--font-ui); font-size:var(--fs-label); color:#111;}
+  /* The figure sits in a bordered box and the sign does not, so left alone the
+     two settle on different baselines. Both are given the same line height and
+     the row centres them. */
+  .proj-pct-sign{
+    font-family:var(--font-ui); font-size:var(--fs-label); color:#111;
+    line-height:20px;
+  }
   .proj-dates{
     display:flex; justify-content:space-between;
     margin:var(--sp-1) 0 0;
+    line-height:1;
     font-family:var(--font-ui); font-size:var(--fs-cell); color:var(--text-muted);
   }
   .proj-form-row{display:flex; align-items:center; gap:var(--sp-4);}
@@ -1384,51 +1429,65 @@ if('serviceWorker' in navigator){
   <!-- The clock sits at the very top; the view switch moved below it so
        nothing pushes the dial down. The filters live under the table so that
        revealing the second tier can't push the table up and down. -->
-  <div class="clock-wrap" id="clockWrap"></div>
+  <!-- Two pages, and the whole screen moves between them: the dial and the
+       list belong to the day, which is what the first page is about, and the
+       second page is about work that runs across many days. -->
+  <div class="pane-view" id="paneView">
+    <div class="pane-track" id="paneTrack">
+      <section class="pane">
+        <div class="clock-wrap" id="clockWrap"></div>
 
-  <!-- The list sits above the table now, with a rule between the two. It always
-       shows: the blank add line is content, so this is not the empty-box case. -->
-  <div class="todo-wrap" id="todoWrap"></div>
+        <!-- The list sits above the table, with space between the two. It
+             always shows: the blank add line is content, so this is not the
+             empty-box case. -->
+        <div class="todo-wrap" id="todoWrap"></div>
+    <table class="day-table">
+      <thead id="dayHead"></thead>
+      <tbody id="dayBody"></tbody>
+    </table>
 
-  <table class="day-table">
-    <thead id="dayHead"></thead>
-    <tbody id="dayBody"></tbody>
-  </table>
-
-  <!-- The filters and the two view buttons share a line: filters left, buttons
-       right. The buttons stay pinned to the first row even when the activity
-       filter appears underneath. -->
-  <div class="filter-bar">
-    <div class="filter-main">
-      <div class="group-row" id="groupRow"></div>
-      <div class="group-row" id="actRow" style="display:none; margin-top:0;"></div>
+    <!-- The filters and the two view buttons share a line: filters left, buttons
+         right. The buttons stay pinned to the first row even when the activity
+         filter appears underneath. -->
+    <div class="filter-bar">
+      <div class="filter-main">
+        <div class="group-row" id="groupRow"></div>
+        <div class="group-row" id="actRow" style="display:none; margin-top:0;"></div>
+      </div>
+      <div class="table-top">
+        <button class="mode-toggle" onclick="openAddDate()" aria-label="Add a day" title="Add / edit a day">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
+        </button>
+        <button class="mode-toggle" id="modeToggleBtn" onclick="toggleMode()" aria-label="Switch view" title="Check / Time">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6.4 7.2 L2.8 10.8 L6.4 14.4 Z"/>
+            <path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>
+            <rect x="4.6" y="9.6" width="14.8" height="2.4"/>
+          </svg>
+        </button>
+      </div>
     </div>
-    <div class="table-top">
-      <button class="mode-toggle" onclick="openAddDate()" aria-label="Add a day" title="Add / edit a day">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
-      </button>
-      <button class="mode-toggle" id="modeToggleBtn" onclick="toggleMode()" aria-label="Switch view" title="Check / Time">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M6.4 7.2 L2.8 10.8 L6.4 14.4 Z"/>
-          <path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>
-          <rect x="4.6" y="9.6" width="14.8" height="2.4"/>
-        </svg>
-      </button>
+      </section>
+      <section class="pane">
+    <!-- ================= Projects =================
+         Longer-running work: what kind it is, what it is called, when it runs and
+         how far along it is. Below the table because it is the slowest-moving
+         thing on the screen. -->
+    <div class="proj-block">
+      <div id="projList"></div>
+      <div class="proj-head">
+        <span style="flex:1;"></span>
+        <button class="mode-toggle" onclick="openProjEditor('')" aria-label="Add a project" title="Add a project">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
+        </button>
+      </div>
+    </div>
+      </section>
     </div>
   </div>
-
-  <!-- ================= Projects =================
-       Longer-running work: what kind it is, what it is called, when it runs and
-       how far along it is. Below the table because it is the slowest-moving
-       thing on the screen. -->
-  <div class="proj-block">
-    <div id="projList"></div>
-    <div class="proj-head">
-      <span style="flex:1;"></span>
-      <button class="mode-toggle" onclick="openProjEditor('')" aria-label="Add a project" title="Add a project">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.8" y="3" width="2.4" height="18"/><rect x="3" y="10.8" width="18" height="2.4"/></svg>
-      </button>
-    </div>
+  <div class="pane-dots" id="paneDots">
+    <button class="pane-dot is-on" onclick="setPane(0)" aria-label="Check / Time"></button>
+    <button class="pane-dot" onclick="setPane(1)" aria-label="Projects"></button>
   </div>
 </section>
 
@@ -1528,7 +1587,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29d</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29h</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2172,6 +2231,43 @@ function allCodes(){
 
 
 /* -------------------------------------------------------------------------
+   The two pages. A horizontal drag across either one moves to the other; a
+   mostly-vertical drag is a scroll and is left alone. Nothing is hidden, so
+   both pages keep rendering and neither arrives stale.
+   ------------------------------------------------------------------------- */
+let currentPane = 0;
+
+function setPane(i){
+  currentPane = Math.max(0, Math.min(1, i));
+  const track = document.getElementById('paneTrack');
+  if(track) track.style.transform = 'translateX(-' + (currentPane * 100) + '%)';
+  const dots = document.querySelectorAll('#paneDots .pane-dot');
+  dots.forEach((d, n) => d.classList.toggle('is-on', n === currentPane));
+}
+
+(function(){
+  const TRIGGER = 50;
+  let x0 = 0, y0 = 0, live = false;
+  const view = () => document.getElementById('paneView');
+  document.addEventListener('touchstart', e => {
+    const v = view();
+    const tch = e.touches[0];
+    live = !!(v && tch && v.contains(e.target));
+    if(live){ x0 = tch.clientX; y0 = tch.clientY; }
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if(!live) return;
+    const tch = e.touches[0];
+    if(!tch) return;
+    const dx = tch.clientX - x0, dy = tch.clientY - y0;
+    if(Math.abs(dy) > Math.abs(dx)){ live = false; return; }   // a scroll
+    if(dx < -TRIGGER){ setPane(currentPane + 1); live = false; }
+    if(dx >  TRIGGER){ setPane(currentPane - 1); live = false; }
+  }, {passive:true});
+  document.addEventListener('touchend', () => { live = false; }, {passive:true});
+})();
+
+/* -------------------------------------------------------------------------
    Projects. One record per piece of long-running work:
      {id, actId, name, note, start, end, pct}
    Dates are the same YYMMDD codes everything else here uses, so the calendar,
@@ -2261,15 +2357,16 @@ function renderProjects(){
         ' fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square"' +
         ' stroke-linejoin="miter"/></svg></button>';
     return '<div class="proj-row">' +
-      '<div class="proj-line">' +
+      // Name and note are indented to clear the count's column, so the count
+      // itself can live on the bar's own line and centre against it.
+      '<div class="proj-head-line">' +
         '<button class="proj-name" onclick="openProjEditor(\'' + p.id + '\')">' +
           escapeHtmlT(p.name || '(untitled)') + '</button>' +
-        '<span class="proj-dday' + (over ? ' is-over' : '') + '">' +
-          escapeHtmlT(projDdayText(p)) + '</span>' +
-        chev(-1, 'Move up') + chev(1, 'Move down') +
       '</div>' +
       (p.note ? '<div class="proj-note">' + escapeHtmlT(p.note) + '</div>' : '') +
       '<div class="proj-bar-row">' +
+        '<span class="proj-dday' + (over ? ' is-over' : '') + '">' +
+          escapeHtmlT(projDdayText(p)) + '</span>' +
         // The bar and the two dates share one column, so the deadline ends
         // exactly where the bar does instead of running out past the box.
         '<span class="proj-barcol">' +
@@ -2283,9 +2380,13 @@ function renderProjects(){
             '<span>' + escapeHtmlT(projDateShort(p.end)) + '</span>' +
           '</span>' +
         '</span>' +
-        '<input type="text" class="proj-pct" inputmode="numeric" value="' + pct + '"' +
-          ' onchange="setProjPct(\'' + p.id + '\', this.value)" aria-label="Percent done">' +
-        '<span class="proj-pct-sign">%</span>' +
+        // Figure, sign and the two arrows on one line to the right of the bar.
+        '<span class="proj-right">' +
+          '<input type="text" class="proj-pct" inputmode="numeric" value="' + pct + '"' +
+            ' onchange="setProjPct(\'' + p.id + '\', this.value)" aria-label="Percent done">' +
+          '<span class="proj-pct-sign">%</span>' +
+          chev(-1, 'Move up') + chev(1, 'Move down') +
+        '</span>' +
       '</div>' +
     '</div>';
   }).join('');
