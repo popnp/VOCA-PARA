@@ -9,6 +9,17 @@
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 <style>
   :root{
+    /* ---- Type scale ----------------------------------------------------
+       The same names Voca/Para uses, so a size chosen in one app means the
+       same thing in the other. Two extra names exist here because this app
+       draws what the other one does not: a table eleven columns wide, and a
+       dial with words inside it. Those are exceptions of kind, not of taste. */
+    --fs-lead:30px;     /* the big figures: wall clock, the time just recorded */
+    --fs-body:22px;     /* what is read: the to-do lines */
+    --fs-label:16px;    /* everything that supports something else */
+    --fs-cell:13px;     /* the day table's date and total — eleven cells a row */
+    --fs-abbr:10px;     /* activity heads, dial labels, the picker's weekdays */
+    --fs-tick:9px;      /* the timeline's hour marks */
     --font-ui:'Switzer','Pretendard Variable','Pretendard',
               'Helvetica Neue',Helvetica,Arial,
               'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
@@ -74,19 +85,7 @@
   .day-nav{display:flex; align-items:center; gap:var(--sp-2);}
   .day-nav .mode-toggle{padding:var(--sp-2) var(--sp-1);}
   .day-nav .nav-chev{width:11px; height:11px;}
-  .brand-header{
-    font-family:var(--font-ui);
-    font-size:38px;
-    font-weight:400;
-    letter-spacing:-0.02em;
-    line-height:1;
-    color:#111;
-    margin:0;
-    display:flex;
-    align-items:center;
-  }
-  .brand-header .app-tab{cursor:pointer;}
-  .brand-header .app-tab + .app-tab{margin-left:17.6px;}
+
   nav.tabs{
     display:flex;
     align-items:center;
@@ -108,7 +107,7 @@
   /* ---- Shared controls ---- */
   .btn{
     font-family:var(--font-ui);
-    font-size:13.5px;
+    font-size:var(--fs-label);
     font-weight:400;
     letter-spacing:0.01em;
     border:none;
@@ -122,7 +121,7 @@
   .btn-primary:hover{background:rgba(0,0,0,0.05);}
   .btn-ghost{background:transparent; border:1px solid #111; color:var(--text-dark);}
   .btn-ghost:hover{background:rgba(0,0,0,0.05);}
-  .btn-danger{background:transparent; color:var(--rust); border:none; font-size:12.5px; padding:6px 10px;}
+  .btn-danger{background:transparent; color:var(--rust); border:none; font-size:var(--fs-label); padding:6px 10px;}
   .btn-danger:hover{text-decoration:underline;}
   /* A button waiting for its second press, used when the browser suppresses
      native confirm dialogs. */
@@ -144,18 +143,37 @@
     background-clip:content-box !important;
   }
   .btn:disabled{opacity:0.35; cursor:not-allowed;}
+  /* Matched to Voca/Para's chip: same size, same 3px/8px box, black lettering
+     rather than grey. The grey it had was the last of the two-colour labelling
+     that both apps have since dropped. */
   .mini-toggle{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:11px;
+    font-size:var(--fs-label);
     letter-spacing:0.02em;
     padding:3px var(--sp-2);
     border:0.5px solid #6B6B6B;
     background:transparent;
-    color:var(--text-muted);
+    color:#111;
     border-radius:0;
     cursor:pointer;
   }
+
+  /* The chosen-from-a-set control, brought over from Voca/Para: no outline
+     until it is chosen, and choosing draws one. Used by the group filter. */
+  .opt-btn{
+    font-family:var(--font-ui);
+    font-weight:400;
+    font-size:var(--fs-label);
+    letter-spacing:0.01em;
+    padding:3px var(--sp-2);
+    border:1px solid transparent;
+    background:transparent;
+    color:#111;
+    border-radius:0;
+    cursor:pointer;
+  }
+  .opt-btn.selected{background:transparent; color:#111; border-color:#111; font-weight:400;}
   .mini-toggle.active{border-color:#111; color:#111; font-weight:300;}
   .mini-toggle:focus-visible{outline:none; border-color:#111;}
   /* One grey text style, shared with index.html: 12.5px, weight 300, no
@@ -165,22 +183,22 @@
     display:block;
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:12.5px;
+    font-size:var(--fs-label);
     color:var(--text-dark);
     margin-bottom:6px;
   }
   .hint{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:12.5px;
+    font-size:var(--fs-label);
     color:var(--text-muted);
     line-height:1.3;
   }
   input[type="text"], input[type="time"], select{
     font-family:var(--font-ui);
-    font-size:13px;
+    font-size:var(--fs-label);
     padding:5px 7px;
-    border:0.5px solid #6B6B6B;
+    border:0.5px solid #111;
     border-radius:0;
     background:#fff;
     color:#111;
@@ -253,15 +271,15 @@
      so this one element turns them back on for itself. */
   .clock-date{
     display:block;
-    /* 8px above the total, and centred with it rather than pushed right. */
-    margin:0 auto 8px;
+    /* Two thirds of the 8px it was. */
+    margin:0 auto 5px;
     padding:0;
     border:none;
     background:none;
     font-family:var(--font-ui);
-    font-size:12.5px;
-    /* One step up, in step with the total above. */
-    font-weight:400;
+    /* 1.3x the 12.5px it was, and a step heavier again. */
+    font-size:var(--fs-label);
+    font-weight:500;
     color:var(--text-dark);
     pointer-events:auto;
     font-variant-numeric:tabular-nums;
@@ -354,12 +372,15 @@
   .mode-toggle svg{width:15.4px; height:15.4px; fill:currentColor;}
 
   /* ---- Day table ---- */
-  .day-table{width:100%; border-collapse:collapse; margin-top:var(--sp-2);}
+    /* fixed, so the activity columns divide what is left equally instead of each
+     being widened by however long its own name is. Without it a single long
+     name held the whole table open and the columns stopped being even. */
+  .day-table{width:100%; table-layout:fixed; border-collapse:collapse; margin-top:var(--sp-2);}
   .day-table thead th{
     font-family:var(--font-ui);
     font-weight:300;
     /* Matches index.html's table head exactly. */
-    font-size:12.5px;
+    font-size:var(--fs-label);
     color:var(--text-muted);
     text-align:left;
     padding:6px var(--sp-1);
@@ -379,7 +400,7 @@
   .day-date{
     font-family:var(--font-ui);
     font-weight:500;
-    font-size:12.5px;
+    font-size:var(--fs-cell);
     white-space:nowrap;
     cursor:pointer;
     width:64px;
@@ -387,7 +408,7 @@
   .day-table tbody tr.is-weekend .day-date{color:var(--text-muted);}
   .day-total{
     font-family:var(--font-ui);
-    font-size:11.5px;
+    font-size:var(--fs-cell);
     color:var(--text-muted);
     white-space:nowrap;
     text-align:right;
@@ -434,7 +455,7 @@
   .day-table th.act-col{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:10px;
+    font-size:var(--fs-abbr);
     letter-spacing:0.06em;
     color:var(--text-muted);
     text-align:center;
@@ -450,7 +471,11 @@
      so both modes' headers stay exactly the same height. */
   .act-abbr{
     display:block;
-    font-size:10px;
+    font-size:var(--fs-abbr);
+    /* Clipped rather than allowed to push the column open. On a narrow screen
+       a long name shows as much as fits and no more. */
+    overflow:hidden;
+    text-overflow:ellipsis;
     line-height:12px;
     height:12px;
     white-space:nowrap;
@@ -473,10 +498,10 @@
      controlled from here. */
   .date-field{
     font-family:var(--font-ui);
-    font-size:13px;
+    font-size:var(--fs-label);
     font-weight:400;
     padding:5px 9px;
-    border:0.5px solid #6B6B6B;
+    border:0.5px solid #111;
     background:#fff;
     color:#111;
     cursor:pointer;
@@ -492,7 +517,7 @@
   }
   .dp-title{
     font-family:var(--font-ui);
-    font-size:14px;
+    font-size:var(--fs-label);
     font-weight:500;
     letter-spacing:0.01em;
   }
@@ -529,11 +554,8 @@
   /* Set back to the content column: past the date, not level with it. */
   .todo-add-row{
     display:flex; align-items:center;
-    /* Same gap the table's two buttons keep between themselves. */
-    gap:var(--sp-4);
-    /* Starts on the table's first cell line, like the rows above. */
-    padding-left:var(--day-col);
-    /* And the same clearance the table's controls keep above themselves. */
+    gap:var(--sp-2);
+    padding-left:0;
     margin-top:var(--sp-4);
   }
   /* Bare until you go near it, exactly like the activity name box in Options:
@@ -544,7 +566,7 @@
   input[type="text"].todo-add{
     flex:1; min-width:0;
     font-family:var(--font-ui);
-    font-size:20px;
+    font-size:var(--fs-body);
     padding:4px 6px;
     border:0.5px solid transparent;
     background:none;
@@ -599,7 +621,7 @@
   .clock-label-plate{pointer-events:none;}
   .todo-done-time{
     font-family:var(--font-ui);
-    font-size:32px; font-weight:300;
+    font-size:var(--fs-lead); font-weight:300;
     letter-spacing:-0.02em;
     color:#111;
     margin:2px 0 0;
@@ -610,15 +632,28 @@
     width:100%;
     padding:var(--sp-2) var(--sp-1);
     border:none; background:none;
-    font-family:var(--font-ui); font-size:13.5px; color:#111;
+    font-family:var(--font-ui); font-size:var(--fs-label); color:#111;
     cursor:pointer; text-align:left;
   }
   .todo-act-row.active{font-weight:500;}
   .todo-act-row:hover{background:#F2F2F2;}
   /* The table's 58px total column, minus the flex gap before it: the text zone
      ends on the same line the table's grid does. */
-  .todo-tools{display:flex; align-items:center; justify-content:flex-end;
-    gap:var(--sp-1); flex:0 0 calc(58px - var(--sp-2)); box-sizing:border-box;}
+  /* The gap is the table's own 16px, untouched, because the two buttons under
+     the check table use it too. What was wrong was the row above: its tick and
+     cross now sit in the same 24px boxes on the same axes. */
+  .todo-tools{
+    display:flex; align-items:center; justify-content:flex-end;
+    gap:var(--sp-4); flex:0 0 auto; box-sizing:border-box;
+  }
+  .todo-tools > button{
+    box-sizing:border-box;
+    width:24px;
+    padding:var(--sp-2) 0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  /* Nothing in it; it only holds the axis open above the list. */
+  .todo-nav-row{min-height:0;}
   /* 11px, the size every other glyph in this row-height sits at. The stock 18px
      ✕ is drawn for a modal corner and would tower over a 24px line. */
   /* Black, not the usual delete red. Asked for: on a line of black text a red
@@ -635,19 +670,34 @@
   .todo-tools .todo-btn,
   .todo-tools .icon-x{padding:var(--sp-2) var(--sp-1);}
   .todo-tools svg{width:15.4px; height:15.4px;}
-  /* The box stays black in both states; only the tick appears. */
-  .todo-check{color:#111;}
-  /* .todo-btn svg sets fill:currentColor for the solid glyphs beside it, and a
-     stylesheet beats a fill="none" written on the shape — so the box and the
-     tick were both being filled in solid. Outlines only here. */
-  .todo-check svg rect,
-  .todo-check svg path{fill:none;}
+  /* Drawn in CSS, not as a picture. Twice now a shape put inside this button
+     came out solid, because the rule that fills the solid glyphs beside it
+     beats a fill written on the shape itself. A bordered box with a tick built
+     from two edges cannot be filled in by anything. */
+  /* The button is the 24px box every mark in this column stands in; the square
+     is drawn inside it so the drawn mark is 16px but the axis is shared. */
+  .todo-btn.todo-check{background:transparent; border:none; position:relative;}
+  .todo-btn.todo-check::before{
+    content:'';
+    position:absolute; left:50%; top:50%;
+    width:16px; height:16px; box-sizing:border-box;
+    border:1px solid #111;
+    transform:translate(-50%, -50%);
+  }
+  .todo-btn.todo-check.is-done::after{
+    content:'';
+    position:absolute; left:50%; top:47%;
+    width:9px; height:5px;
+    border-left:2px solid #111;
+    border-bottom:2px solid #111;
+    transform:translate(-50%, -50%) rotate(-45deg);
+  }
   /* The box that replaces the line while it is being reworded. */
   .todo-edit-input{flex:1; min-width:0;}
   /* Same width, size and weight as .day-date in the table, so the two columns
      line up rather than merely looking close. */
   .todo-day{
-    font-family:var(--font-ui); font-weight:500; font-size:12.5px;
+    font-family:var(--font-ui); font-weight:500; font-size:var(--fs-label);
     line-height:32px;
     /* The table's 64px date column minus the flex gap that follows, with the
        same 4px lead the date cell's ink sits behind. Content after this span
@@ -666,7 +716,7 @@
        size (22px): the list is dense and its rows sit on a fixed grid, and the
        full reading size left no air at all. Row height and wrap leading are
        raised with it below. */
-    font-size:20px; font-weight:400;
+    font-size:var(--fs-body); font-weight:400;
     line-height:26px; color:#111;
     flex:1; min-width:0; overflow-wrap:anywhere;
     cursor:pointer;
@@ -731,14 +781,14 @@
     cursor:pointer;
   }
   .week-lbl{
-    font-family:var(--font-ui); font-weight:300; font-size:12.5px;
+    font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);
     color:var(--text-muted); line-height:1;
   }
   .todo-edit-row{display:flex; align-items:center; gap:var(--sp-2); margin-bottom:var(--sp-2);}
   .todo-edit-row input[type="text"]{flex:1; min-width:0;}
   .dp-nav{
     font-family:var(--font-ui);
-    font-size:15px;
+    font-size:var(--fs-label);
     line-height:0;
     background:none;
     border:none;
@@ -754,7 +804,7 @@
   .dp-dow{
     font-family:var(--font-ui);
     font-weight:300;
-    font-size:9.5px;
+    font-size:var(--fs-abbr);
     letter-spacing:0.08em;
     color:var(--text-muted);
     text-align:center;
@@ -762,7 +812,7 @@
   }
   .dp-cell{
     font-family:var(--font-ui);
-    font-size:12.5px;
+    font-size:var(--fs-label);
     font-weight:400;
     height:32px;
     border:none;
@@ -829,7 +879,7 @@
   .timeline-tick{
     position:absolute;
     top:0;
-    font-size:9px;
+    font-size:var(--fs-tick);
     line-height:12px;
     height:12px;
     color:var(--text-muted);
@@ -900,7 +950,7 @@
   }
   .modal-title{
     font-family:var(--font-ui);
-    font-size:15px;
+    font-size:var(--fs-label);
     font-weight:500;
     margin:0 0 var(--sp-4);
   }
@@ -914,8 +964,8 @@
     margin-bottom:6px;
   }
   .act-swatch{width:11px; height:11px; flex:0 0 auto;}
-  .act-name{font-size:13px; font-weight:500; flex:1;}
-  .act-sum{font-size:11.5px; color:var(--text-muted);}
+  .act-name{font-size:var(--fs-label); font-weight:500; flex:1;}
+  .act-sum{font-size:var(--fs-label); color:var(--text-muted);}
   .seg-row{
     display:flex;
     align-items:center;
@@ -927,14 +977,14 @@
      that has to be filled in. */
   input[type="text"].seg-note{
     flex:1; min-width:90px;
-    font-family:var(--font-ui); font-size:12.5px;
+    font-family:var(--font-ui); font-size:var(--fs-label);
     padding:4px 6px;
     border:0.5px solid transparent;
     background:none;
   }
   input[type="text"].seg-note:hover{border-color:#6B6B6B;}
   input[type="text"].seg-note:focus{border-color:#111; background:#fff; outline:none;}
-  .seg-row .sep{font-size:12px; color:var(--text-muted);}
+  .seg-row .sep{font-size:var(--fs-label); color:var(--text-muted);}
   /* A plain text field rather than <input type="time">, which renders as a
      12-hour AM/PM picker in some locales. This keeps it 24-hour everywhere. */
   .time-in{
@@ -944,7 +994,7 @@
   }
   .time-in.bad{border-color:var(--rust);}
   .seg-warn{
-    font-size:11px;
+    font-size:var(--fs-label);
     color:var(--rust);
     margin-top:5px;
     line-height:1.3;
@@ -982,7 +1032,7 @@
   .color-row input[type="color"]::-moz-color-swatch{border:none;}
   .color-row input[type="text"]{
     font-family:var(--font-ui);
-    font-size:12.5px;
+    font-size:var(--fs-label);
     padding:4px 6px;
     border:0.5px solid transparent;
     background:none;
@@ -1043,7 +1093,7 @@
   }
   .hw-clock{
     font-family:var(--font-ui);
-    font-size:34px;
+    font-size:var(--fs-lead);
     font-weight:300;
     letter-spacing:-0.02em;
     line-height:1;
@@ -1085,7 +1135,7 @@
   .sw-pick{display:flex; gap:6px; flex-wrap:wrap; margin-top:var(--sp-2);}
   .sw-pick button{
     font-family:var(--font-ui);
-    font-size:11.5px;
+    font-size:var(--fs-label);
     font-weight:400;
     padding:5px 10px;
     border:0.5px solid #6B6B6B;
@@ -1115,17 +1165,17 @@
     display:none;
     color:var(--rust);
     font-family:var(--font-ui);
-    font-size:11.5px;
+    font-size:var(--fs-label);
     margin:var(--sp-6) 0 0;
     padding:0 max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px));
   }
   textarea{
     width:100%;
     font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-    font-size:12px;
+    font-size:var(--fs-label);
     line-height:1.3;
     padding:8px;
-    border:0.5px solid #6B6B6B;
+    border:0.5px solid #111;
     border-radius:0;
   }
 </style>
@@ -1155,14 +1205,10 @@ if('serviceWorker' in navigator){
   <header class="top" id="mainHeader" style="display:none;">
     <!-- Idle: the normal app header. -->
     <div class="header-row" id="headerIdle">
-      <div class="day-nav">
-        <button class="mode-toggle" onclick="shiftViewDay(-1)" aria-label="Previous day" title="Previous day">
-          <svg class="nav-chev flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
-        </button>
-        <button class="mode-toggle" onclick="shiftViewDay(1)" aria-label="Next day" title="Next day">
-          <svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
-        </button>
-      </div>
+      <!-- The day arrows moved down to the list, where they line up with the
+           dates they change. Kept as an empty cell so the header's two ends
+           stay where they were. -->
+      <div class="day-nav"></div>
       <nav class="tabs">
         <button onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="10.8" y="7.5" width="2.4" height="6.5"/><rect x="9" y="1.8" width="6" height="2.4"/></svg>
@@ -1289,7 +1335,7 @@ if('serviceWorker' in navigator){
     <label class="field-label">Sync across devices</label>
     <p class="hint" style="margin:6px 0 10px;">This uses the same code as your Voca/Para app, so both stay on the same devices. Anyone with the code can read and change your data — keep it private.</p>
     <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
-      <input type="text" id="syncIdInput" style="flex:1; min-width:200px; font-size:12.5px;">
+      <input type="text" id="syncIdInput" style="flex:1; min-width:200px; font-size:var(--fs-label);">
       <button class="btn btn-ghost" onclick="copySyncId()">Copy</button>
       <button class="btn btn-primary" onclick="applySyncId(this)">Use this code</button>
     </div>
@@ -1297,7 +1343,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28u</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-28x</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -1853,7 +1899,13 @@ function dateWithDow(code){
   const s = String(code);
   if(!/^\d{6}$/.test(s)) return s;
   const dow = dayOfWeekFromCode(s);
-  return s.slice(2,4) + '.' + s.slice(4,6) + (dow === null ? '' : ' ' + DOW_SHORT[dow]);
+  /* The near days say so, after the date rather than instead of it — the figure
+     below is about a particular day and the date should stay readable. Set in
+     the same face and size as the rest of the line. */
+  const n = daysBefore(s);
+  const near = n === 1 ? ' 어제' : (n === 2 ? ' 그저께' : '');
+  return s.slice(2,4) + '.' + s.slice(4,6) +
+         (dow === null ? '' : ' ' + DOW_SHORT[dow]) + near;
 }
 
 function formatDayLabel(code){
@@ -1976,7 +2028,7 @@ function renderGroupRow(){
   const row = document.getElementById('groupRow');
   const btns = [{id:'all', label:'All'}].concat(GROUPS);
   row.innerHTML = btns.map(g =>
-    `<button class="mini-toggle${currentGroup===g.id?' active':''}" onclick="setGroup('${g.id}')">${g.label}</button>`
+    `<button class="opt-btn${currentGroup===g.id?' selected':''}" onclick="setGroup('${g.id}')">${g.label}</button>`
   ).join('');
 
   // Second tier only earns its space when the group holds more than one thing.
@@ -1989,9 +2041,9 @@ function renderGroupRow(){
   }
   sub.style.display = 'flex';
   sub.innerHTML =
-    `<button class="mini-toggle${currentAct==='all'?' active':''}" onclick="setAct('all')">All</button>` +
+    `<button class="opt-btn${currentAct==='all'?' active':''}" onclick="setAct('all')">All</button>` +
     inGroup.map(a =>
-      `<button class="mini-toggle${currentAct===a.id?' active':''}" onclick="setAct('${a.id}')">
+      `<button class="opt-btn${currentAct===a.id?' active':''}" onclick="setAct('${a.id}')">
          <span class="sw-swatch" style="background:${a.color}"></span>${actDisplay(a)}
        </button>`
     ).join('');
@@ -2111,10 +2163,10 @@ function renderDays(){
    these are proportions rather than pixels. */
 const CLOCK_VB_W = 260, CLOCK_VB_H = 260;
 const CLOCK_CX = 130, CLOCK_CY = 130, CLOCK_R = 118;
-/* The hole: 62 of the 118, so 124 across. That leaves a band 56 wide — still
-   room for two lines of label — and gives the figure in the middle enough
-   width to be set large. Set to 0 and the dial goes back to a pie. */
-const CLOCK_R_IN = 62;
+/* The hole: 65 of the 130 half-width, so it measures exactly half the dial.
+   That leaves a band 53 wide, still room for two lines of label. Set to 0 and
+   the dial goes back to a pie. */
+const CLOCK_R_IN = 65;
 
 /* The small hours are left completely blank on the dial — no shading, no hour
    spokes, no numbers. Nothing is ever recorded there, and drawing it only made
@@ -2375,7 +2427,7 @@ function renderClock(){
     const mid = clockAngle((Math.max(0, seg.s) + Math.min(1440, seg.e)) / 2);
     // The middle of the 62–118 band is 0.76 of the radius; a touch outside it
     // puts the words where the slice is widest.
-    const [x, y] = clockPoint(mid, CLOCK_R * 0.79);
+    const [x, y] = clockPoint(mid, CLOCK_R * 0.81);
     const note = seg.n || '';
     // The abbreviation alone, as the table head shows it — actDisplay prefixes
     // the group, which is more words than a slice has room for. The note goes
@@ -2704,10 +2756,28 @@ function renderTodos(){
   // The add line is always present, so the block never collapses. That box is
   // content in its own right — this is not the empty-container case. Nothing
   // sets display here on purpose: no inline value to wipe later.
+  /* The two day arrows sit above the list, on the same right-hand axis as the
+     tick and the cross below them. */
+  const navRow =
+    '<div class="todo-row todo-nav-row">' +
+      '<span class="todo-day"></span>' +
+      '<span style="flex:1;"></span>' +
+      '<span class="todo-tools">' +
+        '<button class="todo-btn" onclick="shiftViewDay(-1)" aria-label="Previous day" title="Previous day">' +
+          '<svg class="nav-chev flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>' +
+        '</button>' +
+        '<button class="todo-btn" onclick="shiftViewDay(1)" aria-label="Next day" title="Next day">' +
+          '<svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>' +
+        '</button>' +
+      '</span>' +
+    '</div>';
+
   const addRow =
     '<div class="todo-add-row">' +
+      '<span class="todo-day"></span>' +
       '<input type="text" class="todo-add" id="todoQuickAdd"' +
         ' onkeydown="todoQuickAddKey(event)" aria-label="Add to today\'s list">' +
+      '<span class="todo-tools">' +
       '<button class="mode-toggle" onclick="todoAddFromBox()" aria-label="Add" title="Add">' +
         '<svg viewBox="0 0 24 24" aria-hidden="true">' +
         '<rect x="10.8" y="3" width="2.4" height="18"/>' +
@@ -2723,9 +2793,10 @@ function renderTodos(){
         '<path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>' +
         '<rect x="4.6" y="9.6" width="14.8" height="2.4"/></svg>' +
       '</button>' +
+      '</span>' +
     '</div>';
 
-  wrap.innerHTML =
+  wrap.innerHTML = navRow +
     rows.map(r => {
       const key = r.code + '|' + r.t.id;
       const a = r.t.actId ? actById(r.t.actId) : null;
@@ -2757,14 +2828,6 @@ function renderTodos(){
             ' onclick="toggleTodo(\'' + r.code + '\',\'' + r.t.id + '\')"' +
             ' aria-label="' + (r.t.done ? 'Undo' : 'Done') + '"' +
             ' title="' + (r.t.done ? 'Done — tap to undo' : 'Mark done') + '">' +
-            '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-            '<rect x="3" y="3" width="18" height="18" fill="none"' +
-            ' stroke="currentColor" stroke-width="2"/>' +
-            (r.t.done
-              ? '<path d="M7 12.4 L10.6 16 L17 8.4" fill="none" stroke="currentColor"' +
-                ' stroke-width="2.6" stroke-linecap="square"/>'
-              : '') +
-            '</svg>' +
           '</button>' +
           '<button class="icon-x" onclick="todoDeleteRow(\'' + r.code + '\',\'' + r.t.id + '\', this)"' +
             ' aria-label="Delete" title="Delete">' +
