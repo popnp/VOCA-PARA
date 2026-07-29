@@ -1011,17 +1011,32 @@
   .day-pagination button.active{color:#111; font-weight:500;}
   select{
     font-family:var(--font-ui);
-    /* Matches .opt-btn — these sit on the same row as the Range buttons, so a
-       1px size difference made the dropdowns look like a separate control set. */
     font-size:var(--fs-label);
     font-weight:400;
     letter-spacing:0.01em;
-    padding:var(--sp-1) var(--sp-4);
+    /* The browser's own control is switched off. Left on, it adds a minimum
+       height and inside padding of its own on top of whatever is set here, so
+       the same numbers as .opt-btn still came out taller — which is why the
+       date fields sat proud of the Range buttons beside them while the list
+       filters, which have no select at all, lined up fine.
+       With it off, this is .opt-btn's box exactly, plus room on the right for
+       the mark below. */
+    -webkit-appearance:none;
+    appearance:none;
+    padding:3px 22px 3px var(--sp-2);
+    line-height:1.3;
     border:0.5px solid #111;
-    background:transparent;
     color:var(--text-dark);
     border-radius:0;
+    /* The same chevron the arrows use, turned down. Drawn here because turning
+       the native control off takes its own arrow away with it. */
+    background-color:transparent;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3.5 7 L12 18.5 L20.5 7' fill='none' stroke='%23111' stroke-width='4.2' stroke-linecap='square' stroke-linejoin='miter'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 6px center;
+    background-size:9px 9px;
   }
+  select::-ms-expand{display:none;}
   .check-row{display:flex; column-gap:var(--sp-4); row-gap:var(--sp-2); flex-wrap:wrap; align-items:center;}
   .check-row label{font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400; letter-spacing:0.01em; color:#111; display:flex; align-items:center; gap:6px; cursor:pointer;}
   .check-row input[type=checkbox]{
@@ -1717,6 +1732,43 @@
     font-weight:500;
   }
   .memo-row:last-child{border-bottom:none;}
+
+  /* The paragraph list on the test settings screen. Built like the memo rows —
+     a rule under each, the rating dot first, the title after — but with no
+     chevron: there is nothing to open, only something to choose. */
+  .pick-row{
+    display:flex; align-items:center; gap:10px;
+    width:100%; text-align:left;
+    padding:var(--sp-3) var(--sp-1);
+    border:none; border-bottom:1px solid #111;
+    background:transparent; border-radius:0;
+    font-weight:500; cursor:pointer;
+  }
+  .pick-row:last-child{border-bottom:none;}
+  /* The chosen one is named by a line through it — enough to tell at a glance,
+     and it does not change the weight of the row or its width. A box here would
+     read as a second button beside the Start button under it. */
+  .pick-row.selected .pick-row-title{text-decoration:line-through;}
+  .pick-row-title{
+    font-family:var(--font-ui); font-size:var(--fs-body); color:#111;
+    flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  /* An untested paragraph has no colour, so the dot is an outline instead. */
+  .status-dot.no-color{background:transparent; border:1px solid #6B6B6B;}
+  /* The tag, set as the chip this app already uses everywhere — same 0.5px
+     edge, same 3px/8px box. Not a control, so it takes no pointer of its own
+     and the whole row stays one target. */
+  .pick-tag{
+    font-family:var(--font-ui); font-weight:400; font-size:var(--fs-label);
+    letter-spacing:0.02em;
+    color:var(--text-muted);
+    padding:3px var(--sp-2);
+    border:0.5px solid #6B6B6B;
+    border-radius:0;
+    flex:0 0 auto;
+    white-space:nowrap;
+    pointer-events:none;
+  }
   .memo-row:hover{opacity:0.9;}
   .memo-row-title{
     /* No font-size of its own: the word rows don't set one either, so both
@@ -2044,7 +2096,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30c</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30g</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -2436,9 +2488,9 @@ if('serviceWorker' in navigator){
           <div class="settings-group">
             <label class="field-label">Quiz mode</label>
             <div class="btn-group" id="pTestModeButtons">
-              <button class="opt-btn" data-testmode="pick">Choose a Paragraph</button>
-              <button class="opt-btn" data-testmode="random">Random</button>
               <button class="opt-btn" data-testmode="reading">Reading</button>
+              <button class="opt-btn" data-testmode="pick">Quiz</button>
+              <button class="opt-btn" data-testmode="random">Random</button>
             </div>
           </div>
 
@@ -2449,6 +2501,7 @@ if('serviceWorker' in navigator){
                 <button class="opt-btn" data-pickrange="all">All</button>
                 <button class="opt-btn" data-pickrange="today">Today</button>
                 <button class="opt-btn" data-pickrange="yesterday">Yesterday</button>
+                <button class="opt-btn" data-pickrange="last5">Last 5d</button>
                 <button class="opt-btn" data-pickrange="date">Specific Date</button>
                 <button class="opt-btn" data-pickrange="period">Date Range</button>
               </div>
@@ -2467,7 +2520,10 @@ if('serviceWorker' in navigator){
             </div>
             <div class="settings-group">
               <label class="field-label">Select paragraph</label>
-              <select id="pPickSelect" style="width:100%;"></select>
+              <!-- A list, not a dropdown: the choice is the point of this
+                   screen, so it is on the page rather than folded away behind a
+                   control that shows one line at a time. -->
+              <div id="pPickList"></div>
             </div>
             <button class="btn btn-primary" onclick="pStartPickedParagraph()" style="width:100%; margin-top:var(--sp-6);">Start</button>
           </div>
@@ -6188,12 +6244,21 @@ function todayCode(){
 }
 
 function yesterdayCode(){
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  const yy = String(d.getFullYear()).slice(2);
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  return yy+mm+dd;
+  return shiftDayCode(todayCode(), -1);
+}
+
+/* A date code moved by so many days. One place does the month and year rolling,
+   so a range that reaches back across the first of a month cannot get it
+   wrong. */
+function shiftDayCode(code, delta){
+  const s = String(code);
+  const d = new Date(2000 + parseInt(s.slice(0,2),10),
+                     parseInt(s.slice(2,4),10) - 1,
+                     parseInt(s.slice(4,6),10));
+  d.setDate(d.getDate() + delta);
+  return String(d.getFullYear()).slice(2) +
+         String(d.getMonth()+1).padStart(2,'0') +
+         String(d.getDate()).padStart(2,'0');
 }
 
 function buildExportText(cardList){
@@ -6963,7 +7028,7 @@ let pStackRevealStage = 0; // 0 = hint only; each tap reveals one more comma/wor
 let pStackCurrentRated = false; // has THIS visit to the current sentence been rated yet (ignores older history)
 
 function pStartPickedParagraph(){
-  const id = document.getElementById('pPickSelect').value;
+  const id = pPickChosenId;
   if(!id){
     alert('No paragraphs match this range. Try a different range.');
     return;
@@ -8023,6 +8088,13 @@ function pUpdatePickList(){
     list = list.filter(p => parseTag(p.tag).date === todayCode());
   } else if(pPickSelectedRange === 'yesterday'){
     list = list.filter(p => parseTag(p.tag).date === yesterdayCode());
+  } else if(pPickSelectedRange === 'last5'){
+    // Today and the four days behind it.
+    const from = shiftDayCode(todayCode(), -4);
+    list = list.filter(p => {
+      const d = parseTag(p.tag).date;
+      return d && d >= from && d <= todayCode();
+    });
   } else if(pPickSelectedRange === 'date'){
     const d = document.getElementById('pPickDateSelect').value;
     list = list.filter(p => parseTag(p.tag).date === d);
@@ -8048,20 +8120,41 @@ function pUpdatePickList(){
     }
   }
 
-  const pickSelect = document.getElementById('pPickSelect');
-  pickSelect.innerHTML = '';
+  const wrap = document.getElementById('pPickList');
+  wrap.innerHTML = '';
   if(list.length === 0){
-    const o = document.createElement('option');
-    o.value = '';
-    o.textContent = 'No paragraphs in this range';
-    pickSelect.appendChild(o);
+    pPickChosenId = null;
+    wrap.innerHTML = '<p class="hint">No paragraphs in this range.</p>';
     return;
   }
-  list.forEach(p=>{
-    const o = document.createElement('option');
-    o.value = p.id;
-    o.textContent = p.titleEn + (p.tag ? ' · '+p.tag : '');
-    pickSelect.appendChild(o);
+  /* Most recent first. The tag carries the date, so it is what orders them;
+     anything untagged falls to the end rather than to the top. */
+  const ordered = list.slice().sort((a, b) =>
+    String(b.tag || '').localeCompare(String(a.tag || '')));
+  // Whatever was chosen before, if it is still in the list; otherwise the newest.
+  if(!ordered.some(p => String(p.id) === String(pPickChosenId))){
+    pPickChosenId = ordered[0].id;
+  }
+  wrap.innerHTML = ordered.map(p => {
+    // The same colour the list and the calendar give this paragraph.
+    const cls = pWordColorClass(p);
+    const dot = '<span class="status-dot ' + (cls || 'no-color') + '"></span>';
+    const on = String(p.id) === String(pPickChosenId);
+    return '<button class="pick-row' + (on ? ' selected' : '') + '"' +
+             ' onclick="pPickChoose(\'' + p.id + '\')">' +
+             dot +
+             '<span class="pick-row-title">' + escapeHtml(p.titleEn) + '</span>' +
+             (p.tag ? '<span class="pick-tag">' + escapeHtml(p.tag) + '</span>' : '') +
+           '</button>';
+  }).join('');
+}
+
+/* Which paragraph the Start button will open. */
+let pPickChosenId = null;
+function pPickChoose(id){
+  pPickChosenId = id;
+  document.querySelectorAll('#pPickList .pick-row').forEach(b => {
+    b.classList.toggle('selected', b.getAttribute('onclick').indexOf("'" + id + "'") !== -1);
   });
 }
 
