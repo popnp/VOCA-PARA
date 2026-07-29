@@ -1737,7 +1737,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30g</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30h</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2401,12 +2401,14 @@ function segmentsFor(code, actId){
 
 /* Total minutes for a day, limited to the activities currently shown so the
    figure always matches what the row displays. */
+/* The day runs 04:00 to 04:00, so what counts towards it is what the strip
+   draws on it — a night that ran to two in the morning belongs to the evening
+   it started in, whether it was written as one record or, in older data, as a
+   pair. Reading the raw records instead was why the figure disagreed with the
+   picture above it. */
 function dayTotal(code){
-  let t = 0;
-  visibleActivities().forEach(a => {
-    segmentsFor(code, a.id).forEach(seg => { t += Math.max(0, seg.e - seg.s); });
-  });
-  return t;
+  return stripSegments(code, true)
+    .reduce((t, s) => t + Math.max(0, s.e - s.s), 0);
 }
 
 /* Every day that holds any record, regardless of the active filter. Filtering
@@ -3255,7 +3257,7 @@ let clockShownCode = null;
    the same basis the dial's wedges are drawn from. Shared so the once-a-second
    tick and the full redraw can never disagree about the figure. */
 function dayVisibleMins(code){
-  return flatSegments(code, true)
+  return stripSegments(code, true)
     .reduce((t,s) => t + Math.max(0, s.e - s.s), 0);
 }
 
@@ -3339,7 +3341,8 @@ function renderClock(){
 
   const code = clockCode();
   clockShownCode = code;
-  const segs = flatSegments(code, true).slice().sort((a,b) => a.s - b.s);
+  // The same set the strip and the totals use, so all three agree.
+  const segs = stripSegments(code, true).slice().sort((a,b) => a.s - b.s);
   const total = dayVisibleMins(code);
 
   // Non-study stretches, shaded so the working parts of the day stand out.
