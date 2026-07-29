@@ -562,18 +562,19 @@
      Time and the activities in Check. Both modes share the corner cell and the
      totals row so the shape does not change when the mode is switched. */
   .axis-corner{width:40px;}
-  .day-table th.tl-axis{width:40px;}
+
   /* The activities sit at the right-hand end and hold that place while the
      dates scroll past under them. White behind, or the cells would show
      through as they pass. */
   .axis-right,
+  .day-table th.tl-axis,
   .day-table th.act-row-head{
     width:76px;
     position:sticky; right:0; z-index:2;
     background:#FFFFFF;
   }
-  /* The hours do the same at the other end, for the same reason. */
-  .axis-corner, .day-table th.tl-axis{
+  .axis-corner{
+    width:8px;
     position:sticky; left:0; z-index:2;
     background:#FFFFFF;
   }
@@ -615,9 +616,11 @@
   }
   .day-table th.act-row-head.picked{color:#111; font-weight:500;}
   .day-table th.act-row-head.dimmed{opacity:0.35;}
-  /* A hair of air where one family of activities ends and the next begins. */
-  .day-table tr.group-start th,
-  .day-table tr.group-start td{padding-top:6px;}
+  /* Where one family of activities ends and the next begins. Drawn as its own
+     row rather than as a border on the cells: the table's own border rules were
+     cancelling that out. Same hairline the hour grid uses, with air above and
+     below it. */
+  .day-table tr.group-gap td{height:10px; padding:0; border:none;}
   .day-table td.grid-cell{padding:1px; text-align:center; vertical-align:middle;}
   .day-table td.tl-cell{padding:0 1px; vertical-align:top;}
   .day-table th.tl-axis{padding:0; vertical-align:top; position:relative;}
@@ -628,10 +631,14 @@
   .tlv-off{position:absolute; left:0; right:0; background:rgba(0,0,0,0.05);}
   .tlv-bar{position:absolute; left:1px; right:1px; cursor:pointer;}
   .tlv-bar.is-overlap{outline:1px solid var(--rust); outline-offset:-1px;}
+  .day-table th.tl-axis{padding:0 0 0 var(--sp-2); vertical-align:top;}
+  /* Set exactly as the activity names above them — same family, size, weight
+     and grey. They are the same kind of label on the same edge. */
   .day-table th.tl-axis .timeline-tick{
-    position:absolute; right:4px; top:0;
+    position:absolute; left:0; top:0;
     transform:translateY(-50%);
-    font-size:var(--fs-label); line-height:1; height:auto;
+    font-family:var(--font-ui);
+    font-size:var(--fs-label); font-weight:300; line-height:1; height:auto;
     color:var(--text-muted); white-space:nowrap;
   }
   .day-table tr.total-row td.day-total{
@@ -767,8 +774,10 @@
     padding-left:0.06em;
   }
   .check-cells{display:flex; gap:6px; align-items:center; flex-wrap:wrap;}
+  /* 1.1x, so the row of circles reads a shade heavier than the timeline strip
+     under it. The timeline keeps its own height. */
   .check-cell{
-    width:22px; height:22px;
+    width:24px; height:24px;
     display:inline-block;
     vertical-align:middle;
     border:1px solid transparent;
@@ -1721,7 +1730,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29o</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29s</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2762,14 +2771,15 @@ function shiftCode(code, delta){
   return ymdToCode(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
-/* A stretch that runs past midnight is written as two records, one on each
-   date, because a record belongs to one day. The strip, which turns the day
-   over at four, draws the pair as the one stretch it was typed as. Returns
-   [thisDay, nextDay|null]. */
-function splitOverMidnight(s, e, note){
-  const head = note ? {s:s, e:1440, n:note} : {s:s, e:1440};
-  const tail = note ? {s:0, e:e, n:note}   : {s:0, e:e};
-  return [head, tail];
+/* The day runs 04:00 to 04:00, and a night's work belongs to the evening it
+   started in. So a stretch that passes midnight stays ONE record on ONE date,
+   with an end past 1440 — 23:00-02:00 is stored as 1380 to 1560. Everything
+   that counts minutes gets the right answer without knowing about any of this,
+   because it is still simply e minus s.
+   The two places that cannot take a number past 1440 — the clock face and the
+   backup file — wrap it themselves, and are the only ones that have to. */
+function endMinutes(s, e){
+  return (e <= s) ? e + 1440 : e;
 }
 
 /* Adds to a date without throwing away what is already filed there. */
@@ -2780,18 +2790,10 @@ function appendSpans(code, actId, spans){
   days[code][actId] = have.concat(spans).sort((a,b) => a.s - b.s);
 }
 
+/* Nothing to gather from elsewhere any more: a night that runs to two in the
+   morning is already filed here, ending at 1560. */
 function stripSegments(code, onlyVisible){
-  const out = [];
-  // This day, from 04:00 on.
-  flatSegments(code, onlyVisible).forEach(seg => {
-    if(seg.s >= DAY_START) out.push(seg);
-  });
-  // And the small hours of the next day, drawn on the end of this one.
-  const nxt = shiftCode(code, 1);
-  flatSegments(nxt, onlyVisible).forEach(seg => {
-    if(seg.e <= DAY_START) out.push({...seg, s: seg.s + 1440, e: seg.e + 1440});
-  });
-  return out;
+  return flatSegments(code, onlyVisible);
 }
 
 function timelineRange(){
@@ -2991,8 +2993,12 @@ function renderDays(){
      them. Time underneath, sharing the same date columns — one table rather
      than two, so the two halves cannot drift out of step. */
   ACTIVITIES.forEach((a, i) => {
-    const newGroup = i > 0 && ACTIVITIES[i-1].group !== a.group;
-    rows += `<tr class="${newGroup ? 'group-start' : ''}">` +
+    // A little air where one family of activities ends and the next begins —
+    // no rule, just the gap.
+    if(i > 0 && ACTIVITIES[i-1].group !== a.group){
+      rows += `<tr class="group-gap"><td colspan="${codes.length + 2}"></td></tr>`;
+    }
+    rows += '<tr>' +
       '<th class="axis-corner"></th>' +
       codes.map(code => `<td class="grid-cell${colCls(code)}">${checkCellHtml(code, a)}</td>`).join('') +
       `<th class="act-row-head${isVisibleAct(a) ? '' : ' dimmed'}` +
@@ -3012,9 +3018,10 @@ function renderDays(){
     ticks += `<span class="timeline-tick" style="top:${pct}%">${Math.floor(m/60) % 24}</span>`;
   }
   rows += '<tr class="tl-row">' +
-    `<th class="tl-axis"><span class="tlv-wrap" style="height:${TL_HEIGHT}px">${ticks}</span></th>` +
+    '<th class="axis-corner"></th>' +
     codes.map(code => `<td class="tl-cell${colCls(code)}">${timelineColHtml(code, range)}</td>`).join('') +
-    '<th class="axis-right"></th>' +
+    // The hours sit under the activity names, on the same right-hand edge.
+    `<th class="tl-axis"><span class="tlv-wrap" style="height:${TL_HEIGHT}px">${ticks}</span></th>` +
     '</tr>';
 
   // The totals run along the bottom, one per date rather than one per row.
@@ -3279,14 +3286,22 @@ function renderClock(){
   // One wedge per recorded stretch. No abbreviation is drawn on the slice —
   // the colour identifies the activity, and the table below spells it out.
   // The name is still in the tooltip.
+  /* The face is a 24-hour ring, so a stretch that passes midnight is drawn as
+     two arcs — up to the top of the ring and on from it. It is still one
+     record; only the drawing is in two pieces. */
   const wedges = segs.map(seg => {
-    const s = Math.max(0, seg.s), e = Math.min(1440, seg.e);
-    if(e <= s) return '';
-    const a0 = clockAngle(s), a1 = clockAngle(e);
-    const tip = `${actDisplay(seg.act)} ${minToHHMM(s)}–${minToHHMM(e)} (${fmtDur(e - s)})`;
-    return `<path class="clock-wedge" d="${clockWedgePath(a0, a1, CLOCK_R)}"` +
-           ` fill="${seg.act.color}" onclick="openActEditor('${code}','${seg.act.id}')">` +
-           `<title>${tip}</title></path>`;
+    const tip = `${actDisplay(seg.act)} ${minToHHMM(seg.s % 1440)}–${minToHHMM(seg.e % 1440)}` +
+                ` (${fmtDur(seg.e - seg.s)})`;
+    const arc = (s, e) => {
+      if(e <= s) return '';
+      return `<path class="clock-wedge" d="${clockWedgePath(clockAngle(s), clockAngle(e), CLOCK_R)}"` +
+             ` fill="${seg.act.color}" onclick="openActEditor('${code}','${seg.act.id}')">` +
+             `<title>${tip}</title></path>`;
+    };
+    const s = Math.max(0, seg.s);
+    return (seg.e > 1440)
+      ? arc(s, 1440) + arc(0, Math.min(seg.e - 1440, 1440))
+      : arc(s, Math.min(1440, seg.e));
   }).join('');
 
   /* The name of the activity, and whatever was written about it, laid on the
@@ -4080,7 +4095,6 @@ async function saveActEditor(){
   const warn = document.getElementById('actWarn');
   const rows = Array.from(document.querySelectorAll('#actSegRows .seg-row'));
   const list = [];
-  const spill = [];          // the part that lands on the next date
   const problems = [];
   rows.forEach(row => {
     const sv = row.querySelector('[data-role="start"]').value;
@@ -4091,12 +4105,8 @@ async function saveActEditor(){
     if(b === a){ problems.push(`${sv}–${ev} is no time at all.`); return; }
     const nEl = row.querySelector('[data-role="note"]');
     const note = nEl ? String(nEl.value || '').trim() : '';
-    if(b < a){
-      const [head, tail] = splitOverMidnight(a, b, note);
-      list.push(head); spill.push(tail);
-      return;
-    }
-    list.push(note ? {s:a, e:b, n:note} : {s:a, e:b});
+    const end = endMinutes(a, b);
+    list.push(note ? {s:a, e:end, n:note} : {s:a, e:end});
   });
   if(problems.length){ warn.textContent = problems.join('  '); return; }
 
@@ -4125,17 +4135,6 @@ async function saveActEditor(){
     delete days[editingCode][editingAct];
   }
   if(!Object.keys(days[editingCode]).length) delete days[editingCode];
-
-  /* The far side of midnight. Anything already sitting in the small hours of
-     that date for this activity came from an earlier crossing and is replaced;
-     the rest of its day is left alone. */
-  if(spill.length){
-    const nxt = shiftCode(editingCode, 1);
-    if(days[nxt] && days[nxt][editingAct]){
-      days[nxt][editingAct] = days[nxt][editingAct].filter(seg => seg.s >= DAY_START);
-    }
-    appendSpans(nxt, editingAct, spill);
-  }
 
   await saveData();
   closeActEditor();
@@ -4247,7 +4246,6 @@ function addSegRow(actId){
    than silently dropping it. */
 function collectDayEditor(){
   const out = {};
-  const spill = {};        // per activity, the piece that lands on the next date
   const problems = [];
   ACTIVITIES.forEach(a => {
     const holder = document.getElementById('segs-' + a.id);
@@ -4268,24 +4266,19 @@ function collectDayEditor(){
       }
       const nEl = row.querySelector('[data-role="note"]');
       const note = nEl ? String(nEl.value || '').trim() : '';
-      if(e < s){
-        const [head, tail] = splitOverMidnight(s, e, note);
-        list.push(head);
-        (spill[a.id] = spill[a.id] || []).push(tail);
-        return;
-      }
-      list.push(note ? {s, e, n:note} : {s, e});
+      const end = endMinutes(s, e);
+      list.push(note ? {s, e:end, n:note} : {s, e:end});
     });
     if(list.length){
       list.sort((x,y)=>x.s-y.s);
       out[a.id] = list;
     }
   });
-  return {day:out, spill, problems};
+  return {day:out, problems};
 }
 
 function saveDayEditor(){
-  const {day, spill, problems} = collectDayEditor();
+  const {day, problems} = collectDayEditor();
   const warn = document.getElementById('dayWarn');
 
   if(problems.length){
@@ -4312,16 +4305,6 @@ function saveDayEditor(){
 
   if(Object.keys(day).length) days[editingCode] = day;
   else delete days[editingCode];
-
-  /* The far side of midnight, activity by activity. The small hours of that
-     date are replaced for those activities and the rest of its day left be. */
-  const nxt = shiftCode(editingCode, 1);
-  Object.keys(spill).forEach(id => {
-    if(days[nxt] && days[nxt][id]){
-      days[nxt][id] = days[nxt][id].filter(seg => seg.s >= DAY_START);
-    }
-    appendSpans(nxt, id, spill[id]);
-  });
 
   saveData();
   closeDayEditor();
@@ -4648,7 +4631,6 @@ async function doConfirmSave(warn){
 
   const rows = Array.from(document.querySelectorAll('#swConfirmRows .seg-row'));
   const list = [];
-  const spill = [];
   const problems = [];
   rows.forEach(row => {
     const sv = row.querySelector('[data-role="start"]').value;
@@ -4659,16 +4641,12 @@ async function doConfirmSave(warn){
     if(b === a){ problems.push(`${sv}–${ev} is no time at all.`); return; }
     const nEl = row.querySelector('[data-role="note"]');
     const note = nEl ? String(nEl.value || '').trim() : '';
-    if(b < a){
-      const [head, tail] = splitOverMidnight(a, b, note);
-      list.push(head); spill.push(tail);
-      return;
-    }
-    list.push(note ? {s:a, e:b, n:note} : {s:a, e:b});
+    const end = endMinutes(a, b);
+    list.push(note ? {s:a, e:end, n:note} : {s:a, e:end});
   });
 
   if(problems.length){ warn.textContent = problems.join('  '); return; }
-  if(!list.length && !spill.length){ warn.textContent = 'Nothing to save — add at least one row, or discard.'; return; }
+  if(!list.length){ warn.textContent = 'Nothing to save — add at least one row, or discard.'; return; }
 
   // Check against what's already on that day, including other activities.
   const existing = flatSegments(code, false);
@@ -4689,7 +4667,6 @@ async function doConfirmSave(warn){
     if(!days[code][act.id]) days[code][act.id] = [];
     list.forEach(x => days[code][act.id].push(x));
     days[code][act.id].sort((a,b)=>a.s-b.s);
-    appendSpans(shiftCode(code, 1), act.id, spill);
 
     await saveData();
     if(swTimer){ clearInterval(swTimer); swTimer = null; }
@@ -5077,7 +5054,9 @@ function buildTxt(){
     const d = days[code] || {};
     const body = ACTIVITIES
       .filter(a => (d[a.id]||[]).length)
-      .map(a => a.short + ' ' + d[a.id].map(s => minToHHMM(s.s)+'-'+minToHHMM(s.e)).join(', '));
+      // Written back inside the clock; reading it, an end before a start is
+      // what says the stretch ran past midnight.
+      .map(a => a.short + ' ' + d[a.id].map(s => minToHHMM(s.s)+'-'+minToHHMM(s.e % 1440)).join(', '));
     /* '* [x][S] text' — the second bracket names the activity, and is left out
        when the line belongs to none. */
     const todoLines = todosFor(code).map(t => {
@@ -5100,7 +5079,7 @@ function buildTxt(){
     const noteLines = [];
     ACTIVITIES.forEach(a => {
       (d[a.id] || []).forEach(s => {
-        if(s.n) noteLines.push('= ' + a.short + ' ' + minToHHMM(s.s) + ' ' + s.n);
+        if(s.n) noteLines.push('= ' + a.short + ' ' + minToHHMM(s.s % 1440) + ' ' + s.n);
       });
     });
     if(!body.length && !todoLines.length && !planLines.length && !noteLines.length) return;
@@ -5265,11 +5244,12 @@ function parseTxt(raw){
       const p = /^\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s*$/.exec(part);
       if(!p){ errors.push('Line ' + (i+1) + ': bad time "' + part.trim() + '".'); return; }
       const s = hhmmToMin(p[1]), e = hhmmToMin(p[2]);
-      if(s === null || e === null || e <= s){
+      if(s === null || e === null || e === s){
         errors.push('Line ' + (i+1) + ': invalid range "' + part.trim() + '".');
         return;
       }
-      segs.push({s,e});
+      // An end before its start is a night that ran on past midnight.
+      segs.push({s, e: endMinutes(s, e)});
     });
     if(segs.length){
       segs.sort((a,b)=>a.s-b.s);
