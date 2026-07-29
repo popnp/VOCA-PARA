@@ -1730,7 +1730,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29s</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29t</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -3324,11 +3324,15 @@ function renderClock(){
   /* One label per stretch now, not one per activity: two sessions of the same
      thing on one day are two pieces of work and carry their own notes. */
   const labels = segs.map(seg => {
-    const len = Math.min(1440, seg.e) - Math.max(0, seg.s);
+    /* Measured on the stretch as recorded, not on a copy clipped at midnight:
+       a night that runs 22:00 to 04:30 is six and a half hours long and its
+       middle is at 01:15, and clipping it to 1440 put the label at 23:00 —
+       inside the first arc rather than in the middle of the slice. */
+    const len = seg.e - seg.s;
     /* Under 40 minutes the abbreviation is dropped — the slice has no room —
        but a note was typed on purpose and is kept whatever the length. */
     const tooShort = len < LABEL_MIN;
-    const mid = clockAngle((Math.max(0, seg.s) + Math.min(1440, seg.e)) / 2);
+    const mid = clockAngle(((seg.s + seg.e) / 2) % 1440);
     // The middle of the 62–118 band is 0.76 of the radius; a touch outside it
     // puts the words where the slice is widest.
     const [x, y] = clockPoint(mid, CLOCK_R * 0.81);
