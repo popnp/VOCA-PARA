@@ -128,9 +128,11 @@
     --vw:100vw;
     /* How wide the reading column may get. This was a bare number repeated in
        nine places; widened 1.3x because the column read as a thin ribbon on a
-       landscape screen. The phone breakpoint in the @media rule further down
-       happens to have carried the same number and is NOT this — leave it. */
-    --content-w:832px;
+       landscape screen, and 1.2x again because a desktop window was giving up
+       more to the margins than to the text. The phone breakpoint in the @media
+       rule further down happens to have carried one of these numbers and is NOT
+       this — leave it. */
+    --content-w:998px;
   }
   /* Tinting the page with the rating colour. --rate-tint carries the colour and
      --rate-tint-a its opacity, so a single transition on background covers both
@@ -2042,7 +2044,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30a</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30c</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">

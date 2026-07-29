@@ -1737,7 +1737,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30a</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30c</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2861,10 +2861,27 @@ function appendSpans(code, actId, spans){
   days[code][actId] = have.concat(spans).sort((a,b) => a.s - b.s);
 }
 
-/* Nothing to gather from elsewhere any more: a night that runs to two in the
-   morning is already filed here, ending at 1560. */
+/* What belongs on one day's strip, which runs 04:00 to 04:00.
+   Two shapes have to be handled, because both exist in the data:
+     - a night written as one record ending past 1440 (23:00-02:00 → 1380-1560),
+       which is already on the right date and needs nothing;
+     - a night written as two, from before this app filed them as one — the tail
+       sits on the FOLLOWING date, starting at 0.
+   A record starting before 04:00 belongs to the night before, so it is taken
+   off its own date and put at the end of the previous one. Left where it was it
+   drew at a negative offset — above the strip entirely, on top of the check
+   grid, which is what was being seen. */
 function stripSegments(code, onlyVisible){
-  return flatSegments(code, onlyVisible);
+  const out = [];
+  flatSegments(code, onlyVisible).forEach(seg => {
+    if(seg.s >= DAY_START) out.push(seg);
+  });
+  flatSegments(shiftCode(code, 1), onlyVisible).forEach(seg => {
+    if(seg.s < DAY_START){
+      out.push({...seg, s: seg.s + 1440, e: Math.min(seg.e, DAY_START) + 1440});
+    }
+  });
+  return out;
 }
 
 function timelineRange(){
