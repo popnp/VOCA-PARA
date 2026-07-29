@@ -236,15 +236,22 @@
   .pane{flex:0 0 100%; min-width:0;}
   /* Which page, and a way to get there without swiping. Two short rules rather
      than circles: the app draws one round thing only, the activity dot. */
+  /* Above the pages, not below them: the table page is long and its marks were
+     a scroll away, while here all three pages show them in the same place.
+     Round and large enough to aim at — the two-pixel rules were neither. */
   .pane-dots{
-    display:flex; justify-content:center; gap:var(--sp-2);
-    margin-top:var(--sp-5);
+    display:flex; justify-content:center; align-items:center; gap:var(--sp-4);
+    margin-bottom:var(--sp-4);
   }
   .pane-dot{
-    width:20px; height:2px; padding:0; border:none; border-radius:0;
+    width:9px; height:9px; padding:0; border:none; border-radius:50%;
     background:#D8D8D8; cursor:pointer;
+    /* The mark is 9px but the target around it is 30px. */
+    box-sizing:content-box;
+    background-clip:content-box;
+    border:10px solid transparent;
   }
-  .pane-dot.is-on{background:#111;}
+  .pane-dot.is-on{background:#111; background-clip:content-box;}
 
   /* Below the dial and to the left, clear of the list that follows. */
   .clock-add{display:flex; justify-content:flex-start; margin-top:var(--sp-4);}
@@ -1568,6 +1575,11 @@ if('serviceWorker' in navigator){
   <!-- Three pages. The day itself is the middle one, since that is what the app
        is for; the table of recent days is to its left and the projects, which
        run across many days, to its right. The whole screen moves. -->
+  <div class="pane-dots" id="paneDots">
+    <button class="pane-dot" onclick="setPane(0)" aria-label="Check / Time"></button>
+    <button class="pane-dot is-on" onclick="setPane(1)" aria-label="Today"></button>
+    <button class="pane-dot" onclick="setPane(2)" aria-label="Projects"></button>
+  </div>
   <div class="pane-view" id="paneView">
     <div class="pane-track" id="paneTrack">
       <section class="pane">
@@ -1626,11 +1638,6 @@ if('serviceWorker' in navigator){
     </div>
       </section>
     </div>
-  </div>
-  <div class="pane-dots" id="paneDots">
-    <button class="pane-dot" onclick="setPane(0)" aria-label="Check / Time"></button>
-    <button class="pane-dot is-on" onclick="setPane(1)" aria-label="Today"></button>
-    <button class="pane-dot" onclick="setPane(2)" aria-label="Projects"></button>
   </div>
 </section>
 
@@ -1730,7 +1737,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29t</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30a</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2075,16 +2082,47 @@ const appStorage = (function(){
   };
   const localSet = (key, value) => { localStorage.setItem(key, value); return {value}; };
 
+  /* Work saved here but not yet accepted by the server. Without this the next
+     start would read the server's older copy straight over the top of it and
+     the work would be gone with nothing said. */
+  const dirtyKey  = (key) => key + ':unsent';
+  const stashKey  = (key) => key + ':before-sync';
+  const isDirty   = (key) => { try{ return localStorage.getItem(dirtyKey(key)) === '1'; }catch(e){ return false; } };
+  const setDirty  = (key, on) => {
+    try{ on ? localStorage.setItem(dirtyKey(key), '1') : localStorage.removeItem(dirtyKey(key)); }catch(e){}
+  };
+
   return {
     async get(key){
       try{
         const remote = await cloudGet(key);
         if(remote){
+          const local = localGet(key);
+          const differs = !local || local.value !== remote.value;
+
+          if(differs && local && isDirty(key)){
+            /* This device has work the server never took, and the server has
+               something else. Whichever is dropped, somebody loses a session,
+               so nothing is dropped: this device keeps its own copy, the
+               server's is put aside under its own name, and the person is told
+               rather than finding out weeks later. */
+            try{ localSet(stashKey(key), remote.value); }catch(e){}
+            syncConflicts.push(key);
+            return local;
+          }
+
+          /* Overwriting local with the server's copy is normal and right, but
+             the copy being replaced is kept for one round anyway — it costs a
+             little room and it is the difference between a scare and a loss. */
+          if(differs && local){
+            try{ localSet(stashKey(key), local.value); }catch(e){}
+          }
           try{ localSet(key, remote.value); }catch(e){}
+          setDirty(key, false);
           return remote;
         }
         const local = localGet(key);
-        if(local) cloudSet(key, local.value).catch(()=>{});
+        if(local) cloudSet(key, local.value).then(()=>setDirty(key, false)).catch(()=>{});
         return local;
       }catch(e){
         console.warn('Cloud read failed, using local copy', e);
@@ -2095,9 +2133,12 @@ const appStorage = (function(){
     async set(key, value){
       let localOk = true;
       try{ localSet(key, value); }catch(e){ localOk = false; }
+      // Marked before the attempt, cleared only once the server has it.
+      setDirty(key, true);
       try{
         const r = await cloudSet(key, value);
         cloudStatus(true);
+        setDirty(key, false);
         return r;
       }catch(e){
         console.warn('Cloud write failed, kept locally', e);
@@ -2105,9 +2146,39 @@ const appStorage = (function(){
         if(localOk) return {value};
         throw e;
       }
+    },
+    unsentKeys(){
+      const out = [];
+      try{
+        for(let i = 0; i < localStorage.length; i++){
+          const k = localStorage.key(i);
+          if(k && k.endsWith(':unsent') && localStorage.getItem(k) === '1'){
+            out.push(k.replace(/:unsent$/, ''));
+          }
+        }
+      }catch(e){}
+      return out;
     }
   };
 })();
+
+/* Keys where this device and the server disagreed at start-up. */
+const syncConflicts = [];
+
+/* Said plainly and once, at the top of the screen, because the alternative is
+   finding out that a session vanished some days later. */
+function reportSyncTrouble(){
+  const unsent = appStorage.unsentKeys();
+  if(!syncConflicts.length && !unsent.length) return;
+  const bar = document.getElementById('cloudBanner');
+  if(!bar) return;
+  bar.style.display = '';
+  bar.textContent = syncConflicts.length
+    ? 'This device had work the server never received, and the server had something different. ' +
+      'This device\'s copy is what you are looking at. Take a backup now, then open the other device and check it.'
+    : 'Some work has not reached the server yet. Stay on this device until the mark at the top clears, ' +
+      'or take a backup before opening another one.';
+}
 
 let cloudOnline = true;
 function cloudStatus(ok){
@@ -5401,6 +5472,7 @@ Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActiviti
              loadProjects()]).then(() => {
   // The middle page is the one that opens.
   setPane(1);
+  reportSyncTrouble();
   document.getElementById('mainHeader').style.display = '';
   renderGroupRow();
   setMode('check');

@@ -849,6 +849,23 @@
        of aside on the English above it. Was 54px. */
     margin-top:132px;
   }
+  /* A small red mark at the top-left of the English sentence being read, over
+     the text rather than beside it: laid out in the flow it would push the
+     sentence along by its own width and the whole block would shift every time
+     the reading moved on. Absolute, so nothing around it knows it is there.
+     Same red the dial marks now with. */
+  .prev-en.cur-en{position:relative;}
+  .prev-en.cur-en::before{
+    content:'';
+    position:absolute;
+    /* Nudged in and down onto its own line: sitting hard against the top-left
+       corner it read as belonging to the line above. */
+    left:-1px; top:1px;
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--rust);
+    pointer-events:none;
+  }
   /* Matches .back-meaning in the Voca card so the Korean gloss reads the same
      in both apps. */
   .stack-current .cur-ko{
@@ -2025,7 +2042,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-29t</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30a</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -2752,6 +2769,16 @@ const appStorage = (function(){
     return {value};
   };
 
+  /* Work saved here that the server has not accepted. Without this mark the
+     next start reads the server's older copy straight over the top of it and
+     the work is gone with nothing said. */
+  const dirtyKey = (key) => key + ':unsent';
+  const stashKey = (key) => key + ':before-sync';
+  const isDirty  = (key) => { try{ return localStorage.getItem(dirtyKey(key)) === '1'; }catch(e){ return false; } };
+  const setDirty = (key, on) => {
+    try{ on ? localStorage.setItem(dirtyKey(key), '1') : localStorage.removeItem(dirtyKey(key)); }catch(e){}
+  };
+
   return {
     kind: 'cloud',
     async get(key){
@@ -2760,14 +2787,36 @@ const appStorage = (function(){
       try{
         const remote = await cloudGet(key);
         if(remote){
+          const local = localGet(key);
+          const differs = !local || local.value !== remote.value;
+
+          if(differs && local && isDirty(key)){
+            /* This device holds work the server never took, and the server
+               holds something else. Dropping either one costs somebody a
+               session, so neither is dropped: this device keeps its own, the
+               server's copy is set aside under its own name, and the person is
+               told now rather than discovering it weeks later. */
+            try{ localSet(stashKey(key), remote.value); }catch(e){}
+            syncConflicts.push(key);
+            return local;
+          }
+
+          /* Taking the server's copy over the local one is normal and right,
+             but the copy being replaced is kept for one round regardless. It
+             costs a little room and it is the difference between a scare and a
+             loss. */
+          if(differs && local){
+            try{ localSet(stashKey(key), local.value); }catch(e){}
+          }
           try{ localSet(key, remote.value); }catch(e){}
+          setDirty(key, false);
           return remote;
         }
         // Nothing in the cloud yet: adopt whatever this device already has so
         // existing local data survives the switch to syncing.
         const local = localGet(key);
         if(local){
-          cloudSet(key, local.value).catch(()=>{});
+          cloudSet(key, local.value).then(()=>setDirty(key, false)).catch(()=>{});
         }
         return local;
       }catch(e){
@@ -2782,9 +2831,12 @@ const appStorage = (function(){
       // user's work still lands on this device.
       let localOk = true;
       try{ localSet(key, value); }catch(e){ localOk = false; }
+      // Marked before the attempt and cleared only once the server has it.
+      setDirty(key, true);
       try{
         const r = await cloudSet(key, value);
         cloudStatus(true);
+        setDirty(key, false);
         return r;
       }catch(e){
         console.warn('Cloud write failed, kept locally', e);
@@ -2792,9 +2844,39 @@ const appStorage = (function(){
         if(localOk) return {value};
         throw e;
       }
+    },
+    unsentKeys(){
+      const out = [];
+      try{
+        for(let i = 0; i < localStorage.length; i++){
+          const k = localStorage.key(i);
+          if(k && k.endsWith(':unsent') && localStorage.getItem(k) === '1'){
+            out.push(k.replace(/:unsent$/, ''));
+          }
+        }
+      }catch(e){}
+      return out;
     }
   };
 })();
+
+/* Keys where this device and the server disagreed at start-up. */
+const syncConflicts = [];
+
+/* Said plainly and once, at the top of the screen. The alternative is finding
+   out that a session vanished some days later, when nothing can be done. */
+function reportSyncTrouble(){
+  const unsent = appStorage.unsentKeys ? appStorage.unsentKeys() : [];
+  if(!syncConflicts.length && !unsent.length) return;
+  const bar = document.getElementById('cloudBanner');
+  if(!bar) return;
+  bar.style.display = '';
+  bar.textContent = syncConflicts.length
+    ? 'This device had work the server never received, and the server had something different. ' +
+      'What you are looking at is this device\'s copy. Take a backup now, then open the other device and check it.'
+    : 'Some work has not reached the server yet. Stay on this device until the mark at the top clears, ' +
+      'or take a backup before opening another one.';
+}
 
 // Shows a small banner when the device is working offline, so a long stretch of
 // unsynced edits can't go unnoticed.
@@ -4548,6 +4630,7 @@ async function saveQuizEdit(){
 }
 
 function flipCard(){
+  if(tapWasDrag()) return;
   flipped = !flipped;
   const back = document.getElementById('backContent');
   const front = document.getElementById('frontPrompt');
@@ -7513,7 +7596,7 @@ function pRenderStack(){
       if(justRated !== undefined) color = RATING_COLORS[justRated];
     }
     const enStyle = color ? ` style="border-bottom-color:${color};"` : '';
-    prevHtml += `<span class="prev-sentence prev-en cur-answer${curSubCls}"${enStyle}>${escapeHtml(fullAnswer)}</span> ${renderVocabLinkRowTest(cur.vocabLinks)}${speakerBtn(fullAnswer, 22)}`;
+    prevHtml += `<span class="prev-sentence prev-en cur-en cur-answer${curSubCls}"${enStyle}>${escapeHtml(fullAnswer)}</span> ${renderVocabLinkRowTest(cur.vocabLinks)}${speakerBtn(fullAnswer, 22)}`;
   } else if(pStackRevealStage === 0){
     // Hint state: show the first 3 words highlighted, but keep the REST of the answer
     // rendered invisibly so the block occupies the SAME height as the revealed answer.
@@ -7522,14 +7605,14 @@ function pRenderStack(){
     const shown = words.slice(0,3).join(' ');
     const restWords = words.slice(3).join(' ');
     const rest = restWords ? ` <span class="answer-space-holder">${escapeHtml(restWords)}</span>` : '';
-    prevHtml += `<span class="prev-sentence prev-en hint${curSubCls}">${escapeHtml(shown)}</span>${rest}`;
+    prevHtml += `<span class="prev-sentence prev-en cur-en hint${curSubCls}">${escapeHtml(shown)}</span>${rest}`;
   } else {
     // Partial reveal: chunks revealed so far shown normally, remaining chunks kept
     // invisible (same space-holder trick) so the block height doesn't jump per tap.
     const shownText = revealChunks.slice(0, pStackRevealStage).join(' ');
     const restText = revealChunks.slice(pStackRevealStage).join(' ');
     const rest = restText ? ` <span class="answer-space-holder">${escapeHtml(restText)}</span>` : '';
-    prevHtml += `<span class="prev-sentence prev-en cur-answer${curSubCls}">${escapeHtml(shownText)}</span>${rest}`;
+    prevHtml += `<span class="prev-sentence prev-en cur-en cur-answer${curSubCls}">${escapeHtml(shownText)}</span>${rest}`;
   }
   prevFlow.innerHTML = prevHtml;
 
@@ -7547,6 +7630,7 @@ function pRenderStack(){
 }
 
 function pStackFlip(){
+  if(tapWasDrag()) return;
   // Reading has nothing to turn over, so the same tap moves on instead.
   if(pStackReading){ pStackAdvance(); return; }
   if(pStackFlipped) return; // already fully revealed
@@ -7614,7 +7698,9 @@ function pStackAdvance(){
 
 function finishParaStackSession(){
   const values = pStackSessionAnswers.map(a=>a.value);
-  document.getElementById('pStackQuizBody').style.display = 'none';
+  /* The text stays on screen behind the panel. It used to be taken away with
+     it, so closing the panel — easy to do by accident while reading — left
+     nothing to go back to. */
   // Gather every linked word across this text's sentences, for a direct Voca test.
   const linkedWords = [];
   if(pStackPara && Array.isArray(pStackPara.sentences)){
@@ -8152,18 +8238,18 @@ function pRenderCard(){
       if(justRated !== undefined) color = RATING_COLORS[justRated];
     }
     const enStyle = color ? ` style="border-bottom-color:${color};"` : '';
-    flowHtml = `<span class="prev-sentence prev-en cur-answer${curSubCls}"${enStyle}>${escapeHtml(fullAnswer)}</span> ${renderVocabLinkRowTest(sentence.vocabLinks)}${speakerBtn(fullAnswer, 22)}`;
+    flowHtml = `<span class="prev-sentence prev-en cur-en cur-answer${curSubCls}"${enStyle}>${escapeHtml(fullAnswer)}</span> ${renderVocabLinkRowTest(sentence.vocabLinks)}${speakerBtn(fullAnswer, 22)}`;
   } else if(pRevealStage === 0){
     const words = fullAnswer.split(/\s+/);
     const shown = words.slice(0,3).join(' ');
     const restWords = words.slice(3).join(' ');
     const rest = restWords ? ` <span class="answer-space-holder">${escapeHtml(restWords)}</span>` : '';
-    flowHtml = `<span class="prev-sentence prev-en hint${curSubCls}">${escapeHtml(shown)}</span>${rest}`;
+    flowHtml = `<span class="prev-sentence prev-en cur-en hint${curSubCls}">${escapeHtml(shown)}</span>${rest}`;
   } else {
     const shownText = revealChunks.slice(0, pRevealStage).join(' ');
     const restText = revealChunks.slice(pRevealStage).join(' ');
     const rest = restText ? ` <span class="answer-space-holder">${escapeHtml(restText)}</span>` : '';
-    flowHtml = `<span class="prev-sentence prev-en cur-answer${curSubCls}">${escapeHtml(shownText)}</span>${rest}`;
+    flowHtml = `<span class="prev-sentence prev-en cur-en cur-answer${curSubCls}">${escapeHtml(shownText)}</span>${rest}`;
   }
   flow.innerHTML = flowHtml;
 
@@ -8182,6 +8268,7 @@ function pRenderCard(){
 }
 
 function pFlipCard(){
+  if(tapWasDrag()) return;
   if(pFlipped) return; // already fully revealed
   pRevealStage++;
   pRenderCard(); // recomputes pFlipped based on new stage vs this sentence's chunk count
@@ -9518,6 +9605,28 @@ function syncViewportWidth(){
 }
 
 
+/* ---- Telling a tap from a drag -------------------------------------------
+   On a computer, copying a word out of a sentence means pressing, dragging and
+   letting go — and a drag ends in a click like any other. Read as a tap it
+   turned the card over and the word was gone before it could be copied. So a
+   press that travelled, or that left text selected, is not a tap. */
+let tapDownX = 0, tapDownY = 0, tapMovedX = 0, tapMovedY = 0;
+document.addEventListener('pointerdown', e => {
+  tapDownX = e.clientX; tapDownY = e.clientY;
+  tapMovedX = 0; tapMovedY = 0;
+}, true);
+document.addEventListener('pointerup', e => {
+  tapMovedX = Math.abs(e.clientX - tapDownX);
+  tapMovedY = Math.abs(e.clientY - tapDownY);
+}, true);
+
+function tapWasDrag(){
+  const sel = window.getSelection && window.getSelection();
+  if(sel && String(sel).trim().length > 0) return true;
+  // Six pixels of slop, so an unsteady finger still counts as a tap.
+  return (tapMovedX > 6 || tapMovedY > 6);
+}
+
 /* ---- Tap anywhere to go on -----------------------------------------------
    A short sentence leaves most of the screen empty, and the card's own tap
    target shrinks with it. During a test, a press on that empty ground now does
@@ -9526,6 +9635,7 @@ function syncViewportWidth(){
    own meaning and is left alone. */
 document.addEventListener('click', e => {
   if(drawerIsOpen()) return;
+  if(tapWasDrag()) return;
   if(e.target.closest(
     'button, a, input, textarea, select, label, svg, ' +
     '#flashcard, #pFlashcard, #pStackContainer, .memo-quiz-card, ' +
@@ -9617,6 +9727,7 @@ loadRatingColors();
 Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs(), loadMemos()]).then(()=>{
   document.getElementById('mainHeader').style.display = '';
   syncHeaderOffset();
+  reportSyncTrouble();
   switchApp('para');
   // Opens on the list, not on a test. The list is the way in to everything,
   // and a test that starts by itself is a test nobody asked for.
