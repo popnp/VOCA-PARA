@@ -48,9 +48,9 @@
     /* The four rating colours. Everything that paints a result reads these, so
        changing one here changes it on the cards, the bar, the list, the
        calendar and the dots at once. Options writes over them at runtime. */
-    --rate-0:var(--rate-0);
-    --rate-1:var(--rate-1);
-    --rate-2:var(--rate-2);
+    --rate-0:#00E5FF;
+    --rate-1:#2CE17A;
+    --rate-2:#F2FF00;
     --rate-3:#FF4602;
     /* The one blue every link in the app uses. Editable in Options beside the
        four rating colours. */
@@ -1751,8 +1751,16 @@
   .pick-row.selected .pick-row-title{text-decoration:line-through;}
   .pick-row-title{
     font-family:var(--font-ui); font-size:var(--fs-body); color:#111;
-    flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    flex:1; min-width:0;
+    display:flex; align-items:baseline;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
+  /* Only this half may be cut. */
+  .pick-title-main{
+    min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  /* The instalment number, kept whatever the width. */
+  .pick-title-tail{flex:0 0 auto; white-space:nowrap;}
   /* An untested paragraph has no colour, so the dot is an outline instead. */
   .status-dot.no-color{background:transparent; border:1px solid #6B6B6B;}
   /* The tag, set as the chip this app already uses everywhere — same 0.5px
@@ -2047,6 +2055,19 @@ if('serviceWorker' in navigator){
   <aside id="headDrawer" aria-label="Menu">
     <!-- Three groups, spaced apart: which app, what to do in it, and the
          playback control, which only appears while something is being read. -->
+    <!-- Reading or testing, changed part-way through: what a text is for is
+         often only clear once it is in front of you. Its own group above the
+         apps, and shown only while one of the two is open — the same way the
+         playback control below appears only while something is being read. -->
+    <nav class="tabs" id="paraModeNav" style="display:none;">
+      <button id="paraModeBtn" onclick="pToggleReading()" aria-label="Reading or test" title="Reading / test">
+        <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6.4 7.2 L2.8 10.8 L6.4 14.4 Z"/>
+          <path d="M17.6 7.2 L21.2 10.8 L17.6 14.4 Z"/>
+          <rect x="4.6" y="9.6" width="14.8" height="2.4"/>
+        </svg>
+      </button>
+    </nav>
     <p class="brand-header">
           <span class="app-tab" id="appTabPara" onclick="onAppTabClick('para')" aria-label="Para" title="Para">P</span><span class="app-tab active" id="appTabVoca" onclick="onAppTabClick('voca')" aria-label="Voca" title="Voca">V</span><span class="app-tab" id="appTabMemo" onclick="openMemoSection()" aria-label="Memo" title="Memo">M</span>
         </p>
@@ -2096,7 +2117,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30h</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30o</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -4688,7 +4709,7 @@ async function saveQuizEdit(){
 }
 
 function flipCard(){
-  if(tapWasDrag()) return;
+  if(tapWasDrag() || advanceLocked()) return;
   flipped = !flipped;
   const back = document.getElementById('backContent');
   const front = document.getElementById('frontPrompt');
@@ -6945,6 +6966,7 @@ let pTestMode = 'pick';
 
 function pShowSettings(){
   pStackReading = false;
+  pSyncModeBtn();
   if(paras.length === 0){
     document.getElementById('pQuizEmpty').style.display = 'block';
     document.getElementById('pQuizSettings').style.display = 'none';
@@ -7569,8 +7591,32 @@ function hideMemoPopup(){
   document.getElementById('memoPopupOverlay').classList.remove('show');
 }
 
+/* Shown only while the stacking screen is up, like the playback control. */
+function pSyncModeBtn(){
+  const nav = document.getElementById('paraModeNav');
+  if(!nav) return;
+  const on = shownById('pStackQuizBody');
+  nav.style.display = on ? '' : 'none';
+  const btn = document.getElementById('paraModeBtn');
+  if(btn) btn.title = pStackReading ? 'Reading — tap to test' : 'Test — tap to read';
+}
+
+/* Swap between the two mid-text. The place in the text is kept; what changes is
+   whether the next sentence arrives hidden or open. Turning testing ON starts
+   the current sentence hidden again, since it has just been read. */
+function pToggleReading(){
+  if(!pStackPara) return;
+  pStackReading = !pStackReading;
+  pTestMode = pStackReading ? 'reading' : 'pick';
+  pStackRevealStage = pStackReading ? 9999 : 0;
+  pStackCurrentRated = false;
+  setDrawer(false);
+  pRenderStack();
+}
+
 function pRenderStack(){
   if(!pStackPara) return;
+  pSyncModeBtn();
   const item = pStackPara;
   if(pStackReading){
     // Nothing is ever hidden here, so every sentence starts fully open.
@@ -7697,7 +7743,7 @@ function pRenderStack(){
 }
 
 function pStackFlip(){
-  if(tapWasDrag()) return;
+  if(tapWasDrag() || advanceLocked()) return;
   // Reading has nothing to turn over, so the same tap moves on instead.
   if(pStackReading){ pStackAdvance(); return; }
   if(pStackFlipped) return; // already fully revealed
@@ -8143,10 +8189,22 @@ function pUpdatePickList(){
     return '<button class="pick-row' + (on ? ' selected' : '') + '"' +
              ' onclick="pPickChoose(\'' + p.id + '\')">' +
              dot +
-             '<span class="pick-row-title">' + escapeHtml(p.titleEn) + '</span>' +
+             pickTitleHtml(p.titleEn) +
              (p.tag ? '<span class="pick-tag">' + escapeHtml(p.tag) + '</span>' : '') +
            '</button>';
   }).join('');
+}
+
+/* On a narrow screen a title is cut with an ellipsis, and a series would lose
+   the one part that says which instalment it is. So a trailing number is split
+   off and always shown; only what comes before it is allowed to be cut. */
+function pickTitleHtml(title){
+  const m = /^(.*?)(\s*[-–—]\s*\d+)$/.exec(String(title || ''));
+  if(!m) return '<span class="pick-row-title">' + escapeHtml(title || '') + '</span>';
+  return '<span class="pick-row-title">' +
+           '<span class="pick-title-main">' + escapeHtml(m[1]) + '</span>' +
+           '<span class="pick-title-tail">' + escapeHtml(m[2]) + '</span>' +
+         '</span>';
 }
 
 /* Which paragraph the Start button will open. */
@@ -8363,7 +8421,7 @@ function pRenderCard(){
 }
 
 function pFlipCard(){
-  if(tapWasDrag()) return;
+  if(tapWasDrag() || advanceLocked()) return;
   if(pFlipped) return; // already fully revealed
   pRevealStage++;
   pRenderCard(); // recomputes pFlipped based on new stage vs this sentence's chunk count
@@ -9714,6 +9772,20 @@ document.addEventListener('pointerup', e => {
   tapMovedX = Math.abs(e.clientX - tapDownX);
   tapMovedY = Math.abs(e.clientY - tapDownY);
 }, true);
+
+/* One press must move the reading on once. A press inside the card runs the
+   card's own handler, and on some browsers the same press also reaches the
+   page listener that turns a tap on the empty ground into the same action —
+   two calls, one press, and a sentence goes by unread. Rather than trying to
+   name every path a press can take, the action itself refuses to run twice in
+   the time one press lasts. */
+let lastAdvanceAt = 0;
+function advanceLocked(){
+  const now = Date.now();
+  if(now - lastAdvanceAt < 350) return true;
+  lastAdvanceAt = now;
+  return false;
+}
 
 function tapWasDrag(){
   const sel = window.getSelection && window.getSelection();

@@ -565,26 +565,25 @@
   .day-table td.tl-cell,
   .day-table tr.total-row td{width:var(--date-col);}
   /* ---- The table, read across in dates -----------------------------------
-     Dates along the top with today at the right; down the side, the hours in
-     Time and the activities in Check. Both modes share the corner cell and the
-     totals row so the shape does not change when the mode is switched. */
-  .axis-corner{width:40px;}
+     Dates along the top with today at the LEFT and the days running away to the
+     right; down the side, the hours in Time and the activities in Check, also
+     on the left. Both modes share the tail cell and the totals row so the shape
+     does not change when the mode is switched. */
 
-  /* The activities sit at the right-hand end and hold that place while the
-     dates scroll past under them. White behind, or the cells would show
-     through as they pass. */
-  .axis-right,
+  /* The activities sit at the left-hand end and hold that place while the dates
+     scroll past under them. White behind, or the cells would show through as
+     they pass. */
+  .axis-side,
   .day-table th.tl-axis,
   .day-table th.act-row-head{
     width:76px;
-    position:sticky; right:0; z-index:2;
-    background:#FFFFFF;
-  }
-  .axis-corner{
-    width:8px;
     position:sticky; left:0; z-index:2;
     background:#FFFFFF;
   }
+  /* The far end: air after the oldest day, nothing in it. Not sticky — there is
+     nothing to hold in place, and a sticky cell there would sit over the dates
+     as they scrolled under it. */
+  .axis-corner{width:8px;}
   /* One height, used under the dates and between the two halves. */
   .day-table tr.spacer-row td{height:20px; padding:0; border:none;}
   .day-table th.date-col{
@@ -618,7 +617,9 @@
   .day-table th.act-row-head{
     font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);
     color:var(--text-muted); text-align:left;
-    padding:2px 0 2px var(--sp-2); cursor:pointer;
+    /* Flush with the left edge; the 8px is the breath between the name and the
+       first date column, which used to be on the other side of it. */
+    padding:2px var(--sp-2) 2px 0; cursor:pointer;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .day-table th.act-row-head.picked{color:#111; font-weight:500;}
@@ -638,7 +639,7 @@
   .tlv-off{position:absolute; left:0; right:0; background:rgba(0,0,0,0.05);}
   .tlv-bar{position:absolute; left:1px; right:1px; cursor:pointer;}
   .tlv-bar.is-overlap{outline:1px solid var(--rust); outline-offset:-1px;}
-  .day-table th.tl-axis{padding:0 0 0 var(--sp-2); vertical-align:top;}
+  .day-table th.tl-axis{padding:0 var(--sp-2) 0 0; vertical-align:top;}
   /* Set exactly as the activity names above them — same family, size, weight
      and grey. They are the same kind of label on the same edge. */
   .day-table th.tl-axis .timeline-tick{
@@ -1349,6 +1350,9 @@
     font-variant-numeric:tabular-nums;
   }
   .act-group{flex:1; min-width:90px; color:var(--text-muted);}
+  /* A standing to-do's line, on the activity row's frame. */
+  .routine-text{flex:1; min-width:90px;}
+  .routine-freq{display:inline-flex; gap:var(--sp-1); flex:0 0 auto; flex-wrap:wrap;}
   .act-del{opacity:0; transition:opacity .15s;}
   .color-row:hover .act-del{opacity:1;}
   .act-del svg{width:14px; height:14px;}
@@ -1542,7 +1546,6 @@ if('serviceWorker' in navigator){
     <div class="header-row hw-row" id="headerRunning" style="display:none;">
       <div class="hw-left">
         <span class="hw-clock" id="hwClock">0:00:00</span>
-        <span class="hw-act" id="hwAct"></span>
         <span class="hw-controls">
           <button onclick="swPause()" id="hwPauseBtn" aria-label="Pause" title="Pause">
             <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7.2" y="3.5" width="2.4" height="17"/><rect x="14.4" y="3.5" width="2.4" height="17"/></svg>
@@ -1551,6 +1554,10 @@ if('serviceWorker' in navigator){
             <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15"/></svg>
           </button>
         </span>
+        <!-- The name sits after the two controls: the figure and the buttons
+             are what a thumb goes for, so they keep the left edge, and the
+             label, which is only read, takes what width is left. -->
+        <span class="hw-act" id="hwAct"></span>
       </div>
       <nav class="tabs">
         <button onclick="openStopwatch()" aria-label="Stopwatch" title="Stopwatch">
@@ -1737,12 +1744,28 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30h</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-30o</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
       <button class="mini-toggle" onclick="addActivity()">+ Add activity</button>
       <button class="mini-toggle" onclick="resetColors(this)">Reset to defaults</button>
+    </div>
+  </div>
+
+  <div class="card-panel">
+    <label class="field-label">Standing to-dos</label>
+    <div id="routineRows" style="margin-top:var(--sp-2);"></div>
+    <div class="color-row" style="margin-top:var(--sp-3);">
+      <button class="todo-dot" id="routineDot" onclick="openRoutineDraftActPick()" aria-label="Kind" title="Kind"></button>
+      <input type="text" class="routine-text" id="routineNew" maxlength="120" placeholder="New standing item" aria-label="What to do">
+      <span class="routine-freq" id="routineDraftFreq"></span>
+      <!-- The same + the to-do box uses: 16px in a 24px box. -->
+      <button class="mode-toggle" onclick="addRoutine()" aria-label="Add" title="Add">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="10.8" y="3" width="2.4" height="18"/>
+        <rect x="3" y="10.8" width="18" height="2.4"/></svg>
+      </button>
     </div>
   </div>
 
@@ -2024,6 +2047,7 @@ const DATA_KEY = 'time-entries';
    time spans, so a `todos` key inside it would sit where an activity id is
    expected and every loop over that map would have to learn about it. */
 const TODO_KEY = 'time-todos';
+const ROUTINE_KEY = 'time-routines';
 const PLAN_KEY = 'time-plans';
 const WEEK_KEY = 'time-weekplan';
 /* Weekly rules start here and never reach back. A rule written today would
@@ -2195,10 +2219,20 @@ function cloudStatus(ok){
    maths trivial and avoids timezone drift entirely.
    ========================================================================= */
 let days = {};
-/* {'260726': [{id, text, done, doneAt}]}. `doneAt` is the day it was ticked,
-   which is what lets a leftover from an earlier day stay on screen for the
-   rest of the day it was finished on instead of vanishing under the finger. */
+/* {'260726': [{id, text, done, doneAt}]}. `doneAt` is the day it was ticked.
+   Nothing on screen reads it any more — a leftover leaves the list as soon as
+   it is done — but it is still written and still travels in the backup, since
+   it is the only record of WHEN something was finished. */
 let todos = {};
+/* [{id, actId, text, freq, since, lastCode}] — the things that come round on
+   their own: the glass of water, the pills. Set up once in Options and written
+   into a day's list when that day first opens, so on screen they are ordinary
+   lines and can be edited, ticked or thrown away like any other.
+   `lastCode` is the day one was last written out on. That is what stops a
+   second copy appearing every time the app is opened, and what lets a line
+   deleted by hand stay deleted for the rest of that day. Missed days are never
+   filled in — three days away should not come back as three days of water. */
+let routines = [];
 /* Two layers, and the day always wins over the week.
 
    weekPlans {actId: [0-6]}   the standing rule — "S every Monday and Friday"
@@ -2419,7 +2453,11 @@ function dayTotal(code){
    an empty day has to appear or a square marked to be done would have nowhere
    to be drawn. Older records are untouched and still reachable through +. */
 const TABLE_DAYS = 20;
-const TODO_DAYS  = 3;
+/* How far back an unfinished item keeps following the list. Three was too
+   short to be useful and long enough to forget; five is a working week seen
+   from its end. Anything older is still there on its own day, reached with the
+   arrows or through the date. */
+const TODO_DAYS  = 5;
 
 /* The last n calendar days ending at `from` (today unless told otherwise),
    newest first. */
@@ -2750,24 +2788,33 @@ function paintProjDot(){
   dot.title = a ? actDisplay(a) : 'No kind';
 }
 
-/* The same picker the to-do lines use, pointed at the draft instead of a
-   saved row — one list of activities, one look, one place to change it. */
-function openProjActPick(){
+/* The activity picker. One list, one overlay, one look, wherever an activity is
+   chosen — a project's kind, a standing to-do's kind. The only thing that
+   differs between callers is where the answer goes, so that is the only thing
+   passed in. */
+let actPickApply = null;
+function openActPick(current, apply){
+  actPickApply = apply;
   document.getElementById('todoActList').innerHTML =
     ACTIVITIES.map(a =>
-      '<button class="todo-act-row' + (projDraftAct === a.id ? ' active' : '') + '"' +
-        ' onclick="pickProjAct(\'' + a.id + '\')">' +
+      '<button class="todo-act-row' + (current === a.id ? ' active' : '') + '"' +
+        ' onclick="pickAct(\'' + a.id + '\')">' +
         '<span class="todo-dot" style="background:' + a.color + '; border-color:' + a.color + ';"></span>' +
         '<span>' + escapeHtmlT(actDisplay(a)) + '</span>' +
       '</button>').join('') +
-    '<button class="todo-act-row' + (projDraftAct ? '' : ' active') + '" onclick="pickProjAct(\'\')">' +
+    '<button class="todo-act-row' + (current ? '' : ' active') + '" onclick="pickAct(\'\')">' +
       '<span class="todo-dot"></span><span>None</span></button>';
   document.getElementById('todoActOverlay').classList.add('show');
 }
-function pickProjAct(actId){
-  projDraftAct = actId || '';
+function pickAct(actId){
+  const apply = actPickApply;
+  actPickApply = null;
   document.getElementById('todoActOverlay').classList.remove('show');
-  paintProjDot();
+  if(apply) apply(actId || '');
+}
+
+function openProjActPick(){
+  openActPick(projDraftAct, id => { projDraftAct = id; paintProjDot(); });
 }
 
 async function saveProject(){
@@ -2886,6 +2933,17 @@ function stripSegments(code, onlyVisible){
   return out;
 }
 
+/* One activity's minutes on one day, measured the way the day itself is
+   measured: 04:00 to 04:00. The strip and every total already read the day
+   through stripSegments; the check squares read the raw records on the date
+   they were filed under, so a 2 a.m. record filled the NEXT morning's square
+   while the total for the night before counted it. Same set, one name, and the
+   two agree. The editors deliberately do not use this — they edit records on
+   the date they are stored on, and must keep showing them there. */
+function daySegments(code, actId){
+  return stripSegments(code, false).filter(seg => seg.act && seg.act.id === actId);
+}
+
 function timelineRange(){
   let lo = 9*60, hi = 21*60;
   allCodes().forEach(code => {
@@ -2988,8 +3046,11 @@ function isVisibleAct(a){
 const TL_HEIGHT = 330;        // the vertical hour strip, in pixels — 1.5x
 
 function tableCodes(){
-  // allCodes() hands them back newest first; the table wants the opposite.
-  return allCodes().slice().reverse();
+  /* Newest first, which is the order allCodes() already uses — today is the
+     leftmost column and the days run away to the right. Reading starts at the
+     left edge, so what is being worked on now is where the eye lands, and the
+     table opens there rather than scrolled to its far end. */
+  return allCodes().slice();
 }
 
 function renderDayHead(range){
@@ -2998,7 +3059,7 @@ function renderDayHead(range){
   const today = todayCode(), viewed = currentViewCode();
   head.innerHTML =
     '<tr>' +
-    '<th class="axis-corner"></th>' +
+    '<th class="axis-side"></th>' +
     codes.map(code => {
       const cls = 'date-col' +
         (code === today ? ' is-today' : '') +
@@ -3007,9 +3068,9 @@ function renderDayHead(range){
       return `<th class="${cls}" onclick="openDayEditor('${code}')"` +
              ` title="${dateWithDow(code)}">${formatDayLabel(code) || 'Today'}</th>`;
     }).join('') +
-    // The activities live at the right-hand end and stay there while the dates
-    // scroll past underneath them.
-    '<th class="axis-right"></th>' +
+    // A tail cell only, holding the dates clear of the scroller's far edge.
+    // The names themselves are on the left now, above.
+    '<th class="axis-corner"></th>' +
     '</tr>';
 }
 
@@ -3017,7 +3078,7 @@ function renderDayHead(range){
    time, an empty black box when the day asked for it, a cross when neither. */
 function checkCellHtml(code, a){
   const shown = isVisibleAct(a);
-  const segs = segmentsFor(code, a.id);
+  const segs = daySegments(code, a.id);
   const has = shown && segs.length > 0;
   const mins = segs.reduce((t,x) => t + Math.max(0, x.e - x.s), 0);
   const planned = !has && shown && isPlanned(code, a.id);
@@ -3088,13 +3149,15 @@ function renderDays(){
     if(i > 0 && ACTIVITIES[i-1].group !== a.group){
       rows += `<tr class="group-gap"><td colspan="${codes.length + 2}"></td></tr>`;
     }
+    /* The activity's name comes first, on the left edge, and holds that place
+       while the dates scroll past it. */
     rows += '<tr>' +
-      '<th class="axis-corner"></th>' +
-      codes.map(code => `<td class="grid-cell${colCls(code)}">${checkCellHtml(code, a)}</td>`).join('') +
       `<th class="act-row-head${isVisibleAct(a) ? '' : ' dimmed'}` +
       `${currentAct === a.id ? ' picked' : ''}"` +
       ` title="${actDisplay(a)}" onclick="toggleActFilter('${a.id}','${a.group}')">` +
       `${a.short}</th>` +
+      codes.map(code => `<td class="grid-cell${colCls(code)}">${checkCellHtml(code, a)}</td>`).join('') +
+      '<th class="axis-corner"></th>' +
       '</tr>';
   });
 
@@ -3107,28 +3170,28 @@ function renderDays(){
     // Past midnight the number rolls over rather than counting on to 28.
     ticks += `<span class="timeline-tick" style="top:${pct}%">${Math.floor(m/60) % 24}</span>`;
   }
+  // The hours sit under the activity names, on the same left-hand edge.
   rows += '<tr class="tl-row">' +
-    '<th class="axis-corner"></th>' +
-    codes.map(code => `<td class="tl-cell${colCls(code)}">${timelineColHtml(code, range)}</td>`).join('') +
-    // The hours sit under the activity names, on the same right-hand edge.
     `<th class="tl-axis"><span class="tlv-wrap" style="height:${TL_HEIGHT}px">${ticks}</span></th>` +
+    codes.map(code => `<td class="tl-cell${colCls(code)}">${timelineColHtml(code, range)}</td>`).join('') +
+    '<th class="axis-corner"></th>' +
     '</tr>';
 
   // The totals run along the bottom, one per date rather than one per row.
   rows += '<tr class="total-row">' +
-    '<th class="axis-corner"></th>' +
+    '<th class="axis-side"></th>' +
     codes.map(code => {
       const total = dayTotal(code);
       return `<td class="day-total${total ? ' has-time' : ''}${colCls(code)}">${fmtDur(total)}</td>`;
     }).join('') +
-    '<th class="axis-right"></th>' +
+    '<th class="axis-corner"></th>' +
     '</tr>';
 
   body.innerHTML = rows;
-  // Twenty days is more than fits, so the strip opens at today and the older
-  // days wait off to the left.
+  // Twenty days is more than fits, so the strip opens at today — which is now
+  // the left edge — and the older days wait off to the right.
   const sc = document.getElementById('dayScroll');
-  if(sc) sc.scrollLeft = sc.scrollWidth;
+  if(sc) sc.scrollLeft = 0;
 
   // The clock rides along with the table — same data, same filter.
   renderClock();
@@ -3486,7 +3549,7 @@ function renderClock(){
 function checkCellsHtml(code){
   return ACTIVITIES.map((a,i) => {
     const shown = isVisibleAct(a);
-    const segs = segmentsFor(code, a.id);
+    const segs = daySegments(code, a.id);
     // Filtered-out columns read as empty even when time exists underneath.
     const has = shown && segs.length > 0;
     const mins = segs.reduce((t,x)=>t+Math.max(0,x.e-x.s),0);
@@ -3725,24 +3788,28 @@ function todoDisplayText(text){
   return String(text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim();
 }
 
-/* What the main screen lists: today's items, plus anything still unfinished
-   from an earlier day. A leftover ticked today stays on screen until tomorrow
-   rather than disappearing the instant it is pressed.
+/* What the main screen lists: the items of the day being LOOKED AT, plus
+   anything still unfinished carried up from the days before it. "Carried" is
+   measured against that day and not against today, which is what makes the
+   arrows work: on today's screen a leftover finished yesterday is gone, and on
+   yesterday's screen it is back, ticked and struck through, on the day it
+   belongs to. A day's own items always stay, finished or not — seeing what was
+   done is the point of looking at a day at all.
 
    Order is importance first, then date within each band — so every two-star
    item appears before any one-star item, and inside a band today leads,
    yesterday follows, and so on back. Date codes are YYMMDD, so plain string
    comparison is date comparison. */
 function mainTodoRows(){
-  const today = todayCode();
+  const anchor = currentViewCode();
   const rows = [];
-  const window = recentCodes(TODO_DAYS, currentViewCode());
+  const window = recentCodes(TODO_DAYS, anchor);
   Object.keys(todos).forEach(c => {
     if(window.indexOf(c) === -1) return;
-    const carried = c < today;
+    const carried = c < anchor;
     if(carried && todoTodayOnly) return;
     todosFor(c).forEach(t => {
-      if(carried && t.done && t.doneAt !== today) return;
+      if(carried && t.done) return;
       rows.push({code: c, t, carried, level: todoLevel(t.text)});
     });
   });
@@ -4489,7 +4556,12 @@ function renderHeaderState(){
   const a = actById(sw.actId);
   document.getElementById('hwClock').textContent = fmtClock(swElapsedMs());
   const actEl = document.getElementById('hwAct');
-  if(actEl) actEl.textContent = a ? actDisplay(a) : '';
+  // The activity's own name only. The group is dropped here — the bar is
+  // already the activity's colour, which says which group it belongs to, and
+  // the two words together were being cut off. Everywhere else (tooltips, the
+  // picker, the editors) still shows group and name, since there is no colour
+  // beside them to read it from.
+  if(actEl) actEl.textContent = a ? a.short : '';
   // The colour marks time actively accumulating. A paused session keeps its
   // place in the header but drops back to white, so a glance at the bar says
   // whether the clock is moving.
@@ -4903,6 +4975,93 @@ async function toggleWeekPlan(actId, dow){
   renderDays();
 }
 
+/* Every day, or working days. This list is the whole rule: it draws the
+   buttons AND decides what may be stored, so a choice taken out of it here is
+   out everywhere, and one put back needs nothing else changed. */
+const ROUTINE_FREQS = [
+  {id:'daily',    label:'Every day'},
+  {id:'weekdays', label:'Weekdays'}
+];
+
+function routineById(id){
+  return routines.find(r => r.id === id) || null;
+}
+
+/* Whether a standing item is wanted on a given day. Anything not named here
+   happens every day, which is what an unknown value falls back to as well. */
+function routineDueOn(r, code){
+  if(r.freq === 'weekdays'){
+    const dow = dayOfWeekFromCode(code);
+    return dow !== null && dow >= 1 && dow <= 5;
+  }
+  return true;
+}
+
+/* Writes today's standing items into today's list, once each. Called when the
+   app opens, again if it is still open when the date turns over, and again
+   after a new one is set up so it does not have to wait for tomorrow. */
+async function applyRoutines(){
+  const code = todayCode();
+  let added = false;
+  routines.forEach(r => {
+    if(r.lastCode === code) return;
+    if(!routineDueOn(r, code)) return;
+    if(!Array.isArray(todos[code])) todos[code] = [];
+    todos[code].push({
+      id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      text: r.text,
+      done: false,
+      doneAt: null,
+      actId: r.actId || undefined
+    });
+    r.lastCode = code;
+    added = true;
+  });
+  if(added){
+    await saveTodos();
+    await saveRoutines();
+  }
+  return added;
+}
+
+async function saveRoutines(){
+  try{
+    await appStorage.set(ROUTINE_KEY, JSON.stringify(routines));
+  }catch(e){
+    alert('Could not save. Your data is still on this device.');
+  }
+}
+
+/* One place that says what a routine may hold, used both on load and after a
+   restore from text. */
+function sanitizeRoutines(list){
+  if(!Array.isArray(list)) return [];
+  return list
+    .filter(r => r && typeof r === 'object' && String(r.text || '').trim())
+    .map(r => ({
+      id: r.id || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2,5)),
+      actId: r.actId || '',
+      text: String(r.text).trim().slice(0,120),
+      freq: ROUTINE_FREQS.some(f => f.id === r.freq) ? r.freq : 'daily',
+      /* Not read by any rule at the moment — the two choices left do not need
+         a starting point. Kept in the record and in the backup line so the
+         file's shape does not move, and so an every-other-day rule can come
+         back without a format change. */
+      since: /^\d{6}$/.test(String(r.since)) ? String(r.since) : todayCode(),
+      lastCode: /^\d{6}$/.test(String(r.lastCode)) ? String(r.lastCode) : null
+    }));
+}
+
+async function loadRoutines(){
+  try{
+    const res = await appStorage.get(ROUTINE_KEY);
+    routines = sanitizeRoutines(res && res.value ? (JSON.parse(res.value) || []) : []);
+  }catch(e){
+    console.warn('routine load failed', e);
+    routines = [];
+  }
+}
+
 async function loadTodos(){
   try{
     const res = await appStorage.get(TODO_KEY);
@@ -4959,6 +5118,123 @@ function renderColorRows(){
         <input type="checkbox" class="todo-check"${(weekPlans[a.id]||[]).indexOf(dow)!==-1?' checked':''}
                onchange="toggleWeekPlan('${a.id}',${dow})" aria-label="${escapeAttr(a.short)} ${lbl}">
       </label>`).join('')}</div>`).join('');
+}
+
+/* The standing to-dos in Options. Built on the activity row above it in the
+   same panel stack: the same flex line, the same input that shows its edge only
+   when written into, the same cross that appears on hover. The three choices
+   are `.opt-btn`, which is what this app uses for one of a set. */
+function renderRoutineRows(){
+  const wrap = document.getElementById('routineRows');
+  if(!wrap) return;
+  if(!routines.length){
+    wrap.innerHTML = '<p class="hint" style="margin:0;">Nothing standing yet.</p>';
+    return;
+  }
+  wrap.innerHTML = routines.map(r => {
+    const a = r.actId ? actById(r.actId) : null;
+    return '<div class="color-row">' +
+      '<button class="todo-dot" onclick="openRoutineActPick(\'' + r.id + '\')"' +
+        (a ? ' style="background:' + a.color + '; border-color:' + a.color + ';"' : '') +
+        ' aria-label="Kind" title="' + escapeAttr(a ? actDisplay(a) : 'No kind') + '"></button>' +
+      '<input type="text" class="routine-text" value="' + escapeAttr(r.text) + '" maxlength="120"' +
+        ' onchange="setRoutineField(\'' + r.id + '\',\'text\',this.value)" aria-label="What to do">' +
+      '<span class="routine-freq">' + freqButtonsHtml(r.freq,
+        f => 'setRoutineField(\'' + r.id + '\',\'freq\',\'' + f + '\')') + '</span>' +
+      '<button class="icon-x act-del" onclick="deleteRoutine(\'' + r.id + '\', this)"' +
+        ' aria-label="Delete" title="Delete this item">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2" fill="none"/></svg>' +
+      '</button>' +
+    '</div>';
+  }).join('');
+}
+
+function freqButtonsHtml(current, onclickFor){
+  return ROUTINE_FREQS.map(f =>
+    '<button class="opt-btn' + (current === f.id ? ' selected' : '') + '"' +
+    ' onclick="' + onclickFor(f.id) + '">' + f.label + '</button>').join('');
+}
+
+/* The line that is not saved yet. Its own activity and its own how-often, so
+   both are decided before the item exists rather than after. */
+let routineDraftAct = '';
+let routineDraftFreq = 'daily';
+
+function renderRoutineDraft(){
+  const dot = document.getElementById('routineDot');
+  if(dot){
+    const a = routineDraftAct ? actById(routineDraftAct) : null;
+    dot.style.background = a ? a.color : 'transparent';
+    dot.style.borderColor = a ? a.color : '#6B6B6B';
+    dot.title = a ? actDisplay(a) : 'No kind';
+  }
+  const fr = document.getElementById('routineDraftFreq');
+  if(fr) fr.innerHTML = freqButtonsHtml(routineDraftFreq,
+    f => "setRoutineDraftFreq('" + f + "')");
+}
+
+function setRoutineDraftFreq(f){
+  if(!ROUTINE_FREQS.some(x => x.id === f)) return;
+  routineDraftFreq = f;
+  renderRoutineDraft();
+}
+
+function openRoutineDraftActPick(){
+  openActPick(routineDraftAct, id => { routineDraftAct = id; renderRoutineDraft(); });
+}
+
+function openRoutineActPick(id){
+  const r = routineById(id);
+  if(!r) return;
+  openActPick(r.actId, aid => setRoutineField(id, 'actId', aid));
+}
+
+async function setRoutineField(id, field, value){
+  const r = routineById(id);
+  if(!r) return;
+  if(field === 'text'){
+    const v = String(value || '').trim();
+    if(!v){ renderRoutineRows(); return; }   // emptied by accident: put it back
+    r.text = v.slice(0,120);
+  } else if(field === 'freq'){
+    if(!ROUTINE_FREQS.some(f => f.id === value)) return;
+    r.freq = value;
+    r.since = todayCode();       // see sanitizeRoutines: kept, not read
+  } else if(field === 'actId'){
+    r.actId = value || '';
+  } else {
+    return;
+  }
+  await saveRoutines();
+  renderRoutineRows();
+}
+
+async function addRoutine(){
+  const el = document.getElementById('routineNew');
+  const text = String(el ? el.value : '').trim();
+  if(!text){ alert('Write what has to be done.'); return; }
+  routines.push({
+    id: 'r' + Date.now().toString(36),
+    actId: routineDraftAct,
+    text: text.slice(0,120),
+    freq: routineDraftFreq,
+    since: todayCode(),
+    lastCode: null
+  });
+  if(el) el.value = '';
+  routineDraftAct = '';
+  await saveRoutines();
+  // Set up today, on today's list today.
+  if(await applyRoutines()) renderTodos();
+  renderRoutineRows();
+  renderRoutineDraft();
+}
+
+async function deleteRoutine(id, btn){
+  if(!armButton(btn)) return;          // two presses, as everywhere else
+  routines = routines.filter(r => r.id !== id);
+  await saveRoutines();
+  renderRoutineRows();
 }
 
 function escapeAttr(v){
@@ -5136,6 +5412,16 @@ function buildTxt(){
     lines.push(['%', a ? a.short : '', pr.name || '', pr.note || '',
                 pr.start || '', pr.end || '', String(pr.pct || 0)].join('\t'));
   });
+  /* The standing to-dos, before the day blocks: like the weekly rules and the
+     projects they belong to no one date. '&' + tab separated, tabs because the
+     text may hold spaces. The last-written-out day is carried too — without it
+     a restore would add a second copy of everything already written into
+     today's block just below. */
+  routines.forEach(r => {
+    const a = r.actId ? actById(r.actId) : null;
+    lines.push(['&', a ? a.short : '', r.freq, r.since || '',
+                r.lastCode || '', r.text].join('\t'));
+  });
   lines.push('');
   /* Every day that holds anything — time, to-dos, or both. A day with only
      to-dos has to appear too, or it would be dropped on the next restore.
@@ -5209,6 +5495,20 @@ function closeImport(){
   document.getElementById('importWrap').style.display = 'none';
 }
 
+/* The fields of a marked line. The marker is a field of its own, so it is the
+   marker and ONE separator that come off — not "the marker and any whitespace".
+   Stripping with a whitespace pattern ate the tab after the marker as well, and
+   a line whose first field is empty then came back shifted along by one: a
+   project with no activity restored with its name read as its activity, its
+   note read as its name, and its percentage lost. A hand-typed line using a
+   space after the marker still reads. */
+function fieldsAfterMarker(t){
+  let rest = t.slice(1);
+  if(rest.charAt(0) === '\t') rest = rest.slice(1);
+  else rest = rest.replace(/^ +/, '');
+  return rest.split('\t');
+}
+
 function parseTxt(raw){
   const out = {};
   const todoOut = {};
@@ -5218,6 +5518,7 @@ function parseTxt(raw){
   const errors = [];
   const defs = [];          // activity definitions found in the file
   const projOut = [];
+  const routineOut = [];
   let code = null;
   raw.split('\n').forEach((line, i) => {
     const t = line.trim();
@@ -5254,7 +5555,7 @@ function parseTxt(raw){
 
     // '% short | name | note | start | end | pct' — a project.
     if(t.startsWith('%')){
-      const parts = t.replace(/^%\s*/,'').split('\t');
+      const parts = fieldsAfterMarker(t);
       const tok = (parts[0] || '').trim();
       const fromFile = defs.find(dd => dd.short.toLowerCase() === tok.toLowerCase());
       const a = tok ? (fromFile ? {id: fromFile.id || ('a_' + fromFile.short.toLowerCase())} : actByToken(tok)) : null;
@@ -5270,6 +5571,27 @@ function parseTxt(raw){
           pct: Math.max(0, Math.min(100, parseInt(parts[5], 10) || 0))
         });
       }
+      return;
+    }
+
+    /* '& short | freq | since | last | text' — a standing to-do. Belongs to no
+       date, so it is read before the "is there a [date] above this" check. */
+    if(t.startsWith('&')){
+      const parts = fieldsAfterMarker(t);
+      const tok = (parts[0] || '').trim();
+      const fromFile = defs.find(dd => dd.short.toLowerCase() === tok.toLowerCase());
+      const a = tok ? (fromFile ? {id: fromFile.id || ('a_' + fromFile.short.toLowerCase())} : actByToken(tok)) : null;
+      if(tok && !a){ errors.push('Line ' + (i+1) + ': unknown activity "' + tok + '".'); return; }
+      const text = (parts[4] || '').trim();
+      if(!text){ errors.push('Line ' + (i+1) + ': standing to-do has no text.'); return; }
+      routineOut.push({
+        id: 'r' + Date.now().toString(36) + routineOut.length,
+        actId: a ? a.id : '',
+        freq: (parts[1] || '').trim(),
+        since: (parts[2] || '').trim(),
+        lastCode: (parts[3] || '').trim() || null,
+        text: text
+      });
       return;
     }
 
@@ -5366,7 +5688,7 @@ function parseTxt(raw){
   });
 
   return {data:out, todoData:todoOut, planData:planOut, weekData:weekOut,
-          projData:projOut, errors, defs};
+          projData:projOut, routineData:routineOut, errors, defs};
 }
 
 /* Rebuild ACTIVITIES from definition lines, keeping ids stable so the imported
@@ -5392,7 +5714,7 @@ function activitiesFromDefs(defs){
 }
 
 async function applyImport(){
-  const {data, todoData, planData, weekData, projData, errors, defs} = parseTxt(document.getElementById('importArea').value);
+  const {data, todoData, planData, weekData, projData, routineData, errors, defs} = parseTxt(document.getElementById('importArea').value);
   const msg = document.getElementById('importMsg');
   if(errors.length){
     msg.textContent = errors.slice(0,5).join('  ') + (errors.length>5 ? ` (+${errors.length-5} more)` : '');
@@ -5415,11 +5737,13 @@ async function applyImport(){
   plans = planData;
   weekPlans = weekData;
   projects = projData || [];
+  routines = sanitizeRoutines(routineData);
   await saveData();
   await saveTodos();
   await savePlans();
   await saveWeekPlans();
   await saveProjects();
+  await saveRoutines();
   closeImport();
   refreshAll();
   msg.textContent = '';
@@ -5449,6 +5773,8 @@ function openOptions(){
   refreshSyncIdField();
   renderBackupStatus();
   renderColorRows();
+  renderRoutineRows();
+  renderRoutineDraft();
   document.getElementById('editOverlay').classList.add('show');
 }
 function closeOptions(){
@@ -5486,10 +5812,20 @@ swLoad();
 if(sw.startedAt) swTimer = setInterval(swTick, 1000);
 
 // The current-time marker advances whether or not a stopwatch is running.
-setInterval(moveNowMarker, 30000);
+// The same tick notices the date turning over: left open past midnight, the
+// app has to move on to the new day and write out its standing items rather
+// than keep yesterday on screen until it is reloaded.
+let lastSeenCode = todayCode();
+function dayRollTick(){
+  const now = todayCode();
+  if(now === lastSeenCode) return;
+  lastSeenCode = now;
+  applyRoutines().then(() => renderDays());
+}
+setInterval(() => { moveNowMarker(); dayRollTick(); }, 30000);
 
 Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActivities(),
-             loadProjects()]).then(() => {
+             loadProjects(), loadRoutines()]).then(() => applyRoutines()).then(() => {
   // The middle page is the one that opens.
   setPane(1);
   reportSyncTrouble();
