@@ -524,13 +524,19 @@
   /* Finished, it stays on the run — the milestone was really there — but
      stands back. */
   .proj-mile.is-done{background:var(--text-muted);}
-  /* Today's date over the line. It was set at 10px against the 13px of the
-     start and deadline sitting a few pixels below it — two sizes 1.3x apart,
-     which reads as a mistake rather than as a hierarchy. It is the same kind of
-     thing as those two dates, so it is the same size as those two dates; only
-     the colour separates it. */
+  /* Today's date, under the line rather than over it. Above, it sat in the
+     same band as the project's name and the two collided whenever today fell
+     early in the run.
+
+     It now sits on the line the start and the deadline already occupy, and it
+     is put there by the same two numbers those use — the bar's own bottom edge
+     plus `--sp-1` — rather than by an offset of its own, so the three dates
+     cannot drift apart. Same face, same size, same weight as those two; the
+     colour is all that separates it. */
   .proj-now-lbl{
-    position:absolute; top:-17px; transform:translateX(-50%);
+    position:absolute;
+    top:calc(100% + var(--sp-1));
+    transform:translateX(-50%);
     font-family:var(--font-ui); font-size:var(--fs-cell); font-weight:400;
     line-height:1;
     color:var(--rust); white-space:nowrap;
@@ -559,7 +565,12 @@
   }
   .proj-dates{
     display:flex; justify-content:space-between;
-    margin:var(--sp-1) 0 0;
+    /* Longhand, not `margin: var(--sp-1) 0 0`. A name inside a shorthand is
+       resolved late and some parsers drop it, leaving 0 — the same trap the
+       `flex` shorthand sprang on the block right of the bar. Today's date is
+       placed against this exact number, so it has to be readable. */
+    margin-top:var(--sp-1);
+    margin-bottom:0;
     line-height:1;
     font-family:var(--font-ui); font-size:var(--fs-cell); color:var(--text-muted);
   }
@@ -2007,7 +2018,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-31e</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-31h</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -4311,7 +4322,11 @@ function timelineHtml(code, range){
    the browser in the system language and can't be restyled. */
 const DP_MONTHS = ['January','February','March','April','May','June',
                    'July','August','September','October','November','December'];
-const DP_DOW = ['S','M','T','W','T','F','S'];
+/* Monday first, as every other calendar in both apps reads — the month over
+   the projects, the Voca grid and the Para grid all start on Monday. This one
+   started on Sunday, which put the same date in a different column depending on
+   which calendar was being looked at. */
+const DP_DOW = ['M','T','W','T','F','S','S'];
 let dpTargetId = null;
 let dpYear = 0, dpMonth = 0;   // month is 0-based
 
@@ -4412,7 +4427,10 @@ function renderDatePicker(){
     DP_DOW.map(d => `<span class="dp-dow">${d}</span>`).join('');
 
   const first = new Date(dpYear, dpMonth, 1);
-  const lead = first.getDay();                       // blanks before the 1st
+  /* Blanks before the 1st, counted from Monday. getDay() is 0 on a Sunday, so
+     the shift turns Sunday from the first column into the seventh. The same
+     expression the other calendars use. */
+  const lead = (first.getDay() + 6) % 7;
   const daysInMonth = new Date(dpYear, dpMonth+1, 0).getDate();
   const prevDays = new Date(dpYear, dpMonth, 0).getDate();
   const chosen = dateFieldCode(dpTargetId);
