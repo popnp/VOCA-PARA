@@ -2018,7 +2018,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-31h</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-08-07d</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2048,7 +2048,9 @@ if('serviceWorker' in navigator){
     <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="exportTxt()">Export .txt</button>
       <button class="btn btn-ghost" onclick="openImport()">Edit by txt manually</button>
+      <button class="btn btn-ghost" onclick="openRestorePicker()">Import .txt</button>
     </div>
+    <input type="file" id="restoreFile" accept=".txt,text/plain" style="display:none;" onchange="handleRestoreFile(this)">
     <p class="hint" id="backupStatus" style="margin-top:8px;"></p>
     <div id="importWrap" style="display:none; margin-top:var(--sp-3);">
       <textarea id="importArea" rows="12" spellcheck="false"></textarea>
@@ -2457,6 +2459,30 @@ const appStorage = (function(){
         }
       }catch(e){}
       return out;
+    },
+
+    /* A mark left by a failed write was only ever cleared by saving that same
+       thing again, so a minute without signal could leave the banner up for
+       days while the work sat here unsent. This pushes every marked key once.
+       One failure stops the run: if the server cannot be reached the rest will
+       fail too, and the marks are the thing protecting the work. */
+    async flushUnsent(){
+      let sent = 0;
+      for(const key of appStorage.unsentKeys()){
+        const local = localGet(key);
+        // Marked, but there is nothing here to send. The mark means nothing.
+        if(!local){ setDirty(key, false); continue; }
+        try{
+          await cloudSet(key, local.value);
+          setDirty(key, false);
+          sent++;
+        }catch(e){
+          console.warn('Retry failed, mark kept', key, e);
+          return sent;
+        }
+      }
+      if(sent) cloudStatus(true);
+      return sent;
     }
   };
 })();
@@ -2468,9 +2494,10 @@ const syncConflicts = [];
    finding out that a session vanished some days later. */
 function reportSyncTrouble(){
   const unsent = appStorage.unsentKeys();
-  if(!syncConflicts.length && !unsent.length) return;
   const bar = document.getElementById('cloudBanner');
   if(!bar) return;
+  // Runs again after a retry, so it has to be able to take the mark DOWN too.
+  if(!syncConflicts.length && !unsent.length){ bar.style.display = 'none'; return; }
   bar.style.display = '';
   bar.textContent = syncConflicts.length
     ? 'This device had work the server never received, and the server had something different. ' +
@@ -2478,6 +2505,15 @@ function reportSyncTrouble(){
     : 'Some work has not reached the server yet. Stay on this device until the mark at the top clears, ' +
       'or take a backup before opening another one.';
 }
+
+/* At start-up, and again whenever the connection comes back. Without the second
+   one the banner stays up until something is saved by hand, which reads as
+   "still broken" long after it has been fixed. */
+function retryUnsent(){
+  if(!appStorage.flushUnsent) return;
+  appStorage.flushUnsent().then(n => { if(n) reportSyncTrouble(); }).catch(()=>{});
+}
+window.addEventListener('online', retryUnsent);
 
 let cloudOnline = true;
 function cloudStatus(ok){
@@ -4268,12 +4304,15 @@ function checkCellsHtml(code){
   }).join('');
 }
 
-/* Hours that aren't study time — before waking, lunch, and after dinner.
-   Shaded so the working stretches of the day stand out between them. */
+/* Hours that aren't study time — before the day starts, lunch, and after
+   dinner. Shaded so the working stretches stand out between them.
+   The gap at 07:30–08:30 is left unshaded: it is worked in, even though the
+   day proper does not start until 09:00. */
 const OFF_HOURS = [
-  {s:0,      e:10*60},   // up to 10:00
-  {s:12*60,  e:13*60},   // 12:00 – 13:00
-  {s:19*60,  e:24*60}    // 19:00 onwards
+  {s:0,          e:7*60+30},  // up to 07:30
+  {s:8*60+30,    e:9*60},     // 08:30 – 09:00
+  {s:12*60,      e:13*60},    // 12:00 – 13:00
+  {s:19*60,      e:24*60}     // 19:00 onwards
 ];
 
 function offHourBandsHtml(range){
@@ -6335,6 +6374,33 @@ function closeImport(){
   document.getElementById('importWrap').style.display = 'none';
 }
 
+/* Reading a backup file in. It does NOT restore on its own — the text lands in
+   the box above Save, which is the path that already exists and already asks
+   before replacing anything. One button to pick the file, then the same two
+   presses as always. */
+function openRestorePicker(){
+  const f = document.getElementById('restoreFile');
+  if(f) f.click();
+}
+
+function handleRestoreFile(input){
+  const file = input.files && input.files[0];
+  // Cleared so that picking the SAME file again still fires a change event.
+  input.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    document.getElementById('importArea').value = String(reader.result || '');
+    document.getElementById('importWrap').style.display = 'block';
+    document.getElementById('importMsg').textContent = file.name + ' loaded. Check it, then press Save.';
+  };
+  reader.onerror = () => {
+    document.getElementById('importWrap').style.display = 'block';
+    document.getElementById('importMsg').textContent = 'That file could not be read.';
+  };
+  reader.readAsText(file);
+}
+
 /* The fields of a marked line. The marker is a field of its own, so it is the
    marker and ONE separator that come off — not "the marker and any whitespace".
    Stripping with a whitespace pattern ate the tab after the marker as well, and
@@ -6688,6 +6754,7 @@ Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActiviti
   // The middle page is the one that opens.
   setPane(1);
   reportSyncTrouble();
+  retryUnsent();
   document.getElementById('mainHeader').style.display = '';
   renderGroupRow();
   setMode('check');

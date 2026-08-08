@@ -746,6 +746,9 @@
     margin-bottom:14px;
     position:relative;
   }
+  /* The card's tag, at the very top of the card. `.flashcard` is a flex column,
+     so this margin does NOT collapse with anything under it — 16px is 16px. */
+  .quiz-tag-row{margin-bottom:var(--sp-4);}
   .prompt-text{
     font-family:var(--font-ui);
     font-size:var(--fs-display);
@@ -2117,7 +2120,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-07-31h</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-08-07d</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -2169,8 +2172,18 @@ if('serviceWorker' in navigator){
         <div class="actions" style="margin-top:8px;">
           <button class="btn btn-primary" onclick="backupAll()">Backup</button>
           <button class="btn btn-ghost" onclick="openEditByTxt()">Edit by txt manually</button>
+          <button class="btn btn-ghost" onclick="openRestorePicker()">Import .txt</button>
         </div>
+        <input type="file" id="restoreFile" accept=".txt,text/plain" style="display:none;" onchange="handleRestoreFile(this)">
         <p id="backupStatus" class="hint" style="margin:8px 0 0;"></p>
+
+        <div id="restoreWrap" style="display:none; margin-top:var(--sp-3);">
+          <p id="restoreMsg" class="hint" style="margin:0 0 var(--sp-2);"></p>
+          <div class="actions">
+            <button class="btn btn-primary" id="restoreGoBtn" onclick="restoreFromFile(this)">Restore</button>
+            <button class="btn btn-ghost" onclick="cancelRestore()">Cancel</button>
+          </div>
+        </div>
 
         <div id="editByTxtWrap" style="display:none; margin-top:16px;">
           <div class="btn-group" id="editScopeRow" style="margin-bottom:var(--sp-3);">
@@ -2309,6 +2322,7 @@ if('serviceWorker' in navigator){
       </div>
 
       <div class="flashcard" id="flashcard" onclick="flipCard()">
+        <div class="quiz-tag-row" id="quizTagRow" style="display:none;"><div class="tagbadge" id="quizTag"></div></div>
         <div class="prompt-text" id="frontPrompt"></div>
         <p class="example-hint" id="exampleHint" style="display:none;"></p>
 
@@ -2935,6 +2949,30 @@ const appStorage = (function(){
         }
       }catch(e){}
       return out;
+    },
+
+    /* A mark left by a failed write was only ever cleared by saving that same
+       thing again, so a minute without signal could leave the banner up for
+       days while the work sat here unsent. This pushes every marked key once.
+       One failure stops the run: if the server cannot be reached the rest will
+       fail too, and the marks are the thing protecting the work. */
+    async flushUnsent(){
+      let sent = 0;
+      for(const key of appStorage.unsentKeys()){
+        const local = localGet(key);
+        // Marked, but there is nothing here to send. The mark means nothing.
+        if(!local){ setDirty(key, false); continue; }
+        try{
+          await cloudSet(key, local.value);
+          setDirty(key, false);
+          sent++;
+        }catch(e){
+          console.warn('Retry failed, mark kept', key, e);
+          return sent;
+        }
+      }
+      if(sent) cloudStatus(true);
+      return sent;
     }
   };
 })();
@@ -2946,9 +2984,10 @@ const syncConflicts = [];
    out that a session vanished some days later, when nothing can be done. */
 function reportSyncTrouble(){
   const unsent = appStorage.unsentKeys ? appStorage.unsentKeys() : [];
-  if(!syncConflicts.length && !unsent.length) return;
   const bar = document.getElementById('cloudBanner');
   if(!bar) return;
+  // Runs again after a retry, so it has to be able to take the mark DOWN too.
+  if(!syncConflicts.length && !unsent.length){ bar.style.display = 'none'; return; }
   bar.style.display = '';
   bar.textContent = syncConflicts.length
     ? 'This device had work the server never received, and the server had something different. ' +
@@ -2956,6 +2995,15 @@ function reportSyncTrouble(){
     : 'Some work has not reached the server yet. Stay on this device until the mark at the top clears, ' +
       'or take a backup before opening another one.';
 }
+
+/* At start-up, and again whenever the connection comes back. Without the second
+   one the banner stays up until something is saved by hand, which reads as
+   "still broken" long after it has been fixed. */
+function retryUnsent(){
+  if(!appStorage.flushUnsent) return;
+  appStorage.flushUnsent().then(n => { if(n) reportSyncTrouble(); }).catch(()=>{});
+}
+window.addEventListener('online', retryUnsent);
 
 // Shows a small banner when the device is working offline, so a long stretch of
 // unsynced edits can't go unnoticed.
@@ -4573,6 +4621,18 @@ function renderQuizCard(){
   const validExamples = (card.examples||[]).filter(ex => parseExampleBlank(ex, card.word).ok);
   const pickedExample = validExamples.length>0 ? validExamples[Math.floor(Math.random()*validExamples.length)] : '';
   const target = pickedExample ? parseExampleBlank(pickedExample, card.word) : {ok:false};
+
+  /* The card's own tag (`260727-R`), drawn once at the top of the card. The
+     question stays on screen when the card is flipped and the answer appears
+     under it, so one badge sits above both. Same `.tagbadge` as the word list
+     and the detail panel — nothing new drawn. An untagged card shows nothing
+     rather than an empty box. */
+  const quizTagRow = document.getElementById('quizTagRow');
+  const quizTagEl = document.getElementById('quizTag');
+  if(quizTagRow && quizTagEl){
+    quizTagEl.textContent = card.tag || '';
+    quizTagRow.style.display = card.tag ? 'block' : 'none';
+  }
 
   document.getElementById('quizProgress').textContent = `${quizIndex+1} / ${quizQueue.length}`;
   setQuizProgress(quizIndex + 1, quizQueue.length);
@@ -6501,6 +6561,135 @@ function backupAll(){
                    `\n\n\n===== MEMO =====\n\n${memoText}`;
   downloadText(`Backup_${dateSuffix}.txt`, combined);
   markBackupDone();
+}
+
+/* ---- Restoring from a backup file -------------------------------------
+   The export is three sections under `===== VOCA =====` and friends. Each is
+   read on its own, so a file that is missing one leaves that section of the app
+   exactly as it was rather than emptying it — a half file must not be able to
+   delete what it does not mention.
+   Nothing is written on picking the file. The counts of what is there now and
+   what is about to replace it are put on screen, and the button has to be
+   pressed twice. */
+let pendingRestore = null;
+
+function openRestorePicker(){
+  const f = document.getElementById('restoreFile');
+  if(f) f.click();
+}
+
+function handleRestoreFile(input){
+  const file = input.files && input.files[0];
+  // Cleared so that picking the SAME file again still fires a change event.
+  input.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { pendingRestore = readBackupText(String(reader.result || '')); showRestoreSummary(file.name); };
+  reader.onerror = () => { pendingRestore = null; showRestoreError('That file could not be read.'); };
+  reader.readAsText(file);
+}
+
+/* A section absent from the file comes back null, and null is what stops it
+   being touched. An empty section that IS in the file comes back '' — which
+   does mean "make it empty", since that is what the file says. */
+function readBackupText(text){
+  const section = (name) => {
+    const head = new RegExp('^=====[ \t]*' + name + '[ \t]*=====[ \t]*$', 'm');
+    const m = head.exec(text);
+    if(!m) return null;
+    const rest = text.slice(m.index + m[0].length);
+    const next = /^=====[ 	]*[A-Za-z]+[ 	]*=====[ 	]*$/m.exec(rest);
+    return (next ? rest.slice(0, next.index) : rest).trim();
+  };
+  return {voca: section('VOCA'), para: section('PARA'), memo: section('MEMO')};
+}
+
+function showRestoreError(msg){
+  document.getElementById('restoreWrap').style.display = 'block';
+  document.getElementById('restoreMsg').textContent = msg;
+  document.getElementById('restoreGoBtn').style.display = 'none';
+}
+
+function showRestoreSummary(fileName){
+  const wrap = document.getElementById('restoreWrap');
+  const msg = document.getElementById('restoreMsg');
+  const go = document.getElementById('restoreGoBtn');
+  wrap.style.display = 'block';
+  const p = pendingRestore;
+  if(!p || (p.voca === null && p.para === null && p.memo === null)){
+    pendingRestore = null;
+    msg.textContent = fileName + ' — no ===== VOCA / PARA / MEMO ===== section found. Nothing to restore.';
+    go.style.display = 'none';
+    return;
+  }
+  const lines = [];
+  if(p.voca !== null) lines.push('Voca  ' + cards.length + ' \u2192 ' + groupParsedEntries(parseBlockText(p.voca)).length);
+  else lines.push('Voca  ' + cards.length + ' \u2192 untouched (not in the file)');
+  if(p.para !== null) lines.push('Para  ' + paras.length + ' \u2192 ' + parseParaBlockText(p.para).length);
+  else lines.push('Para  ' + paras.length + ' \u2192 untouched (not in the file)');
+  if(p.memo !== null) lines.push('Memo  ' + memos.length + ' \u2192 ' + parseMemoExportText(p.memo).length);
+  else lines.push('Memo  ' + memos.length + ' \u2192 untouched (not in the file)');
+  msg.textContent = fileName + ' \u2014 ' + lines.join('  \u00b7  ');
+  go.style.display = '';
+}
+
+function cancelRestore(){
+  pendingRestore = null;
+  document.getElementById('restoreWrap').style.display = 'none';
+  document.getElementById('restoreMsg').textContent = '';
+}
+
+async function restoreFromFile(el){
+  if(!pendingRestore) return;
+  if(!askConfirmVoca('Replace what is in the app with this file?', el, 'Press again to restore')) return;
+  const p = pendingRestore;
+
+  if(p.voca !== null){
+    cards = groupParsedEntries(parseBlockText(p.voca)).map(item => ({
+      id: Date.now() + Math.random(),
+      word: item.word,
+      meaning: item.meaning,
+      examples: item.examples.slice(),
+      tag: item.tag || '',
+      testHistory: item.testHistory || [],
+      phonetics: item.phonetics || ''
+    }));
+    await saveCards();
+  }
+
+  if(p.para !== null){
+    const old = paras;
+    paras = parseParaBlockText(p.para).map(item => {
+      const {sentences} = buildSentencePairs(item);
+      // Same rule the manual-edit panel uses: a paragraph that is word for word
+      // the one already here keeps the test history it has on THIS device, since
+      // the export does not carry it.
+      const match = old.find(op => op.titleEn === item.titleEn && op.contentEn === item.contentEn);
+      if(match && match.sentences.length === sentences.length){
+        sentences.forEach((s,i) => { s.testHistory = match.sentences[i].testHistory || []; });
+      }
+      return {
+        id: match ? match.id : Date.now() + Math.random(),
+        titleEn: item.titleEn, contentEn: item.contentEn,
+        titleKo: item.titleKo, contentKo: item.contentKo,
+        tag: item.tag || '', sentences
+      };
+    });
+    await pSaveEntries();
+  }
+
+  if(p.memo !== null){
+    memos = parseMemoExportText(p.memo);
+    await saveMemos();
+  }
+
+  pendingRestore = null;
+  document.getElementById('restoreWrap').style.display = 'none';
+  document.getElementById('restoreMsg').textContent = '';
+  renderCalendar();
+  renderCalendarIfParaListOpen();
+  renderMemoList();
+  document.getElementById('backupStatus').textContent = 'Restored from file.';
 }
 
 // ---- Memo: raw text editing ----
@@ -9895,6 +10084,7 @@ Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs(), loadMemos()]).then((
   document.getElementById('mainHeader').style.display = '';
   syncHeaderOffset();
   reportSyncTrouble();
+  retryUnsent();
   switchApp('para');
   // Opens on the list, not on a test. The list is the way in to everything,
   // and a test that starts by itself is a test nobody asked for.
