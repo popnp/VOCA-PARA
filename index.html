@@ -2128,7 +2128,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-08-07e</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-08-07f</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -6908,6 +6908,31 @@ function getParagraphBreakIndices(content){
   return breaks;
 }
 
+/* Abbreviations whose full stop does NOT end a sentence.
+
+   The splitter's rule is "a full stop followed by whitespace or end of line".
+   That is right for `U.S.` — nothing follows the stop but a letter — and wrong
+   for `viz. expenditure`, which it cut in two, leaving the English one sentence
+   longer than the Korean and every pair after it shifted by one.
+
+   `etc.` is deliberately NOT here. It ends a sentence far more often than not,
+   and a wrong exception is worse than a wrong split: a split can be seen in the
+   preview, a swallowed sentence boundary cannot. Adding an entry is one word;
+   the whole list is matched in lower case. */
+const ABBREV_NO_SPLIT = new Set([
+  'e.g.', 'i.e.', 'viz.', 'cf.', 'vs.',
+  'mr.', 'mrs.', 'ms.', 'dr.', 'prof.'
+]);
+
+/* Is the full stop at `pos` the tail of one of those?
+   Walks back over letters and stops, so `e.g.` is read whole rather than as the
+   single letter `g`. */
+function isAbbrevDot(line, pos){
+  let start = pos;
+  while(start > 0 && /[A-Za-z.]/.test(line[start-1])) start--;
+  return ABBREV_NO_SPLIT.has(line.slice(start, pos+1).toLowerCase());
+}
+
 // Korean sentences can carry an invisible-ish history tag right after them, e.g. "문장이다.⟦3,1,0⟧"
 // This lets per-sentence test history round-trip through export/import.
 function splitSentencesWithMeta(text){
@@ -6924,6 +6949,8 @@ function splitSentencesWithMeta(text){
     while(i < n){
       const ch = line[i];
       if(ch === '.' || ch === '!' || ch === '?'){
+        // `viz.` and friends: the stop belongs to the word, not to the sentence.
+        if(ch === '.' && isAbbrevDot(line, i)){ i++; continue; }
         let end = i + 1;
         let testHistory = [];
         let vocabLinks = [];
