@@ -753,6 +753,36 @@
   }
   /* The card's tag, at the very top of the card. `.flashcard` is a flex column,
      so this margin does NOT collapse with anything under it — 16px is 16px. */
+  /* The named lines under a card. Labels only until one is pressed — four of
+     them open at once is the whole card over again, which is the problem this
+     is for. Same 0.5px rule and 16px lettering as every other list row. */
+  .extras-block{
+    margin-top:var(--sp-4);
+    border-top:0.5px solid #6B6B6B;
+  }
+  .extra-row{border-bottom:0.5px solid var(--paper-line);}
+  .extra-row:last-child{border-bottom:0;}
+  .extra-head{
+    display:flex; align-items:center; justify-content:space-between;
+    width:100%; background:none; border:0; border-radius:0;
+    padding:var(--sp-2) 0; cursor:pointer; text-align:left;
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
+    color:var(--text-dark);
+  }
+  /* The single chevron the whole file uses, turned down; turned up when open. */
+  .extra-chev{
+    display:inline-block; flex:0 0 auto;
+    transform:rotate(90deg);
+    transition:transform .15s;
+  }
+  .extra-row.open .extra-chev{transform:rotate(270deg);}
+  .extra-body{
+    display:none;
+    padding:0 0 var(--sp-2);
+    font-size:var(--fs-label); color:var(--text-muted); line-height:1.5;
+  }
+  .extra-row.open .extra-body{display:block;}
+
   .quiz-tag-row{margin-bottom:var(--sp-4);}
   .prompt-text{
     font-family:var(--font-ui);
@@ -1745,8 +1775,10 @@
   .memo-row:last-child{border-bottom:none;}
 
   /* The paragraph list on the test settings screen. Built like the memo rows —
-     a rule under each, the rating dot first, the title after — but with no
-     chevron: there is nothing to open, only something to choose. */
+     a rule under each, the rating dot first, the title after.
+     A single paragraph carries its rating dot and nothing to open. A series
+     carries a chevron in the dot's place instead, so the two kinds of row still
+     start their titles on the same line. */
   .pick-row{
     display:flex; align-items:center; gap:10px;
     width:100%; text-align:left;
@@ -1788,6 +1820,26 @@
     white-space:nowrap;
     pointer-events:none;
   }
+  /* The series row's chevron. 10px, the dot's width, so a series title and a
+     single paragraph's title begin at the same place. The one chevron this
+     file already draws, turned down; turned up once the series is open. */
+  .pick-chev{
+    width:10px; height:10px; flex:0 0 auto;
+    color:var(--text-muted);
+    transform:rotate(90deg);
+    transition:transform .15s;
+  }
+  .pick-row.open .pick-chev{transform:rotate(270deg);}
+  /* The parts of a series, set in from the title above them by the dot's width
+     and the gap that follows it — the same 10 + 10 the row itself uses, so a
+     part's dot lands under the first letter of the series title. */
+  .pick-child{padding-left:calc(var(--sp-1) + 20px);}
+  /* The rule under the last part belongs to the list, not to the series: it is
+     what separates it from whatever comes next. Only the very last row in the
+     whole list goes without one. */
+  .pick-children .pick-row:last-child{border-bottom:1px solid #111;}
+  #pPickList > .pick-row:last-child,
+  #pPickList > .pick-children:last-child .pick-row:last-child{border-bottom:none;}
   .memo-row:hover{opacity:0.9;}
   .memo-row-title{
     /* No font-size of its own: the word rows don't set one either, so both
@@ -2128,7 +2180,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-08-07f</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-22c</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -2341,6 +2393,7 @@ if('serviceWorker' in navigator){
             <div class="back-phonetics" id="backPhonetics" style="display:none;"></div>
             <div class="back-meaning" id="backMeaning"></div>
             <div class="back-example" id="backExample"></div>
+            <div id="backExtras"></div>
             <div id="backMemoRow" style="display:none; margin-top:10px; text-align:right;"></div>
           </div>
           <div id="backEdit" class="quiz-edit-form" style="display:none;" onclick="event.stopPropagation();">
@@ -3113,7 +3166,35 @@ function saveMemos(){
 
 let saveQueue = Promise.resolve();
 
+/* The red number on the home-screen icon. iOS draws it for web apps added to
+   the Home Screen (16.4 and later); anywhere the call is missing the guard is
+   the whole story and nothing happens.
+
+   It is only ever refreshed while the app is open — there is no background
+   task to recount after it closes. So the figure is "as of the last time this
+   was on screen", which is what it is for. */
+function updateBadge(){
+  if(!('setAppBadge' in navigator)) return;
+  let n = 0;
+  try{ n = badgeCount(); }catch(e){ return; }
+  // Zero clears the badge rather than drawing a nought.
+  const p = n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
+  if(p && p.catch) p.catch(() => {});
+}
+
+/* Words that are not working. The measure is the app's own — `latestTest`, the
+   last five ratings averaged into a bucket — and 2 (unsure) and 3 (unknown)
+   are the two that count. A card never tested comes back null and is left out:
+   it is not failing, it is untried. */
+function badgeCount(){
+  return cards.filter(c => {
+    const b = latestTest(c);
+    return b === 2 || b === 3;
+  }).length;
+}
+
 function saveCards(){
+  updateBadge();
   const payload = JSON.stringify(cards); // snapshot now, in call order
   saveQueue = saveQueue.then(() => performSave(payload));
   return saveQueue;
@@ -3398,6 +3479,7 @@ function parseBlockText(raw){
         examples: buffer.examples,
         testHistory: buffer.testHistory,
         phonetics: buffer.phoneticsLines.join(' ').trim(),
+        extras: buffer.extras,
         tag: currentTag
       });
     }
@@ -3412,7 +3494,7 @@ function parseBlockText(raw){
       flush();
       const parts = line.split('\t').map(s=>s.trim());
       if(parts[0]){
-        entries.push({word:parts[0], meaning:parts[1]||'', examples: parts[2]?[parts[2]]:[], testHistory:null, phonetics:'', tag: parts[3] ? normalizeTag(parts[3]) : currentTag});
+        entries.push({word:parts[0], meaning:parts[1]||'', examples: parts[2]?[parts[2]]:[], testHistory:null, phonetics:'', extras:[], tag: parts[3] ? normalizeTag(parts[3]) : currentTag});
       }
       return;
     }
@@ -3434,6 +3516,18 @@ function parseBlockText(raw){
     const phoneticsCore = line.startsWith('~') ? line.slice(1).trim() : line;
     const isPhoneticsLine = /^\/[^/]+\//.test(phoneticsCore);
 
+    /* A named line: `~어원: ...`, `~말할때: ...`, `~쓸때: ...`, `~내경우: ...`.
+       The NAME is whatever is written, so adding a fifth kind later needs no
+       code here — one rule, any label.
+       Tested only when the phonetics test has already failed, which is what
+       keeps `~/ˈækses/ (동사: ...)` from being read as a label called `/ˈækses/`.
+       The label may not contain a colon or a slash, and is capped at 12
+       characters, so a sentence that happens to begin with `~` and contain a
+       colon much later is not mistaken for one. */
+    const extraMatch = (!isPhoneticsLine && line.startsWith('~'))
+      ? line.slice(1).match(/^\s*([^:：/]{1,12}?)\s*[:：]\s*(.+)$/)
+      : null;
+
     // No blank line was used between words: once a buffer already has example
     // lines and a new plain/phonetics line shows up, that's the start of the next word.
     if(buffer && buffer.examples.length > 0 && !isExampleLine && !isTestLine){
@@ -3441,7 +3535,7 @@ function parseBlockText(raw){
     }
 
     if(!buffer){
-      buffer = {word: line, meaningLines:[], examples:[], testHistory:null, phoneticsLines:[]};
+      buffer = {word: line, meaningLines:[], examples:[], testHistory:null, phoneticsLines:[], extras:[]};
       return;
     }
 
@@ -3458,6 +3552,8 @@ function parseBlockText(raw){
       } else {
         buffer.phoneticsLines.push(core);
       }
+    } else if(extraMatch){
+      buffer.extras.push({label: extraMatch[1].trim(), text: extraMatch[2].trim()});
     } else if(isTestLine){
       const m = line.slice(1).trim().match(/test\s*[:：]?\s*([\d/\s]+)/i);
       if(m){
@@ -3504,11 +3600,12 @@ function groupParsedEntries(entries){
   entries.forEach(item=>{
     const key = item.word.toLowerCase();
     if(!grouped[key]){
-      grouped[key] = {word:item.word, meaning:item.meaning, examples:item.examples.slice(), tag:item.tag, testHistory:item.testHistory, phonetics:item.phonetics||''};
+      grouped[key] = {word:item.word, meaning:item.meaning, examples:item.examples.slice(), tag:item.tag, testHistory:item.testHistory, phonetics:item.phonetics||'', extras:(item.extras||[]).slice()};
     } else {
       if(!grouped[key].meaning && item.meaning) grouped[key].meaning = item.meaning;
       if(!grouped[key].tag && item.tag) grouped[key].tag = item.tag;
       if(!grouped[key].phonetics && item.phonetics) grouped[key].phonetics = item.phonetics;
+      if(!grouped[key].extras.length && (item.extras||[]).length) grouped[key].extras = item.extras.slice();
       if(item.testHistory) grouped[key].testHistory = item.testHistory;
       item.examples.forEach(ex=>{
         if(ex && grouped[key].examples.indexOf(ex) === -1) grouped[key].examples.push(ex);
@@ -3802,12 +3899,13 @@ async function confirmAdd(){
       if(!existing.meaning && item.meaning) existing.meaning = item.meaning;
       if(!existing.tag && item.tag) existing.tag = item.tag;
       if(!existing.phonetics && item.phonetics) existing.phonetics = item.phonetics;
+      if(!(existing.extras||[]).length && (item.extras||[]).length) existing.extras = item.extras.slice();
       if(item.testHistory) existing.testHistory = item.testHistory;
       item.examples.forEach(ex=>{
         if(existing.examples.indexOf(ex) === -1) existing.examples.push(ex);
       });
     } else {
-      cards.push({id: Date.now()+Math.random(), word:item.word, meaning:item.meaning, examples: item.examples.slice(), tag:item.tag||'', testHistory:item.testHistory||[], phonetics:item.phonetics||''});
+      cards.push({id: Date.now()+Math.random(), word:item.word, meaning:item.meaning, examples: item.examples.slice(), tag:item.tag||'', testHistory:item.testHistory||[], phonetics:item.phonetics||'', extras:(item.extras||[]).slice()});
     }
   });
   await saveCards();
@@ -4703,9 +4801,36 @@ function renderQuizCard(){
   setBackMemoRow(card);
 }
 
-/* Lives inside #backView, so the edit form replacing that view takes it away
-   without anything having to remember to hide it. */
+/* One renderer for both places the named lines are drawn — the card's back and
+   the word list's detail panel. The card itself flips on click, so the press
+   has to be stopped here or opening a line turns the card over. */
+function extrasHtml(list){
+  const items = (list||[]).filter(e => e && e.label && e.text);
+  if(!items.length) return '';
+  return '<div class="extras-block">' + items.map(e =>
+    '<div class="extra-row">' +
+      '<button type="button" class="extra-head" onclick="event.stopPropagation(); toggleExtra(this);">' +
+        '<span>' + escapeHtml(e.label) + '</span>' +
+        '<svg class="extra-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+          '<path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/>' +
+        '</svg>' +
+      '</button>' +
+      '<div class="extra-body">' + escapeHtml(e.text) + '</div>' +
+    '</div>').join('') + '</div>';
+}
+
+function toggleExtra(btn){
+  const row = btn.closest('.extra-row');
+  if(row) row.classList.toggle('open');
+}
+
+/* Both live inside #backView, so the edit form replacing that view takes them
+   away without anything having to remember to hide them. Called from the two
+   places that draw the back, which is why the named lines are set here rather
+   than in each of them. */
 function setBackMemoRow(card){
+  const extras = document.getElementById('backExtras');
+  if(extras) extras.innerHTML = extrasHtml(card.extras);
   const row = document.getElementById('backMemoRow');
   if(!row) return;
   const chip = memoLinkChip(card.word, true);
@@ -6149,6 +6274,7 @@ function showDayDetail(code){
             <div class="lbl">Examples</div>
             ${(c.examples||[]).length ? c.examples.map(ex=>`<div class="ex-view-line">${escapeHtml(stripBrackets(ex))}</div>`).join('') : '<p class="hint">No examples</p>'}
           </div>
+          ${extrasHtml(c.extras)}
           <div class="dwc-bottom">
             <button class="btn btn-ghost" onclick="enableEdit(${c.id})">Edit</button>
             <div class="dwc-history">Test history<br>${testHistoryLabel(c)}</div>
@@ -6389,6 +6515,12 @@ function cardToBlock(c){
     block += `~${c.phonetics}\n`;
   }
   block += `${c.meaning}\n`;
+  /* Written back in the shape they were read in, so a backup taken before this
+     build and one taken after are the same file. Data rule: a new field goes
+     into the export in the commit that creates it. */
+  (c.extras||[]).forEach(e=>{
+    if(e && e.label && e.text) block += `~${e.label}: ${e.text}\n`;
+  });
   if(c.testHistory && c.testHistory.length > 0){
     block += `*test: ${c.testHistory.slice(-5).join('/')}\n`;
   }
@@ -6471,7 +6603,8 @@ async function saveManualEdit(){
     examples: item.examples.slice(),
     tag: item.tag || '',
     testHistory: item.testHistory || [],
-    phonetics: item.phonetics || ''
+    phonetics: item.phonetics || '',
+    extras: (item.extras || []).slice()
   }));
 
   // Determine which categories are currently shown (so Save only replaces
@@ -6660,7 +6793,8 @@ async function restoreFromFile(el){
       examples: item.examples.slice(),
       tag: item.tag || '',
       testHistory: item.testHistory || [],
-      phonetics: item.phonetics || ''
+      phonetics: item.phonetics || '',
+      extras: (item.extras || []).slice()
     }));
     await saveCards();
   }
@@ -8405,18 +8539,105 @@ function pUpdatePickList(){
   if(!ordered.some(p => String(p.id) === String(pPickChosenId))){
     pPickChosenId = ordered[0].id;
   }
-  wrap.innerHTML = ordered.map(p => {
-    // The same colour the list and the calendar give this paragraph.
-    const cls = pWordColorClass(p);
-    const dot = '<span class="status-dot ' + (cls || 'no-color') + '"></span>';
-    const on = String(p.id) === String(pPickChosenId);
-    return '<button class="pick-row' + (on ? ' selected' : '') + '"' +
-             ' onclick="pPickChoose(\'' + p.id + '\')">' +
-             dot +
-             pickTitleHtml(p.titleEn) +
-             (p.tag ? '<span class="pick-tag">' + escapeHtml(p.tag) + '</span>' : '') +
-           '</button>';
+  const groups = pickGroups(ordered);
+
+  /* A series holding the chosen paragraph opens itself. Left shut, the one row
+     that says what Start will open would be hidden behind it. */
+  groups.forEach(g => {
+    if(g.items.length > 1 && g.items.some(it => String(it.p.id) === String(pPickChosenId))){
+      pPickOpen.add(g.base);
+    }
+  });
+
+  wrap.innerHTML = groups.map(g => {
+    // One paragraph on its own stays exactly the row it was.
+    if(g.items.length === 1) return pickRowHtml(g.items[0].p, null);
+
+    const open = pPickOpen.has(g.base);
+    const holds = g.items.some(it => String(it.p.id) === String(pPickChosenId));
+    return '<button class="pick-row pick-group' + (open ? ' open' : '') +
+             (holds ? ' selected' : '') + '"' +
+             ' data-base="' + escapeAttr(g.base) + '"' +
+             ' onclick="pPickToggleGroup(this)">' +
+             PICK_CHEV +
+             '<span class="pick-row-title"><span class="pick-title-main">' +
+               escapeHtml(g.base) + '</span></span>' +
+           '</button>' +
+           '<div class="pick-children"' + (open ? '' : ' style="display:none;"') + '>' +
+             g.items.map(it => pickRowHtml(it.p, it.part)).join('') +
+           '</div>';
   }).join('');
+}
+
+/* The one chevron this file draws, at the dot's size. */
+const PICK_CHEV = '<svg class="pick-chev" width="10" height="10" viewBox="0 0 24 24"' +
+  ' aria-hidden="true" focusable="false"><path d="M7 3.5 L18.5 12 L7 20.5"' +
+  ' fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square"' +
+  ' stroke-linejoin="miter"/></svg>';
+
+/* Which series are open. Kept outside the render so a change of filter does not
+   fold them all shut again. Keyed by the title they share. */
+const pPickOpen = new Set();
+
+/* A series is one row, not five. Parts are recognised by the same trailing
+   number `pickTitleHtml` already splits off, so a title that does not end in
+   one — `Plastic`, `Too Much World - Is this...` — is never joined to anything
+   and keeps its own row.
+   Groups come out in the order their newest part arrived, which is the order
+   the list was already in; the parts inside a group read 1, 2, 3, because that
+   is the order they are meant to be read in. */
+function pickGroups(ordered){
+  const groups = [];
+  const seen = {};
+  ordered.forEach(p => {
+    const m = /^(.*?)(\s*[-\u2013\u2014]\s*\d+)$/.exec(String(p.titleEn || ''));
+    const base = m ? m[1] : String(p.titleEn || '');
+    // No part number: its own key, so two untitled-but-identical rows cannot
+    // collapse into each other either.
+    const key = m ? 'g:' + base : 'one:' + p.id;
+    if(!seen[key]){
+      seen[key] = {base: base, items: []};
+      groups.push(seen[key]);
+    }
+    seen[key].items.push({
+      p: p,
+      part: m ? m[2].trim() : '',
+      n: m ? parseInt(m[2].replace(/[^0-9]/g, ''), 10) : 0
+    });
+  });
+  groups.forEach(g => g.items.sort((a, b) => a.n - b.n));
+  return groups;
+}
+
+/* One selectable row. `part` null means it stands alone and shows its whole
+   title; otherwise it is one of a series and shows only which part it is, the
+   series title being the row above it. */
+function pickRowHtml(p, part){
+  const cls = pWordColorClass(p);
+  const dot = '<span class="status-dot ' + (cls || 'no-color') + '"></span>';
+  const on = String(p.id) === String(pPickChosenId);
+  const title = (part === null)
+    ? pickTitleHtml(p.titleEn)
+    : '<span class="pick-row-title"><span class="pick-title-tail">' +
+        escapeHtml(part) + '</span></span>';
+  return '<button class="pick-row' + (part === null ? '' : ' pick-child') +
+           (on ? ' selected' : '') + '"' +
+           ' onclick="pPickChoose(\'' + p.id + '\')">' +
+           dot + title +
+           (p.tag ? '<span class="pick-tag">' + escapeHtml(p.tag) + '</span>' : '') +
+         '</button>';
+}
+
+/* Opening and shutting is done to the rows in place rather than by drawing the
+   list again: the list can be long, and redrawing it would jump the screen back
+   to the top under the finger. */
+function pPickToggleGroup(btn){
+  const base = btn.getAttribute('data-base') || '';
+  if(pPickOpen.has(base)) pPickOpen.delete(base); else pPickOpen.add(base);
+  const open = pPickOpen.has(base);
+  btn.classList.toggle('open', open);
+  const box = btn.nextElementSibling;
+  if(box && box.classList.contains('pick-children')) box.style.display = open ? '' : 'none';
 }
 
 /* On a narrow screen a title is cut with an ellipsis, and a series would lose
@@ -8436,7 +8657,14 @@ let pPickChosenId = null;
 function pPickChoose(id){
   pPickChosenId = id;
   document.querySelectorAll('#pPickList .pick-row').forEach(b => {
-    b.classList.toggle('selected', b.getAttribute('onclick').indexOf("'" + id + "'") !== -1);
+    const oc = b.getAttribute('onclick') || '';
+    b.classList.toggle('selected', oc.indexOf("'" + id + "'") !== -1);
+  });
+  /* A series wears the mark too while it is shut, so folding one away does not
+     make the choice look as though it had been lost. */
+  document.querySelectorAll('#pPickList .pick-group').forEach(g => {
+    const box = g.nextElementSibling;
+    g.classList.toggle('selected', !!(box && box.querySelector('.pick-row.selected')));
   });
 }
 
@@ -9584,6 +9812,7 @@ function upsertVocabCard(item, tag){
     (item.examples||[]).forEach(ex=>{
       if(ex && existing.examples.indexOf(ex) === -1) existing.examples.push(ex);
     });
+    if(!(existing.extras||[]).length && (item.extras||[]).length) existing.extras = item.extras.slice();
   } else {
     cards.push({
       id: Date.now() + Math.random(),
@@ -9592,7 +9821,8 @@ function upsertVocabCard(item, tag){
       examples: (item.examples||[]).slice(),
       tag: tag || '',
       testHistory: [],
-      phonetics: item.phonetics || ''
+      phonetics: item.phonetics || '',
+      extras: (item.extras || []).slice()
     });
   }
 }
@@ -10120,6 +10350,7 @@ Promise.all([pLoadEntries(), loadCards(), loadVoicePrefs(), loadMemos()]).then((
   syncHeaderOffset();
   reportSyncTrouble();
   retryUnsent();
+  updateBadge();
   switchApp('para');
   // Opens on the list, not on a test. The list is the way in to everything,
   // and a test that starts by itself is a test nobody asked for.

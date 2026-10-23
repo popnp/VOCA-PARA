@@ -2018,7 +2018,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-08-07f</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-22c</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -5739,7 +5739,30 @@ async function loadData(){
   }
 }
 
+/* The red number on the home-screen icon. iOS draws it for web apps added to
+   the Home Screen (16.4 and later); anywhere the call is missing the guard is
+   the whole story and nothing happens.
+
+   It is only ever refreshed while the app is open — there is no background
+   task to recount after it closes. So the figure is "as of the last time this
+   was on screen", which is what it is for. */
+function updateBadge(){
+  if(!('setAppBadge' in navigator)) return;
+  let n = 0;
+  try{ n = badgeCount(); }catch(e){ return; }
+  // Zero clears the badge rather than drawing a nought.
+  const p = n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
+  if(p && p.catch) p.catch(() => {});
+}
+
+/* What is still open today. Ticking a line takes it out of the count at once,
+   since every change to the list comes through saveTodos below. */
+function badgeCount(){
+  return todosFor(todayCode()).filter(t => !t.done).length;
+}
+
 async function saveTodos(){
+  updateBadge();
   try{
     await appStorage.set(TODO_KEY, JSON.stringify(todos));
   }catch(e){
@@ -6745,7 +6768,7 @@ function dayRollTick(){
   const now = todayCode();
   if(now === lastSeenCode) return;
   lastSeenCode = now;
-  applyRoutines().then(() => renderDays());
+  applyRoutines().then(() => { renderDays(); updateBadge(); });
 }
 setInterval(() => { moveNowMarker(); dayRollTick(); }, 30000);
 
@@ -6754,6 +6777,7 @@ Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActiviti
   // The middle page is the one that opens.
   setPane(1);
   reportSyncTrouble();
+  updateBadge();
   retryUnsent();
   document.getElementById('mainHeader').style.display = '';
   renderGroupRow();
