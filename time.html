@@ -242,7 +242,14 @@
   /* The strip itself reaches the edges of the window so that one page — the
      board — can use all of it. The other three put the page's own margin back
      on their own content, so nothing about them moves. */
-  .pane{flex:0 0 100%; min-width:0; padding-left:var(--page-pad); padding-right:var(--page-pad);}
+  .pane{
+    flex:0 0 100%; min-width:0;
+    padding-left:var(--page-pad); padding-right:var(--page-pad);
+    /* `clip` rather than `hidden`: hidden would make each page a scroll box
+       and cut its own height off, while clip only trims what reaches past
+       the sides. A table inside that scrolls sideways still scrolls. */
+    overflow-x:clip;
+  }
   #view-cal .pane-view{
     margin-left:calc(var(--page-pad) * -1);
     margin-right:calc(var(--page-pad) * -1);
@@ -425,7 +432,7 @@
     display:flex; align-items:center; justify-content:center;
   }
   .ptask-add-row{margin-top:var(--sp-1);}
-  .proj-block{margin-top:var(--sp-6);}
+  .proj-block{margin-top:var(--sp-6); padding-top:var(--sp-5);}
   .proj-head{
     display:flex; align-items:center; justify-content:space-between;
     margin-top:var(--sp-2);
@@ -438,6 +445,13 @@
   .proj-name{
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
     color:#111; flex:1; min-width:0;
+    /* Without this it is as wide as its words: a button is an inline-block,
+       its parent here is a plain block, and `flex` and `min-width` are both
+       instructions to a flex parent that is not there. So `overflow:hidden`
+       below had nothing to cut against and a long name ran off the page —
+       onto the board beside it, where part of it showed as a line of text
+       nobody could place. */
+    max-width:100%;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     background:none; border:none; padding:0; text-align:left; cursor:pointer;
   }
@@ -1819,8 +1833,20 @@
   .cal-cell{cursor:pointer;}
   .cal-cell.empty{cursor:default;}
 
-  .dlog{
+  /* The rule runs the width of the window rather than the width of the
+     reading column: it divides the page into bands — the month, the day, the
+     work that runs across many days — and a band is as wide as the page. The
+     writing inside stays in the column, so only the line reaches the edges.
+     The two rules are written once, here, and the project block below takes
+     the same ones. */
+  .page-rule{
     border-top:1px solid #111;
+    margin-left:calc(var(--page-pad) * -1);
+    margin-right:calc(var(--page-pad) * -1);
+    padding-left:var(--page-pad);
+    padding-right:var(--page-pad);
+  }
+  .dlog{
     margin-top:var(--sp-4); padding-top:var(--sp-3);
   }
   .dlog-head{
@@ -1979,10 +2005,10 @@
        than at the top of it, with the slack falling evenly above and below. */
     display:flex; flex-direction:column; justify-content:center;
     position:relative;
-    /* A hairline, which the couple app does without: there the page is black
-       and white paper is obvious. Here the page is white too, and an
-       ungrouped note would be a note-shaped nothing. */
-    border:0.5px solid rgba(0,0,0,0.14); border-radius:0;
+    /* No outline. It was there for a note on white paper, which was the
+       colour an ungrouped note used to be drawn in; every note stands in a
+       group now and every group has a colour of its own. */
+    border:none; border-radius:0;
     /* The padding goes with the paper, or a note at half size reads as a
        full-size margin with a few words trapped in the middle of it. */
     padding:calc(var(--sp-4) * var(--pi-z));
@@ -2255,9 +2281,9 @@ if('serviceWorker' in navigator){
           <div id="projCalGrid" class="cal-grid"></div>
           <!-- What was on that day and what came of it. Hidden until a day
                is pressed; the ✕ puts it away again. -->
-          <div id="dayLogBox" class="dlog" style="display:none;"></div>
+          <div id="dayLogBox" class="dlog page-rule" style="display:none;"></div>
         </div>
-        <div class="proj-block">
+        <div class="proj-block page-rule">
       <div id="projList"></div>
       <div class="proj-head">
         <span style="flex:1;"></span>
@@ -2385,7 +2411,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-27f</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-27i</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -7241,6 +7267,7 @@ async function applyImport(){
     Object.assign({}, nt, {gid: gids[nt.gid] ? nt.gid : ''}));
   noteEditId = null;
   groupEditId = null;
+  noteGroupsFix();
   calPickedCode = '';
   await saveDayLog();
   await saveNotes();
@@ -7735,10 +7762,35 @@ let groupColors = GROUP_COLORS_DEF.slice();
 const UNGROUPED_COLOR = 'FFFFFF';
 
 function groupColor(gid){
-  if(!gid) return UNGROUPED_COLOR;
   const at = noteGroups.findIndex(g => g.id === gid);
-  if(at === -1) return UNGROUPED_COLOR;
+  if(at === -1) return groupColors[0] || UNGROUPED_COLOR;
   return groupColors[at % groupColors.length] || UNGROUPED_COLOR;
+}
+
+/* Every note sits under a divider, and the first divider is a divider like
+   any other — it has a name and it takes the first of the papers. It used to
+   be a nameless block of white above the first rule, which left the top of
+   the board as the one part that could not be labelled or coloured.
+
+   Notes written before there was a divider, and notes whose divider has gone,
+   are gathered into one at the top. Called wherever the board is drawn, so a
+   store written by an earlier build opens straight into the new shape. */
+function noteGroupsFix(){
+  const known = {};
+  noteGroups.forEach(g => { known[g.id] = true; });
+  const loose = notes.filter(nt => !known[nt.gid]);
+  if(loose.length){
+    const first = {id: noteUid(), name: '그룹 1'};
+    noteGroups.unshift(first);
+    loose.forEach(nt => { nt.gid = first.id; });
+    return true;
+  }
+  /* An empty board still needs somewhere to put the first note. */
+  if(!noteGroups.length){
+    noteGroups.push({id: noteUid(), name: '그룹 1'});
+    return true;
+  }
+  return false;
 }
 
 /* The six, as they are set. Changing one reaches every group standing on it
@@ -7999,17 +8051,9 @@ function renderNotes(){
   const stack = document.getElementById('noteStack');
   if(!stack) return;
   noteApplyView();
+  if(noteGroupsFix()) saveNotes();
 
   let html = '';
-  /* Anything written before the first divider stands at the top with no rule
-     over it — a board that has never been divided is one run of paper. */
-  const loose = notesIn('');
-  if(loose.length || !noteGroups.length){
-    html += '<div class="pi-row">' +
-      loose.map((n, i) => noteHtml(n, i === loose.length - 1)).join('') +
-      (loose.length ? '' : noteAddBtnHtml('')) +
-    '</div>';
-  }
   noteGroups.forEach(g => {
     const ns = notesIn(g.id);
     html += groupBarHtml(g);
@@ -8019,7 +8063,7 @@ function renderNotes(){
     '</div>';
   });
   html += '<div class="ng-foot">' +
-    '<button class="tool-btn" onclick="groupAdd()">+ Group</button>' +
+    '<button class="tool-btn" onclick="groupAdd()">+ 그룹</button>' +
   '</div>';
   stack.innerHTML = html;
 }
@@ -8036,7 +8080,8 @@ function noteOpen(id){
 /* A new note appears straight away, already open to be written on. Left
    empty, it is taken away again when it closes. */
 function noteAdd(gid){
-  const note = {id: noteUid(), gid: gid || '', color: '', lines: []};
+  noteGroupsFix();
+  const note = {id: noteUid(), gid: gid || (noteGroups[0] || {}).id || '', color: '', lines: []};
   notes.push(note);
   noteOpen(note.id);
   saveNotes();
@@ -8101,7 +8146,7 @@ function noteDelete(el, id){
 
 /* ---- a group ----------------------------------------------------------- */
 function groupAdd(){
-  const g = {id: noteUid(), name: 'Group ' + (noteGroups.length + 1)};
+  const g = {id: noteUid(), name: '그룹 ' + (noteGroups.length + 1)};
   noteGroups.push(g);
   groupEditId = g.id;
   noteEditId = null;
@@ -8131,12 +8176,18 @@ function groupRename(el, id){
    come back up to the top of the board rather than disappearing with a name
    nobody meant to delete twice. */
 function groupDelete(el, id){
-  if(!askConfirm('Delete this group? Its notes move to the top.', el,
-                 'Press again to delete')) return;
+  if(!askConfirm('이 그룹을 지웁니다. 안의 포스트잇은 첫 그룹으로 옮겨집니다.', el,
+                 '한 번 더 누르면 지웁니다')) return;
   const at = noteGroups.findIndex(g => g.id === id);
   if(at === -1) return;
   noteGroups.splice(at, 1);
-  notes.forEach(n => { if(n.gid === id) n.gid = ''; });
+  /* The notes are not deleted with the name: they go to whichever divider is
+     left, or to a new first one if that was the last. */
+  const orphans = notes.filter(n => n.gid === id);
+  if(orphans.length){
+    if(!noteGroups.length) noteGroups.push({id: noteUid(), name: '그룹 1'});
+    orphans.forEach(n => { n.gid = noteGroups[0].id; });
+  }
   groupEditId = null;
   renderNotes();
   saveNotes();
