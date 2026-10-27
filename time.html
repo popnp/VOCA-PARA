@@ -47,6 +47,11 @@
     /* The date column in the day table. The to-do rows and the add line both
        measure off this, so the three stay in one column. */
     --day-col:64px;
+    /* The margin that makes the reading column: what is left of the window
+       either side of --content-w, never less than 16. Written out three times
+       before this; one name now, because the board has to put it back on the
+       pages that keep it and take it off the one that does not. */
+    --page-pad:max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px));
   }
   /* Activity colours live in the JS DEFAULT_ACTIVITIES array (single source of
      truth, keyed by id). The former --c-* CSS vars were unused and had drifted
@@ -61,7 +66,7 @@
     min-height:100vh;
     /* Body owns the gap under the header — one number for every screen, the
        same one Voca/Para uses. */
-    padding:calc(var(--header-h, 60px) + var(--gap-top)) max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px)) 40px;
+    padding:calc(var(--header-h, 60px) + var(--gap-top)) var(--page-pad) 40px;
   }
 
   /* ---- Header: mirrors the Voca/Para app so the two feel like one system ---- */
@@ -69,7 +74,7 @@
     position:fixed;
     top:0; left:0;
     width:var(--vw);
-    padding:0 max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px)) 0;
+    padding:0 var(--page-pad) 0;
     background:transparent;
     z-index:50;
   }
@@ -234,7 +239,14 @@
     transition:transform .24s cubic-bezier(.4,0,.2,1);
     will-change:transform;
   }
-  .pane{flex:0 0 100%; min-width:0;}
+  /* The strip itself reaches the edges of the window so that one page — the
+     board — can use all of it. The other three put the page's own margin back
+     on their own content, so nothing about them moves. */
+  .pane{flex:0 0 100%; min-width:0; padding-left:var(--page-pad); padding-right:var(--page-pad);}
+  #view-cal .pane-view{
+    margin-left:calc(var(--page-pad) * -1);
+    margin-right:calc(var(--page-pad) * -1);
+  }
   /* Which page, and a way to get there without swiping. Two short rules rather
      than circles: the app draws one round thing only, the activity dot. */
   /* Above the pages, not below them: the table page is long and its marks were
@@ -1748,7 +1760,7 @@
     font-family:var(--font-ui);
     font-size:var(--fs-label);
     margin:var(--sp-6) 0 0;
-    padding:0 max(16px, calc((var(--vw) - var(--content-w)) / 2 + 16px));
+    padding:0 var(--page-pad);
   }
   textarea{
     width:100%;
@@ -1759,6 +1771,291 @@
     border:0.5px solid #111;
     border-radius:0;
   }
+  /* ---- the day's own record, on the projects calendar ---- */
+  /* The cell grew from one figure to four things, so it gets the room. Two
+     lines of errands at 11px, the figure above them and the marks below. */
+  .cal-cell{min-height:84px;}
+  .cal-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:3px; width:100%;
+  }
+  .cal-head .cal-daynum{flex:0 0 auto; margin-bottom:0;}
+  /* Cut at the edge rather than wrapped: a long name must not cost the cell
+     a line it needs for what is on that day. */
+  .cal-holi{
+    flex:0 1 auto; min-width:0;
+    font-size:var(--fs-tick); font-weight:400; line-height:1.2;
+    color:var(--rust);
+    white-space:nowrap; overflow:hidden; text-align:right;
+  }
+  /* Two lines, cut at the end of the second. `text-overflow` counts one line
+     only, so the box model that can count lines is the one used here. */
+  .cal-sched{
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+    font-size:11px; font-weight:400; line-height:1.3;
+    color:#111; margin-top:2px;
+    overflow-wrap:anywhere;
+  }
+  .cal-foot{display:flex; align-items:center; gap:3px; margin-top:2px;}
+  /* Something was written about this day. The errands say themselves; this is
+     the only thing left that needs a mark. */
+  .cal-dot{
+    width:4px; height:4px; border-radius:50%;
+    background:var(--text-muted); display:block; flex:0 0 auto;
+  }
+  .cal-cell.is-off{background:#F4F4F4;}
+  .cal-cell.is-picked{box-shadow:inset 0 0 0 1px #111;}
+  .cal-cell{cursor:pointer;}
+  .cal-cell.empty{cursor:default;}
+
+  .dlog{
+    border-top:1px solid #111;
+    margin-top:var(--sp-4); padding-top:var(--sp-3);
+  }
+  .dlog-head{
+    display:flex; align-items:baseline; gap:var(--sp-2);
+    margin-bottom:var(--sp-2);
+  }
+  .dlog-date{font-size:var(--fs-label); font-weight:500; color:var(--text-dark);}
+  .dlog-holi{font-size:var(--fs-abbr); color:var(--rust);}
+  /* Side by side where there is room, one above the other on a phone. */
+  .dlog-grid{display:flex; gap:var(--sp-3); flex-wrap:wrap;}
+  .dlog-field{flex:1 1 220px; min-width:0; display:block;}
+  .dlog-area{
+    width:100%; margin-top:var(--sp-1);
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
+    line-height:1.4; color:var(--text-dark);
+    border:0.5px solid #D8D8D8; border-radius:0;
+    padding:var(--sp-2); resize:vertical;
+  }
+  .dlog-tools{
+    display:flex; align-items:center; gap:var(--sp-2);
+    margin-top:var(--sp-3);
+  }
+  .dlog-paste{margin-top:var(--sp-3);}
+  .dlog-paste textarea{
+    width:100%; font-family:var(--font-ui); font-size:var(--fs-abbr);
+    line-height:1.5; border:0.5px solid #D8D8D8; border-radius:0;
+    padding:var(--sp-2); resize:vertical;
+  }
+
+  /* =======================================================================
+     The board — the fourth page. Paper on a wall, ported from the couple
+     app's 쀼리뷰 with its tiers taken out.
+     ======================================================================= */
+  /* The same file that app loads. A hand, because what goes on a wall is
+     written by hand; everything else in this app stays in Switzer. */
+  @font-face{
+    font-family:'UhBeeRice';
+    src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_five@.2.0/UhBeeRice.woff') format('woff');
+    font-weight:normal;
+    font-display:swap;
+  }
+  #view-cal .pane-board{
+    /* The one page allowed past the reading column: the rest of the app is
+       832px wide because 832px is what prose and a table want, and a wall is
+       neither. The strip itself is full width (see #paneView below), so this
+       page simply declines to put the margin back. */
+    padding-left:0; padding-right:0;
+  }
+  #noteStack{
+    display:flex; flex-direction:column; gap:var(--sp-3);
+    /* How big the paper draws on this device — nothing else moves with it. */
+    --pi-z:1;
+    /* The paper is 300 across at full size. The two type sizes are written
+       out of it at the ratio the couple app uses on 288, so changing this one
+       number moves the lettering with the paper. */
+    --pi-w:300px;
+    --pi-big:calc(var(--pi-w) * 0.1042);
+    --pi-sml:calc(var(--pi-w) * 0.0556);
+    /* Up and down still scrolls; two fingers do not zoom the page, because
+       the board wants that gesture for itself. */
+    touch-action:pan-y;
+  }
+  /* The other way of laying it out: one wrapping run rather than a row per
+     group. The rows give up their own boxes so notes from two groups can
+     share a line; the dividers are not drawn there, because a rule across a
+     run of paper cuts notes in half. The colours still say which is which. */
+  #noteStack.flow{
+    flex-direction:row; flex-wrap:wrap; justify-content:center;
+    align-items:flex-start;
+  }
+  #noteStack.flow > .pi-row{display:contents;}
+  #noteStack.flow > .ng-bar{display:none;}
+  #noteStack.flow .add-btn{order:1;}
+  #noteStack.flow > .ng-foot{flex:0 0 100%; order:2;}
+  .pi-row{
+    display:flex; flex-wrap:wrap; justify-content:center;
+    align-items:flex-start; gap:var(--sp-3);
+  }
+  .pi-row > .add-btn, #noteStack.flow > .add-btn{align-self:center;}
+  .pi{
+    width:calc(var(--pi-w) * var(--pi-z)); max-width:100%;
+    flex:0 0 auto; text-align:center;
+    /* Square at the smallest: the same measure down as across. A note with
+       more on it grows downward from there, never narrower or wider. */
+    min-height:calc(var(--pi-w) * var(--pi-z));
+    /* A column, so what is written sits in the middle of the paper rather
+       than at the top of it, with the slack falling evenly above and below. */
+    display:flex; flex-direction:column; justify-content:center;
+    position:relative;
+    /* A hairline, which the couple app does without: there the page is black
+       and white paper is obvious. Here the page is white too, and an
+       ungrouped note would be a note-shaped nothing. */
+    border:0.5px solid rgba(0,0,0,0.14); border-radius:0;
+    /* The padding goes with the paper, or a note at half size reads as a
+       full-size margin with a few words trapped in the middle of it. */
+    padding:calc(var(--sp-4) * var(--pi-z));
+    cursor:pointer;
+    font-family:'UhBeeRice', var(--font-ui);
+    color:#111;
+  }
+  .pi-big{
+    font-size:calc(var(--pi-big) * var(--pi-z));
+    font-weight:500; line-height:1.2; display:block;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .pi-small{
+    font-size:calc(var(--pi-sml) * var(--pi-z));
+    font-weight:300; line-height:1.3; display:block;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .pi-big + .pi-big, .pi-big + .pi-small,
+  .pi-small + .pi-big, .pi-small + .pi-small{
+    margin-top:calc(var(--sp-2) * var(--pi-z));
+  }
+  .pi-gap{display:block; height:calc(var(--sp-5) * var(--pi-z));}
+  /* A note open for writing comes back to its own size whatever the board is
+     set to: the scale is for reading the wall, and nobody should have to type
+     into a sheet at half size. */
+  .pi.editing{
+    cursor:default;
+    width:var(--pi-w); min-height:var(--pi-w); padding:var(--sp-4);
+  }
+  .pi-edit{
+    width:100%; flex:1 1 auto; min-height:120px;
+    /* Written in the face it will be read in: a note typed in one letterform
+       and shown in another is a note that has to be opened twice. */
+    font-family:'UhBeeRice', var(--font-ui);
+    font-size:var(--fs-label); font-weight:400;
+    line-height:1.3; text-align:center;
+    color:#111; background:rgba(255,255,255,0.55);
+    border:0.5px solid rgba(0,0,0,0.35); border-radius:0;
+    padding:var(--sp-2); resize:vertical;
+  }
+  .pi-tools{
+    display:flex; align-items:center; justify-content:center;
+    gap:var(--sp-3); margin-top:var(--sp-3); flex-wrap:wrap;
+  }
+  .pi-tools input[type=color]{
+    width:26px; height:26px; flex:0 0 auto;
+    padding:0; border:0.5px solid rgba(0,0,0,0.35); border-radius:0;
+    background:none; cursor:pointer; -webkit-appearance:none; appearance:none;
+  }
+  .pi-tools input[type=color]::-webkit-color-swatch-wrapper{padding:0;}
+  .pi-tools input[type=color]::-webkit-color-swatch{border:none;}
+  .pi-tool{
+    font-family:var(--font-ui); font-size:var(--fs-abbr); font-weight:400;
+    padding:2px var(--sp-2);
+    background:none; color:#111;
+    border:0.5px solid rgba(0,0,0,0.35); border-radius:0;
+    cursor:pointer;
+  }
+  .pi-tool.done{font-weight:500;}
+  /* The + that adds one more note to a group, in the bottom right of that
+     group's last sheet. Absolute, so it costs the writing above it no room
+     and the lettering stays centred on the whole square. */
+  .pi .pi-add{
+    position:absolute; right:var(--sp-2); bottom:var(--sp-2);
+    color:#111;
+  }
+  .add-btn{
+    width:24px; height:24px; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:none; border-radius:0;
+    color:#111; cursor:pointer; line-height:0;
+  }
+  .add-btn svg{width:16px; height:16px; fill:currentColor; display:block;}
+  .add-btn:hover{opacity:0.6;}
+
+  /* ---- a divider, and the group it opens ---- */
+  /* The rule runs the width of the wall, because that is what it divides;
+     the name and the buttons on it are set in to the app's own column, so
+     they stand under the switches rather than against the window. */
+  .ng-bar{
+    display:flex; align-items:center; gap:var(--sp-2);
+    border-top:1px solid #111;
+    padding:var(--sp-2) var(--page-pad) 0; margin-top:var(--sp-4);
+  }
+  .ng-swatch{
+    width:12px; height:12px; flex:0 0 auto;
+    border:0.5px solid rgba(0,0,0,0.3);
+  }
+  .ng-name{
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
+    background:none; border:none; border-radius:0; padding:0;
+    color:var(--text-dark); cursor:pointer; text-align:left;
+  }
+  .ng-name:hover{color:var(--text-muted);}
+  .ng-input{
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
+    flex:1 1 auto; min-width:0;
+    padding:2px var(--sp-1);
+    background:#FFFFFF; color:var(--text-dark);
+    border:0.5px solid rgba(0,0,0,0.35); border-radius:0;
+  }
+  .ng-foot{
+    margin-top:var(--sp-5);
+    padding-left:var(--page-pad); padding-right:var(--page-pad);
+  }
+
+  /* ---- the three switches over the board ---- */
+  .note-tools{
+    display:flex; align-items:center; gap:var(--sp-2);
+    margin-bottom:var(--sp-3);
+    /* Lined up with the rest of the app even though the page they stand on
+       is wider than it: only the paper was meant to break the column. */
+    padding-left:var(--page-pad); padding-right:var(--page-pad);
+  }
+  .tool-btn{
+    font-family:var(--font-ui); font-size:var(--fs-abbr); font-weight:400;
+    min-height:26px; padding:2px var(--sp-2);
+    display:flex; align-items:center; justify-content:center;
+    background:none; color:var(--text-muted);
+    border:1px solid #D8D8D8; border-radius:0;
+    cursor:pointer;
+  }
+  .tool-btn.on{color:var(--text-dark); border-color:var(--text-dark);}
+  .tool-btn svg{display:block; width:16px; height:16px;}
+  /* Pressed, WebKit rings a button in its own rounded outline — the one curve
+     anywhere in this app. Which switch is on is already said by the border
+     going black. A keyboard still gets a ring, drawn square. */
+  .tool-btn:focus, .pane-dot:focus{outline:none;}
+  .tool-btn:focus-visible, .pane-dot:focus-visible{
+    outline:1px solid var(--text-dark); outline-offset:2px;
+  }
+
+  /* ---- left up on a screen ---- */
+  /* The wall is the paper, the switches, and nothing else. */
+  body.note-wall #topBar,
+  body.note-wall #paneDots,
+  body.note-wall .ng-bar .pi-tool,
+  body.note-wall .ng-foot{display:none;}
+  body.note-wall{padding-top:var(--gap-top);}
+  /* Held in the corner rather than carried with the page: the board can be
+     long, and a way out that scrolls away is a way out that has to be hunted
+     for. */
+  body.note-wall .note-tools{
+    position:fixed; top:var(--sp-3); left:var(--sp-3);
+    margin:0; padding:0; z-index:40;
+  }
+  body.note-wall .note-tools,
+  body.note-wall #paneDots{transition:opacity 0.6s ease;}
+  body.note-idle.note-wall .note-tools{opacity:0; pointer-events:none;}
+
 </style>
 <link rel="manifest" href="time.webmanifest">
 <meta name="theme-color" content="#FFFFFF">
@@ -1845,6 +2142,7 @@ if('serviceWorker' in navigator){
     <button class="pane-dot" onclick="setPane(0)" aria-label="Check / Time"></button>
     <button class="pane-dot is-on" onclick="setPane(1)" aria-label="Today"></button>
     <button class="pane-dot" onclick="setPane(2)" aria-label="Projects"></button>
+    <button class="pane-dot" onclick="setPane(3)" aria-label="Board"></button>
   </div>
   <div class="pane-view" id="paneView">
     <div class="pane-track" id="paneTrack">
@@ -1900,6 +2198,21 @@ if('serviceWorker' in navigator){
             </button>
           </div>
           <div id="projCalGrid" class="cal-grid"></div>
+          <!-- What was on that day and what came of it. Hidden until a day
+               is pressed; the ✕ puts it away again. -->
+          <div id="dayLogBox" class="dlog" style="display:none;"></div>
+          <div class="dlog-tools">
+            <button class="tool-btn" onclick="openHoliPaste()">Days off</button>
+          </div>
+          <div id="holiWrap" class="dlog-paste" style="display:none;">
+            <label class="field-label" for="holiArea">Paste a list of days off</label>
+            <textarea id="holiArea" rows="8" spellcheck="false"></textarea>
+            <p class="hint" id="holiMsg"></p>
+            <div class="dlog-tools">
+              <button class="btn btn-primary" onclick="applyHoliPaste(this)">Add</button>
+              <button class="btn btn-ghost" onclick="closeHoliPaste()">Close</button>
+            </div>
+          </div>
         </div>
         <div class="proj-block">
       <div id="projList"></div>
@@ -1917,6 +2230,18 @@ if('serviceWorker' in navigator){
         </button>
       </div>
     </div>
+      </section>
+      <!-- ================= The board ================= -->
+      <!-- Paper that belongs to no month. The three switches say how it is
+           laid out, how big it draws, and whether it is up on a wall; none of
+           the three travels between devices. -->
+      <section class="pane pane-board">
+        <div class="note-tools">
+          <button class="tool-btn" id="noteLayoutBtn" onclick="noteToggleFlow()" aria-label="Layout"></button>
+          <button class="tool-btn" id="noteZoomBtn" onclick="noteStepZoom()" aria-label="Note size">100%</button>
+          <button class="tool-btn" id="noteWallBtn" onclick="noteToggleWall()" aria-label="Wall mode"></button>
+        </div>
+        <div id="noteStack"></div>
       </section>
     </div>
   </div>
@@ -2018,7 +2343,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-22c</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-27b</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2821,7 +3146,7 @@ function allCodes(){
 let currentPane = 1;
 
 function setPane(i){
-  currentPane = Math.max(0, Math.min(2, i));
+  currentPane = Math.max(0, Math.min(3, i));
   const track = document.getElementById('paneTrack');
   if(track) track.style.transform = 'translateX(-' + (currentPane * 100) + '%)';
   const dots = document.querySelectorAll('#paneDots .pane-dot');
@@ -3349,10 +3674,37 @@ function renderProjCal(){
              ' onclick="projTaskToggle(\'' + p.id + '\',\'' + t.id + '\')">' +
              escapeHtmlT(name) + '</button>';
     }).join('');
+    /* What the day is, beside its figure and pushed to the far end: wrapped
+       underneath it took a line of a cell that has two of errands to show,
+       and cut at the edge it says as much as fits, which on a day off is
+       usually the whole of it. */
+    const off = holiOf(code);
+    const offName = [off.jp, off.kr].filter(Boolean).join(' / ');
+    const log = dayLogOf(code);
+    const sched = log.sched.length
+      ? '<div class="cal-sched">' + escapeHtmlT(log.sched.join(' / ')) + '</div>' : '';
+    /* A paragraph does not fit in a cell this size, so what was written gets
+       a mark and the box below gets the words. */
+    const wrote = log.diary.length ? '<span class="cal-dot"></span>' : '';
+
     const el = document.createElement('div');
-    el.className = 'cal-cell' + (code === today ? ' is-today' : '');
-    el.innerHTML = '<div class="cal-daynum">' + day + '</div>' +
-                   (marks ? '<div class="cal-marks">' + marks + '</div>' : '');
+    el.className = 'cal-cell' + (code === today ? ' is-today' : '') +
+                   (offName ? ' is-off' : '') +
+                   (code === calPickedCode ? ' is-picked' : '');
+    el.innerHTML =
+      '<div class="cal-head">' +
+        '<span class="cal-daynum">' + day + '</span>' +
+        (offName ? '<span class="cal-holi">' + escapeHtmlT(offName) + '</span>' : '') +
+      '</div>' +
+      sched +
+      (marks ? '<div class="cal-marks">' + marks + '</div>' : '') +
+      (wrote ? '<div class="cal-foot">' + wrote + '</div>' : '');
+    /* The chips inside carry their own presses and stop them there; anywhere
+       else on the square opens the day. */
+    el.addEventListener('click', ev => {
+      if(ev.target.closest && ev.target.closest('.cal-mark')) return;
+      calPick(code);
+    });
     grid.appendChild(el);
   }
 }
@@ -6324,6 +6676,19 @@ function buildTxt(){
     lines.push(['&', a ? a.short : '', r.freq, r.since || '',
                 r.lastCode || '', r.text].join('\t'));
   });
+  /* The board, which belongs to no date either. ':' is a divider, '^' opens a
+     note and the ';' lines under it are what is written on it — one line of
+     the note per line of the file, a bare ';' being a blank line, so a note
+     can be read and edited here the same way it is on the wall. */
+  noteGroups.forEach(g => {
+    lines.push([':', g.id, g.name || ''].join('\t'));
+  });
+  notes.forEach(nt => {
+    lines.push(['^', nt.id, nt.gid || '', nt.color || ''].join('\t'));
+    (nt.lines || []).forEach(l => {
+      lines.push(';\t' + (l.t ? (l.s ? '-' + l.t : l.t) : ''));
+    });
+  });
   lines.push('');
   /* Every day that holds anything — time, to-dos, or both. A day with only
      to-dos has to appear too, or it would be dropped on the next restore.
@@ -6332,7 +6697,9 @@ function buildTxt(){
      filed under the day it is written beneath. */
   const codes = Object.keys(days)
     .concat(Object.keys(todos))
-    .concat(Object.keys(plans));
+    .concat(Object.keys(plans))
+    .concat(Object.keys(dayLog))
+    .concat(Object.keys(holi));
   Array.from(new Set(codes)).sort().forEach(code => {
     const d = days[code] || {};
     const body = ACTIVITIES
@@ -6365,11 +6732,21 @@ function buildTxt(){
         if(s.n) noteLines.push('= ' + a.short + ' ' + minToHHMM(s.s % 1440) + ' ' + s.n);
       });
     });
-    if(!body.length && !todoLines.length && !planLines.length && !noteLines.length) return;
+    /* '> what was on', '| what came of it', '! Japan\tKorea'. A day holding
+       nothing but these still has to be written out, or it would vanish on
+       the next restore. */
+    const lg = dayLogOf(code);
+    const logLines = lg.sched.map(s => '> ' + s)
+      .concat(lg.diary.map(s => '| ' + s));
+    const dayOff = holiOf(code);
+    if(!holiEmpty(dayOff)) logLines.push(['!', dayOff.jp, dayOff.kr].join('\t'));
+    if(!body.length && !todoLines.length && !planLines.length &&
+       !noteLines.length && !logLines.length) return;
     lines.push('[' + code + ']');
     lines.push(...body);
     lines.push(...planLines);
     lines.push(...noteLines);
+    lines.push(...logLines);
     lines.push(...todoLines);
     lines.push('');
   });
@@ -6444,6 +6821,10 @@ function parseTxt(raw){
   const planOut = {};
   const weekOut = {};
   const pendingNotes = [];
+  const logOut = {};        // what was on and what came of it, by day
+  const holiOut = {};       // the days off
+  const groupOut = [];      // the board's dividers
+  const noteOut = [];       // and its paper
   const errors = [];
   const defs = [];          // activity definitions found in the file
   const projOut = [];
@@ -6542,9 +6923,59 @@ function parseTxt(raw){
       return;
     }
 
+    // ': id\tname' — a divider on the board. Belongs to no date.
+    if(t.startsWith(':')){
+      const p = fieldsAfterMarker(t);
+      groupOut.push({id: (p[0] || '').trim() || ('g_' + groupOut.length),
+                     name: (p[1] || '').trim()});
+      return;
+    }
+    // '^ id\tgid\tcolour' opens a note; the ';' lines under it are its text.
+    if(t.startsWith('^')){
+      const p = fieldsAfterMarker(t);
+      noteOut.push({id: (p[0] || '').trim() || ('n_' + noteOut.length),
+                    gid: (p[1] || '').trim(),
+                    color: (p[2] || '').trim().replace('#', '').toUpperCase(),
+                    lines: []});
+      return;
+    }
+    if(t.startsWith(';')){
+      if(!noteOut.length){ errors.push('Line ' + (i+1) + ': no note above this.'); return; }
+      /* The raw line, not the trimmed one: leading spaces inside a note are
+         the writer's. Only the marker and one separator come off. */
+      let body = line.replace(/\r$/, '');
+      body = body.slice(body.indexOf(';') + 1);
+      if(body.charAt(0) === '\t') body = body.slice(1);
+      const txt = body.trim();
+      noteOut[noteOut.length - 1].lines.push(
+        txt.charAt(0) === '-' ? {s: true, t: txt.slice(1).trim()} : {s: false, t: txt});
+      return;
+    }
+
     const head = /^\[(\d{6})\]$/.exec(t);
     if(head){ code = head[1]; out[code] = out[code] || {}; return; }
     if(!code){ errors.push('Line ' + (i+1) + ': no [date] above this.'); return; }
+
+    // '> what was on' / '| what came of it' / '! Japan\tKorea'.
+    if(t.startsWith('>')){
+      const s = t.slice(1).trim();
+      if(s){
+        logOut[code] = logOut[code] || {sched: [], diary: []};
+        logOut[code].sched.push(s);
+      }
+      return;
+    }
+    if(t.startsWith('|')){
+      logOut[code] = logOut[code] || {sched: [], diary: []};
+      logOut[code].diary.push(t.slice(1).trim());
+      return;
+    }
+    if(t.startsWith('!')){
+      const p = fieldsAfterMarker(t);
+      const v = {jp: (p[0] || '').trim(), kr: (p[1] || '').trim()};
+      if(!holiEmpty(v)) holiOut[code] = v;
+      return;
+    }
 
     // '* [ ] text' / '* [x] text' — a to-do. Read before the activity match,
     // since '*' is not an activity and would otherwise be reported as unknown.
@@ -6634,8 +7065,21 @@ function parseTxt(raw){
     else errors.push('A note for "' + n.body + '" has no matching time.');
   });
 
+  /* A note whose text came out empty was a blank square on the wall, and a
+     blank square is not something anybody meant to keep. */
+  const notesKept = noteOut.map(nt => Object.assign({}, nt, {
+    lines: (function(ls){
+      const a = ls.slice();
+      while(a.length && !a[0].t) a.shift();
+      while(a.length && !a[a.length - 1].t) a.pop();
+      return a;
+    })(nt.lines)
+  })).filter(nt => nt.lines.length);
+
   return {data:out, todoData:todoOut, planData:planOut, weekData:weekOut,
-          projData:projOut, routineData:routineOut, errors, defs};
+          projData:projOut, routineData:routineOut,
+          logData:logOut, holiData:holiOut,
+          groupData:groupOut, noteData:notesKept, errors, defs};
 }
 
 /* Rebuild ACTIVITIES from definition lines, keeping ids stable so the imported
@@ -6661,7 +7105,9 @@ function activitiesFromDefs(defs){
 }
 
 async function applyImport(){
-  const {data, todoData, planData, weekData, projData, routineData, errors, defs} = parseTxt(document.getElementById('importArea').value);
+  const {data, todoData, planData, weekData, projData, routineData,
+         logData, holiData, groupData, noteData, errors, defs} =
+    parseTxt(document.getElementById('importArea').value);
   const msg = document.getElementById('importMsg');
   if(errors.length){
     msg.textContent = errors.slice(0,5).join('  ') + (errors.length>5 ? ` (+${errors.length-5} more)` : '');
@@ -6686,6 +7132,20 @@ async function applyImport(){
   projects = (projData || []).map(p =>
     Object.assign({}, p, {tasks: sanitizeTasks(p.tasks)}));
   routines = sanitizeRoutines(routineData);
+  dayLog = logData || {};
+  holi = holiData || {};
+  noteGroups = groupData || [];
+  /* A note pointing at a divider the file does not carry comes back to the
+     top of the board rather than to a group that is not there. */
+  const gids = {};
+  noteGroups.forEach(g => { gids[g.id] = true; });
+  notes = (noteData || []).map(nt =>
+    Object.assign({}, nt, {gid: gids[nt.gid] ? nt.gid : ''}));
+  noteEditId = null;
+  groupEditId = null;
+  calPickedCode = '';
+  await saveDayLog();
+  await saveNotes();
   await saveData();
   await saveTodos();
   await savePlans();
@@ -6694,6 +7154,9 @@ async function applyImport(){
   await saveRoutines();
   closeImport();
   refreshAll();
+  renderNotes();
+  renderProjCal();
+  renderDayLog();
   msg.textContent = '';
 }
 
@@ -6772,8 +7235,677 @@ function dayRollTick(){
 }
 setInterval(() => { moveNowMarker(); dayRollTick(); }, 30000);
 
+
+
+/* =========================================================================
+   The day's own record, and the days off.
+
+   The calendar on the projects page showed deadlines and nothing else, which
+   made it a map of what is owed rather than of what happened. Two things are
+   written onto it now: what was on that day, and what was made of it. The
+   first shows in the cell, two lines of it; the second is a mark, because a
+   paragraph does not fit in a 56px square and the day below is where it is
+   read.
+
+   Spending stays out of this app — the couple app is where money is kept.
+   ========================================================================= */
+const DLOG_KEY = 'time-daylog';
+const HOLI_KEY = 'time-holi';
+/* {'261027': {sched:['치과 10시'], diary:['...']}} */
+let dayLog = {};
+/* {'261027': {jp:'문화의 날', kr:''}} — the same two countries the couple app
+   keeps, and the same pasted text, so one list serves both. */
+let holi = {};
+
+function dayLogOf(code){
+  const d = dayLog[code] || {};
+  return {sched: Array.isArray(d.sched) ? d.sched : [],
+          diary: Array.isArray(d.diary) ? d.diary : []};
+}
+function dayLogEmpty(v){ return !v.sched.length && !v.diary.length; }
+function holiOf(code){
+  const v = holi[code] || {};
+  return {jp: String(v.jp || '').trim(), kr: String(v.kr || '').trim()};
+}
+function holiEmpty(v){ return !v.jp && !v.kr; }
+
+async function saveDayLog(){
+  try{
+    await appStorage.set(DLOG_KEY, JSON.stringify(dayLog));
+    await appStorage.set(HOLI_KEY, JSON.stringify(holi));
+  }catch(e){
+    console.warn('day log save failed', e);
+  }
+}
+async function loadDayLog(){
+  try{
+    const a = await appStorage.get(DLOG_KEY);
+    dayLog = a && a.value ? (JSON.parse(a.value) || {}) : {};
+  }catch(e){ dayLog = {}; }
+  try{
+    const b = await appStorage.get(HOLI_KEY);
+    holi = b && b.value ? (JSON.parse(b.value) || {}) : {};
+  }catch(e){ holi = {}; }
+  if(!dayLog || typeof dayLog !== 'object') dayLog = {};
+  if(!holi || typeof holi !== 'object') holi = {};
+}
+
+/* One line of the box is one line. Blank lines are kept inside the diary —
+   a paragraph break is something somebody typed on purpose — and trimmed off
+   either end. The schedule drops them: a blank errand is not an errand. */
+function logParseLines(text, keepBlanks){
+  const out = String(text || '').replace(/\r/g, '').split('\n')
+    .map(s => s.trim());
+  if(!keepBlanks) return out.filter(Boolean);
+  while(out.length && !out[0]) out.shift();
+  while(out.length && !out[out.length - 1]) out.pop();
+  return out;
+}
+
+/* ---- the day being looked at ------------------------------------------ */
+let calPickedCode = '';
+
+function calPick(code){
+  calPickedCode = (calPickedCode === code) ? '' : code;
+  renderProjCal();
+  renderDayLog();
+}
+
+/* Two boxes under the grid: what was on, and what came of it. Typed into,
+   they are kept on every keystroke and the grid is redrawn so the cell
+   follows along — but the box itself is not rebuilt, or the caret would jump
+   back to the start on every letter. */
+function renderDayLog(){
+  const wrap = document.getElementById('dayLogBox');
+  if(!wrap) return;
+  if(!calPickedCode){ wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const v = dayLogOf(calPickedCode);
+  const h = holiOf(calPickedCode);
+  const off = [h.jp, h.kr].filter(Boolean).join(' / ');
+  wrap.innerHTML =
+    '<div class="dlog-head">' +
+      '<span class="dlog-date">' + escapeHtmlT(codeToLabel(calPickedCode)) + '</span>' +
+      (off ? '<span class="dlog-holi">' + escapeHtmlT(off) + '</span>' : '') +
+      '<span style="flex:1;"></span>' +
+      '<button class="pi-tool" onclick="calPick(\'\')" aria-label="Close">✕</button>' +
+    '</div>' +
+    '<div class="dlog-grid">' +
+      '<label class="dlog-field">' +
+        '<span class="field-label">What was on</span>' +
+        '<textarea class="dlog-area" rows="3" spellcheck="false"' +
+          ' placeholder="One a line"' +
+          ' oninput="dayLogTyping(this,\'sched\')">' +
+          escapeHtmlT(v.sched.join('\n')) + '</textarea>' +
+      '</label>' +
+      '<label class="dlog-field">' +
+        '<span class="field-label">What came of it</span>' +
+        '<textarea class="dlog-area" rows="3" spellcheck="false"' +
+          ' oninput="dayLogTyping(this,\'diary\')">' +
+          escapeHtmlT(v.diary.join('\n')) + '</textarea>' +
+      '</label>' +
+    '</div>';
+}
+
+function dayLogTyping(el, which){
+  const code = calPickedCode;
+  if(!code) return;
+  const cur = dayLogOf(code);
+  cur[which] = logParseLines(el.value, which === 'diary');
+  if(dayLogEmpty(cur)) delete dayLog[code];
+  else dayLog[code] = cur;
+  renderProjCal();              // the cell follows; the box is left alone
+  saveDayLog();
+}
+
+function codeToLabel(code){
+  const y = 2000 + parseInt(code.slice(0, 2), 10);
+  const m = parseInt(code.slice(2, 4), 10);
+  const d = parseInt(code.slice(4, 6), 10);
+  const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y, m - 1, d).getDay()];
+  return y + '. ' + pad2(m) + '. ' + pad2(d) + ' ' + dow;
+}
+
+/* ---- the days off, pasted in ------------------------------------------
+   The same block the couple app writes, so one list covers both:
+
+     <공휴일_2611>
+
+     일   일본 / 한국
+
+     3    문화의 날 /
+     23   근로감사의 날 /
+
+   A month heading, then one line a day: the day, Japan's name for it, a
+   slash, Korea's. Either side may be empty. Several months in one paste. */
+function openHoliPaste(){
+  const box = document.getElementById('holiWrap');
+  if(!box) return;
+  box.style.display = 'block';
+  document.getElementById('holiArea').value = holiToText();
+  document.getElementById('holiMsg').textContent = '';
+}
+function closeHoliPaste(){
+  const box = document.getElementById('holiWrap');
+  if(box) box.style.display = 'none';
+}
+
+function parseHoliText(raw){
+  const out = {};
+  let mm = '';
+  String(raw || '').replace(/\r/g, '').split('\n').forEach(line => {
+    const t = line.trim();
+    const head = /^<\s*공휴일[_\s]*(\d{4})\s*>$/.exec(t);
+    if(head){ mm = head[1]; return; }
+    if(!mm) return;
+    const m = /^(\d{1,2})\s*일?[:\s]\s*(.+)$/.exec(t);
+    if(!m) return;
+    const parts = m[2].split('/');
+    const v = {jp: (parts[0] || '').trim(), kr: (parts[1] || '').trim()};
+    if(!holiEmpty(v)) out[mm + pad2(parseInt(m[1], 10))] = v;
+  });
+  return out;
+}
+
+/* Adds to what is there rather than replacing it: a paste covering November
+   must not take October's days off with it. A day named twice takes the
+   newer name. */
+async function applyHoliPaste(el){
+  const raw = document.getElementById('holiArea').value;
+  const found = parseHoliText(raw);
+  const codes = Object.keys(found);
+  const msg = document.getElementById('holiMsg');
+  if(!codes.length){
+    msg.textContent = 'Nothing recognised. Check the format.';
+    return;
+  }
+  if(!askConfirm('Add ' + codes.length + ' day(s) off?', el, 'Press again to add')) return;
+  codes.forEach(c => { holi[c] = found[c]; });
+  await saveDayLog();
+  renderProjCal();
+  renderDayLog();
+  msg.textContent = codes.length + ' day(s) off added.';
+}
+
+function holiToText(){
+  const months = {};
+  Object.keys(holi).forEach(code => {
+    if(holiEmpty(holiOf(code))) return;
+    (months[code.slice(0, 4)] = months[code.slice(0, 4)] || []).push(code);
+  });
+  const keys = Object.keys(months).sort();
+  if(!keys.length) return '';
+  return keys.map(mm =>
+    '<공휴일_' + mm + '>\n\n일   일본 / 한국\n\n' +
+    months[mm].sort().map(code => {
+      const v = holiOf(code);
+      const day = (String(parseInt(code.slice(4), 10)) + '    ').slice(0, 4) + ' ';
+      return (day + v.jp + ' / ' + v.kr).replace(/\s+$/, '');
+    }).join('\n')
+  ).join('\n\n\n');
+}
+
+/* =========================================================================
+   The board — the fourth page. One wall of paper that belongs to no month:
+   what is written on it stays until it is taken off, which is the whole of
+   what makes it a wall rather than a diary.
+
+   Ported from the couple app's 쀼리뷰 board, with its tiers taken out. There
+   every note belonged to one of four kinds and the kind decided its colour
+   and its size; here every note is the same kind, and what sorts them is a
+   divider the person writes themselves. A divider opens a group, the group
+   carries a name and takes the next of six colours, and the notes under it
+   are drawn on that paper until the next divider.
+   ========================================================================= */
+const NOTE_KEY  = 'time-notes';
+const NGROUP_KEY = 'time-notegroups';
+
+/* {id, gid, color, lines:[{s:false, t:'...'}]}
+   `gid` is the group the note sits under, '' for the notes written before
+   the first divider. `color` is a colour given to this one note by hand and
+   is empty until somebody sets one — so a group recoloured later reaches
+   every note that has not been painted over. */
+let notes = [];
+/* {id, name} in the order they are drawn. */
+let noteGroups = [];
+
+/* Six papers, cycled. A seventh group starts again at the first: a wall is
+   read by where a thing sits as much as by its colour, and six colours that
+   stay distinct beat twelve that do not. All are light enough to carry the
+   same black lettering the rest of the app uses. */
+const GROUP_COLORS = ['F2FF00', '00E5FF', '2CE17A', 'FFA3C7', 'FFB454', 'C9C9C9'];
+const UNGROUPED_COLOR = 'FFFFFF';
+
+function groupColor(gid){
+  if(!gid) return UNGROUPED_COLOR;
+  const at = noteGroups.findIndex(g => g.id === gid);
+  if(at === -1) return UNGROUPED_COLOR;
+  return GROUP_COLORS[at % GROUP_COLORS.length];
+}
+function noteColor(note){ return note.color || groupColor(note.gid); }
+function groupById(gid){ return noteGroups.find(g => g.id === gid) || null; }
+function notesIn(gid){ return notes.filter(n => n.gid === gid); }
+
+function noteUid(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+async function saveNotes(){
+  try{
+    await appStorage.set(NOTE_KEY, JSON.stringify(notes));
+    await appStorage.set(NGROUP_KEY, JSON.stringify(noteGroups));
+  }catch(e){
+    console.warn('note save failed', e);
+  }
+}
+
+async function loadNotes(){
+  try{
+    const a = await appStorage.get(NOTE_KEY);
+    notes = a && a.value ? (JSON.parse(a.value) || []) : [];
+  }catch(e){ notes = []; }
+  try{
+    const b = await appStorage.get(NGROUP_KEY);
+    noteGroups = b && b.value ? (JSON.parse(b.value) || []) : [];
+  }catch(e){ noteGroups = []; }
+  if(!Array.isArray(notes)) notes = [];
+  if(!Array.isArray(noteGroups)) noteGroups = [];
+  notes.forEach(n => {
+    if(!Array.isArray(n.lines)) n.lines = [];
+    if(typeof n.gid !== 'string') n.gid = '';
+    if(typeof n.color !== 'string') n.color = '';
+  });
+}
+
+/* ---- a note's text, in and out ----------------------------------------
+   One line of the box is one line of the note. A line opening with `-` is
+   the small type under the big; a blank line is a blank line. The same
+   shorthand the couple app uses, so a note can be carried between them. */
+function noteParseLines(text){
+  const out = String(text || '').replace(/\r/g, '').split('\n').map(raw => {
+    const line = raw.trim();
+    if(!line) return {s: false, t: ''};
+    if(line.charAt(0) === '-') return {s: true, t: line.slice(1).trim()};
+    return {s: false, t: line};
+  });
+  while(out.length && !out[0].t) out.shift();
+  while(out.length && !out[out.length - 1].t) out.pop();
+  return out;
+}
+function noteLinesToText(note){
+  return (note.lines || []).map(l => (l.t ? (l.s ? '-' + l.t : l.t) : '')).join('\n');
+}
+
+/* ---- how this device draws the board ----------------------------------
+   None of it travels: how big the paper is drawn and how it is laid out is
+   what suits the screen in front of you, and a phone and a desktop looking
+   at the same wall want different answers. */
+const NZ_KEY = 'time-note-zoom';
+const NLAY_KEY = 'time-note-layout';
+const NWALL_KEY = 'time-note-wall';
+let noteZoom = 1;
+let noteFlow = false;
+let noteWall = false;
+const NZ_MIN = 0.35, NZ_MAX = 1.6;
+const NZ_STEPS = [1.25, 1, 0.75, 0.5];
+let noteEditId = null;
+let groupEditId = null;
+
+function noteReadView(){
+  try{
+    const z = parseFloat(localStorage.getItem(NZ_KEY));
+    if(isFinite(z)) noteZoom = Math.min(NZ_MAX, Math.max(NZ_MIN, z));
+    noteFlow = localStorage.getItem(NLAY_KEY) === '1';
+    noteWall = localStorage.getItem(NWALL_KEY) === '1';
+  }catch(e){}
+}
+
+/* Written straight onto the board rather than redrawn: the fingers move this
+   many times a second, and rebuilding every note at each step would stutter. */
+function noteApplyView(){
+  const st = document.getElementById('noteStack');
+  if(st){
+    st.style.setProperty('--pi-z', noteZoom.toFixed(3));
+    st.classList.toggle('flow', noteFlow);
+  }
+  const z = document.getElementById('noteZoomBtn');
+  if(z){
+    z.textContent = Math.round(noteZoom * 100) + '%';
+    z.classList.toggle('on', Math.abs(noteZoom - 1) > 0.005);
+  }
+  const l = document.getElementById('noteLayoutBtn');
+  if(l){
+    l.innerHTML = noteFlow ? NFLOW_SVG : NSTACK_SVG;
+    l.classList.toggle('on', noteFlow);
+  }
+  const wb = document.getElementById('noteWallBtn');
+  if(wb){
+    wb.innerHTML = noteWall ? NWALL_IN_SVG : NWALL_OUT_SVG;
+    wb.classList.toggle('on', noteWall);
+  }
+  document.body.classList.toggle('note-wall', noteWall);
+  noteWake();
+}
+
+function noteSetZoom(z, keep){
+  noteZoom = Math.min(NZ_MAX, Math.max(NZ_MIN, z));
+  noteApplyView();
+  if(keep){ try{ localStorage.setItem(NZ_KEY, String(noteZoom)); }catch(e){} }
+}
+/* Pressing the percentage steps down through the sizes and comes back round
+   to the largest: 100 → 75 → 50 → 125. A trackpad has no pinch to offer the
+   board, so the button is the only way in on a desktop. */
+function noteStepZoom(){
+  const i = NZ_STEPS.findIndex(z => z < noteZoom - 0.005);
+  noteSetZoom(i === -1 ? NZ_STEPS[0] : NZ_STEPS[i], true);
+}
+function noteToggleFlow(){
+  noteFlow = !noteFlow;
+  try{ localStorage.setItem(NLAY_KEY, noteFlow ? '1' : '0'); }catch(e){}
+  renderNotes();
+}
+/* Left up on a screen, the wall is the paper and the way back and nothing
+   else: the page dots, the header and the groups' own controls all go. */
+function noteToggleWall(){
+  noteWall = !noteWall;
+  try{ localStorage.setItem(NWALL_KEY, noteWall ? '1' : '0'); }catch(e){}
+  renderNotes();
+}
+
+/* Three seconds without a finger, a mouse or a key and the switches fade out;
+   the next movement of any kind brings them back. Only on a wall — off it,
+   the controls are the page. */
+const NIDLE_MS = 3000;
+let noteIdleTimer = 0;
+function noteWake(){
+  document.body.classList.remove('note-idle');
+  clearTimeout(noteIdleTimer);
+  if(noteWall) noteIdleTimer = setTimeout(() => {
+    document.body.classList.add('note-idle');
+  }, NIDLE_MS);
+}
+['mousemove', 'mousedown', 'touchstart', 'touchmove', 'keydown', 'wheel', 'scroll']
+  .forEach(ev => document.addEventListener(ev, noteWake, {passive: true, capture: true}));
+
+/* Two fingers on the board, and nothing else: one finger is a scroll or a
+   push to the next page, and a pinch that began anywhere but the paper
+   belongs to whatever it began on. */
+(function(){
+  let d0 = 0, base = 1;
+  const gap = t => Math.hypot(
+    t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const onBoard = el => !!(el && el.closest && el.closest('#noteStack'));
+  document.addEventListener('touchstart', e => {
+    if(e.touches.length !== 2 || !onBoard(e.target)){ d0 = 0; return; }
+    d0 = gap(e.touches); base = noteZoom;
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if(!d0 || e.touches.length !== 2) return;
+    const d = gap(e.touches);
+    if(d > 0) noteSetZoom(base * d / d0, false);
+  }, {passive:true});
+  const done = () => { if(d0){ d0 = 0; noteSetZoom(noteZoom, true); } };
+  document.addEventListener('touchend', done, {passive:true});
+  document.addEventListener('touchcancel', done, {passive:true});
+})();
+
+const NPLUS_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+  '<rect x="10.8" y="3" width="2.4" height="18"/>' +
+  '<rect x="3" y="10.8" width="18" height="2.4"/></svg>';
+const NSTACK_SVG =
+  '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+  '<rect x="6" y="0.5" width="4" height="4" fill="currentColor"/>' +
+  '<rect x="6" y="6" width="4" height="4" fill="currentColor"/>' +
+  '<rect x="6" y="11.5" width="4" height="4" fill="currentColor"/></svg>';
+const NFLOW_SVG =
+  '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+  '<rect x="0.5" y="3.25" width="4" height="4" fill="currentColor"/>' +
+  '<rect x="6" y="3.25" width="4" height="4" fill="currentColor"/>' +
+  '<rect x="11.5" y="3.25" width="4" height="4" fill="currentColor"/>' +
+  '<rect x="0.5" y="8.75" width="4" height="4" fill="currentColor"/>' +
+  '<rect x="6" y="8.75" width="4" height="4" fill="currentColor"/></svg>';
+const NWALL_OUT_SVG =
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"' +
+  ' stroke-linecap="square" aria-hidden="true">' +
+  '<path d="M1 5V1h4"/><path d="M11 1h4v4"/>' +
+  '<path d="M15 11v4h-4"/><path d="M5 15H1v-4"/></svg>';
+const NWALL_IN_SVG =
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"' +
+  ' stroke-linecap="square" aria-hidden="true">' +
+  '<path d="M5 1v4H1"/><path d="M11 1v4h4"/>' +
+  '<path d="M15 11h-4v4"/><path d="M1 11h4v4"/></svg>';
+
+/* ---- drawing ----------------------------------------------------------- */
+function noteBodyHtml(note){
+  return (note.lines || []).map(l =>
+    l.t ? '<span class="' + (l.s ? 'pi-small' : 'pi-big') + '">' +
+            escapeHtmlT(l.t) + '</span>'
+        : '<span class="pi-gap"></span>'
+  ).join('');
+}
+
+/* The + that adds one more note to a group rides in the bottom right corner
+   of that group's last note, so it always stands against the paper it
+   extends rather than adrift at the end of a row. */
+function noteHtml(note, carriesAdd){
+  const paper = noteColor(note);
+  const bg = ' style="background:#' + escapeAttr(paper) + ';"';
+  const add = carriesAdd
+    ? '<button class="add-btn pi-add" aria-label="Add note"' +
+        ' onclick="event.stopPropagation();noteAdd(\'' + note.gid + '\')">' +
+        NPLUS_SVG + '</button>'
+    : '';
+  if(noteEditId !== note.id){
+    return '<div class="pi" role="button" tabindex="0"' + bg +
+      ' onclick="noteOpen(\'' + note.id + '\')">' +
+      noteBodyHtml(note) + add + '</div>';
+  }
+  return '<div class="pi editing"' + bg + '>' +
+    '<textarea class="pi-edit" spellcheck="false"' +
+      ' oninput="noteTyping(this,\'' + note.id + '\')"' +
+      ' onkeydown="noteEditKey(event)" aria-label="Note">' +
+      escapeHtmlT(noteLinesToText(note)) + '</textarea>' +
+    '<div class="pi-tools">' +
+      '<input type="color" value="#' + escapeAttr(paper) + '"' +
+        ' oninput="noteColorPick(this,\'' + note.id + '\')" aria-label="Colour">' +
+      (note.color
+        ? '<button class="pi-tool" onclick="noteColorReset(\'' + note.id + '\')">Default</button>'
+        : '') +
+      '<button class="pi-tool" onclick="noteDelete(this,\'' + note.id + '\')">Delete</button>' +
+      '<button class="pi-tool done" onclick="noteClose()" aria-label="Done">✓</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function noteAddBtnHtml(gid){
+  return '<button class="add-btn" aria-label="Add note"' +
+    ' onclick="noteAdd(\'' + gid + '\')">' + NPLUS_SVG + '</button>';
+}
+
+/* A divider: the rule, the group's name, and the two things that can be done
+   to it. Drawn only when the board is stacked — in one wrapping run there are
+   no rows to divide, and a rule across a run of paper would cut notes in
+   half. The groups still colour their notes there. */
+function groupBarHtml(g){
+  const swatch = '<span class="ng-swatch" style="background:#' +
+    escapeAttr(groupColor(g.id)) + ';"></span>';
+  if(groupEditId === g.id){
+    return '<div class="ng-bar is-editing">' + swatch +
+      '<input class="ng-input" type="text" value="' + escapeAttr(g.name) + '"' +
+        ' oninput="groupRename(this,\'' + g.id + '\')"' +
+        ' onkeydown="groupNameKey(event)" aria-label="Group name">' +
+      '<button class="pi-tool" onclick="groupDelete(this,\'' + g.id + '\')">Delete</button>' +
+      '<button class="pi-tool done" onclick="groupCloseEdit()" aria-label="Done">✓</button>' +
+    '</div>';
+  }
+  return '<div class="ng-bar">' + swatch +
+    '<button class="ng-name" onclick="groupOpenEdit(\'' + g.id + '\')">' +
+      escapeHtmlT(g.name || '(no name)') + '</button>' +
+  '</div>';
+}
+
+function renderNotes(){
+  const stack = document.getElementById('noteStack');
+  if(!stack) return;
+  noteApplyView();
+
+  let html = '';
+  /* Anything written before the first divider stands at the top with no rule
+     over it — a board that has never been divided is one run of paper. */
+  const loose = notesIn('');
+  if(loose.length || !noteGroups.length){
+    html += '<div class="pi-row">' +
+      loose.map((n, i) => noteHtml(n, i === loose.length - 1)).join('') +
+      (loose.length ? '' : noteAddBtnHtml('')) +
+    '</div>';
+  }
+  noteGroups.forEach(g => {
+    const ns = notesIn(g.id);
+    html += groupBarHtml(g);
+    html += '<div class="pi-row">' +
+      ns.map((n, i) => noteHtml(n, i === ns.length - 1)).join('') +
+      (ns.length ? '' : noteAddBtnHtml(g.id)) +
+    '</div>';
+  });
+  html += '<div class="ng-foot">' +
+    '<button class="tool-btn" onclick="groupAdd()">+ Group</button>' +
+  '</div>';
+  stack.innerHTML = html;
+}
+
+/* ---- a note ------------------------------------------------------------ */
+function noteOpen(id){
+  noteEditId = id;
+  groupEditId = null;
+  renderNotes();
+  const box = document.querySelector('#noteStack .pi-edit');
+  if(box){ box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+
+/* A new note appears straight away, already open to be written on. Left
+   empty, it is taken away again when it closes. */
+function noteAdd(gid){
+  const note = {id: noteUid(), gid: gid || '', color: '', lines: []};
+  notes.push(note);
+  noteOpen(note.id);
+  saveNotes();
+}
+
+/* Typed into, the note is kept as it is typed — but the board is NOT redrawn,
+   or the caret would jump back to the start on every letter. */
+function noteTyping(el, id){
+  const note = notes.find(n => n.id === id);
+  if(!note) return;
+  note.lines = noteParseLines(el.value);
+  saveNotes();
+}
+
+function noteColorPick(el, id){
+  const note = notes.find(n => n.id === id);
+  if(!note) return;
+  note.color = el.value.replace('#', '').toUpperCase();
+  const paper = el.closest('.pi');
+  if(paper) paper.style.background = el.value;      // no redraw: the box is open
+  saveNotes();
+}
+
+/* Back to the group's own paper. The note stops carrying a colour rather than
+   being painted the group's, so a group recoloured later reaches it again. */
+function noteColorReset(id){
+  const note = notes.find(n => n.id === id);
+  if(!note) return;
+  note.color = '';
+  renderNotes();
+  saveNotes();
+}
+
+/* Closing. A note with nothing written on it is taken away rather than left
+   as a blank square nobody meant to make. */
+function noteClose(){
+  const id = noteEditId;
+  noteEditId = null;
+  if(id){
+    const at = notes.findIndex(n => n.id === id);
+    if(at !== -1 && !notes[at].lines.length){
+      notes.splice(at, 1);
+      saveNotes();
+    }
+  }
+  renderNotes();
+}
+
+function noteEditKey(ev){
+  if(ev.key === 'Escape'){ ev.preventDefault(); noteClose(); }
+}
+
+function noteDelete(el, id){
+  if(!askConfirm('Delete this note?', el, 'Press again to delete')) return;
+  const at = notes.findIndex(n => n.id === id);
+  if(at === -1) return;
+  notes.splice(at, 1);
+  noteEditId = null;
+  renderNotes();
+  saveNotes();
+}
+
+/* ---- a group ----------------------------------------------------------- */
+function groupAdd(){
+  const g = {id: noteUid(), name: 'Group ' + (noteGroups.length + 1)};
+  noteGroups.push(g);
+  groupEditId = g.id;
+  noteEditId = null;
+  renderNotes();
+  const box = document.querySelector('#noteStack .ng-input');
+  if(box){ box.focus(); box.select(); }
+  saveNotes();
+}
+function groupOpenEdit(id){
+  groupEditId = id;
+  noteEditId = null;
+  renderNotes();
+  const box = document.querySelector('#noteStack .ng-input');
+  if(box){ box.focus(); box.select(); }
+}
+function groupCloseEdit(){ groupEditId = null; renderNotes(); }
+function groupNameKey(ev){
+  if(ev.key === 'Enter' || ev.key === 'Escape'){ ev.preventDefault(); groupCloseEdit(); }
+}
+function groupRename(el, id){
+  const g = groupById(id);
+  if(!g) return;
+  g.name = el.value;
+  saveNotes();
+}
+/* Taking a divider away does not take its paper with it: the notes under it
+   come back up to the top of the board rather than disappearing with a name
+   nobody meant to delete twice. */
+function groupDelete(el, id){
+  if(!askConfirm('Delete this group? Its notes move to the top.', el,
+                 'Press again to delete')) return;
+  const at = noteGroups.findIndex(g => g.id === id);
+  if(at === -1) return;
+  noteGroups.splice(at, 1);
+  notes.forEach(n => { if(n.gid === id) n.gid = ''; });
+  groupEditId = null;
+  renderNotes();
+  saveNotes();
+}
+
+/* Pressing away from an open note or an open name closes it. Everything typed
+   is already saved on each keystroke, so there is nothing to lose. Listened
+   for on the way down rather than on the click, so it is closed before
+   whatever was pressed takes focus. */
+document.addEventListener('pointerdown', e => {
+  if(!noteEditId && !groupEditId) return;
+  const t = e.target;
+  if(t && t.closest && (t.closest('.pi.editing') || t.closest('.ng-bar.is-editing') ||
+     t.closest('.modal-overlay'))) return;
+  if(noteEditId) noteClose(); else groupCloseEdit();
+}, true);
+
 Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActivities(),
-             loadProjects(), loadRoutines()]).then(() => applyRoutines()).then(() => {
+             loadProjects(), loadRoutines(), loadNotes(),
+             loadDayLog()]).then(() => applyRoutines()).then(() => {
   // The middle page is the one that opens.
   setPane(1);
   reportSyncTrouble();
@@ -6784,6 +7916,10 @@ Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActiviti
   setMode('check');
   swRender();
   renderBackupStatus();
+  noteReadView();
+  renderNotes();
+  renderProjCal();
+  renderDayLog();
   syncHeaderOffset();
 });
 </script>
