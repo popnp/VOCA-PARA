@@ -2038,24 +2038,6 @@
     outline:1px solid var(--text-dark); outline-offset:2px;
   }
 
-  /* ---- left up on a screen ---- */
-  /* The wall is the paper, the switches, and nothing else. */
-  body.note-wall #topBar,
-  body.note-wall #paneDots,
-  body.note-wall .ng-bar .pi-tool,
-  body.note-wall .ng-foot{display:none;}
-  body.note-wall{padding-top:var(--gap-top);}
-  /* Held in the corner rather than carried with the page: the board can be
-     long, and a way out that scrolls away is a way out that has to be hunted
-     for. */
-  body.note-wall .note-tools{
-    position:fixed; top:var(--sp-3); left:var(--sp-3);
-    margin:0; padding:0; z-index:40;
-  }
-  body.note-wall .note-tools,
-  body.note-wall #paneDots{transition:opacity 0.6s ease;}
-  body.note-idle.note-wall .note-tools{opacity:0; pointer-events:none;}
-
 </style>
 <link rel="manifest" href="time.webmanifest">
 <meta name="theme-color" content="#FFFFFF">
@@ -2239,7 +2221,6 @@ if('serviceWorker' in navigator){
         <div class="note-tools">
           <button class="tool-btn" id="noteLayoutBtn" onclick="noteToggleFlow()" aria-label="Layout"></button>
           <button class="tool-btn" id="noteZoomBtn" onclick="noteStepZoom()" aria-label="Note size">100%</button>
-          <button class="tool-btn" id="noteWallBtn" onclick="noteToggleWall()" aria-label="Wall mode"></button>
         </div>
         <div id="noteStack"></div>
       </section>
@@ -2343,7 +2324,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-27b</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-27c</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -7542,10 +7523,8 @@ function noteLinesToText(note){
    at the same wall want different answers. */
 const NZ_KEY = 'time-note-zoom';
 const NLAY_KEY = 'time-note-layout';
-const NWALL_KEY = 'time-note-wall';
 let noteZoom = 1;
 let noteFlow = false;
-let noteWall = false;
 const NZ_MIN = 0.35, NZ_MAX = 1.6;
 const NZ_STEPS = [1.25, 1, 0.75, 0.5];
 let noteEditId = null;
@@ -7556,8 +7535,14 @@ function noteReadView(){
     const z = parseFloat(localStorage.getItem(NZ_KEY));
     if(isFinite(z)) noteZoom = Math.min(NZ_MAX, Math.max(NZ_MIN, z));
     noteFlow = localStorage.getItem(NLAY_KEY) === '1';
-    noteWall = localStorage.getItem(NWALL_KEY) === '1';
   }catch(e){}
+  /* A mode this app used to have, taken out: it hid the page dots and the
+     header with a body class, so a board left in it came back hidden on the
+     next open and on every other page too, and its one way out faded after
+     three seconds. The key is cleared rather than ignored, so a device that
+     was left in it is not carrying a setting nothing reads. */
+  try{ localStorage.removeItem('time-note-wall'); }catch(e){}
+  document.body.classList.remove('note-wall', 'note-idle');
 }
 
 /* Written straight onto the board rather than redrawn: the fingers move this
@@ -7578,13 +7563,6 @@ function noteApplyView(){
     l.innerHTML = noteFlow ? NFLOW_SVG : NSTACK_SVG;
     l.classList.toggle('on', noteFlow);
   }
-  const wb = document.getElementById('noteWallBtn');
-  if(wb){
-    wb.innerHTML = noteWall ? NWALL_IN_SVG : NWALL_OUT_SVG;
-    wb.classList.toggle('on', noteWall);
-  }
-  document.body.classList.toggle('note-wall', noteWall);
-  noteWake();
 }
 
 function noteSetZoom(z, keep){
@@ -7604,29 +7582,6 @@ function noteToggleFlow(){
   try{ localStorage.setItem(NLAY_KEY, noteFlow ? '1' : '0'); }catch(e){}
   renderNotes();
 }
-/* Left up on a screen, the wall is the paper and the way back and nothing
-   else: the page dots, the header and the groups' own controls all go. */
-function noteToggleWall(){
-  noteWall = !noteWall;
-  try{ localStorage.setItem(NWALL_KEY, noteWall ? '1' : '0'); }catch(e){}
-  renderNotes();
-}
-
-/* Three seconds without a finger, a mouse or a key and the switches fade out;
-   the next movement of any kind brings them back. Only on a wall — off it,
-   the controls are the page. */
-const NIDLE_MS = 3000;
-let noteIdleTimer = 0;
-function noteWake(){
-  document.body.classList.remove('note-idle');
-  clearTimeout(noteIdleTimer);
-  if(noteWall) noteIdleTimer = setTimeout(() => {
-    document.body.classList.add('note-idle');
-  }, NIDLE_MS);
-}
-['mousemove', 'mousedown', 'touchstart', 'touchmove', 'keydown', 'wheel', 'scroll']
-  .forEach(ev => document.addEventListener(ev, noteWake, {passive: true, capture: true}));
-
 /* Two fingers on the board, and nothing else: one finger is a scroll or a
    push to the next page, and a pinch that began anywhere but the paper
    belongs to whatever it began on. */
@@ -7664,16 +7619,6 @@ const NFLOW_SVG =
   '<rect x="11.5" y="3.25" width="4" height="4" fill="currentColor"/>' +
   '<rect x="0.5" y="8.75" width="4" height="4" fill="currentColor"/>' +
   '<rect x="6" y="8.75" width="4" height="4" fill="currentColor"/></svg>';
-const NWALL_OUT_SVG =
-  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"' +
-  ' stroke-linecap="square" aria-hidden="true">' +
-  '<path d="M1 5V1h4"/><path d="M11 1h4v4"/>' +
-  '<path d="M15 11v4h-4"/><path d="M5 15H1v-4"/></svg>';
-const NWALL_IN_SVG =
-  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"' +
-  ' stroke-linecap="square" aria-hidden="true">' +
-  '<path d="M5 1v4H1"/><path d="M11 1v4h4"/>' +
-  '<path d="M15 11h-4v4"/><path d="M1 11h4v4"/></svg>';
 
 /* ---- drawing ----------------------------------------------------------- */
 function noteBodyHtml(note){
@@ -7906,8 +7851,8 @@ document.addEventListener('pointerdown', e => {
 Promise.all([loadData(), loadTodos(), loadPlans(), loadWeekPlans(), loadActivities(),
              loadProjects(), loadRoutines(), loadNotes(),
              loadDayLog()]).then(() => applyRoutines()).then(() => {
-  // The middle page is the one that opens.
-  setPane(1);
+  // The board is the one that opens: it is what this app is kept open on.
+  setPane(3);
   reportSyncTrouble();
   updateBadge();
   retryUnsent();
