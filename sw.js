@@ -1,8 +1,9 @@
-/* Service worker for popnp.github.io — Voca/Para/Memo and Time.
+/* Service worker for the two apps in this folder — Voca/Para/Memo and Time.
+   BBYU has moved to a folder of its own and brought its own worker with it.
 
    What this does and, more importantly, what it does not do:
 
-   It keeps a copy of the two HTML files so the apps open with no signal. That
+   It keeps a copy of the HTML files so the apps open with no signal. That
    is all. It never touches your records — those live in the browser's own
    storage and go to Supabase exactly as they always have. Requests to any other
    host pass straight through untouched, so syncing is unaffected.
@@ -15,8 +16,9 @@
 */
 
 /* Bump this on every release. Changing it is what retires the old cache. */
-const VERSION = '2026-10-22c';
-const CACHE = 'popnp-' + VERSION;
+const VERSION = '2026-10-27a';
+const PREFIX = 'popnp-';
+const CACHE = PREFIX + VERSION;
 
 const ASSETS = [
   './',
@@ -42,8 +44,11 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
+      /* Only this folder's own old caches. A blanket sweep here would take
+         BBYU's with it — caches belong to the site, not to the folder. */
       .then(keys => Promise.all(
-        keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+        keys.filter(k => k.indexOf(PREFIX) === 0 && k !== CACHE)
+            .map(k => caches.delete(k))
       ))
       .then(() => self.clients.claim())
   );

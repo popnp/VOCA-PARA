@@ -2064,6 +2064,9 @@ if('serviceWorker' in navigator){
 <div class="wrap">
 <div id="vocabPopupOverlay" class="modal-overlay"><div id="vocabPopup" class="modal-box"></div></div>
 <div id="memoPopupOverlay" class="modal-overlay"><div id="memoPopup" class="modal-box"></div></div>
+<!-- Pressing the paragraph that is already chosen opens this instead of
+     making the person scroll back down to the Start button. -->
+<div id="pPickStartOverlay" class="modal-overlay"><div id="pPickStartBox" class="modal-box modal-box-tight"></div></div>
 
 <div id="resultsModal" class="modal-overlay">
   <div class="modal-box" style="text-align:center;">
@@ -2180,7 +2183,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-22c</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-27a</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -3617,6 +3620,44 @@ function groupParsedEntries(entries){
 
 let unifiedDetectedType = 'voca';
 
+/* One paste, both kinds. A day's writing is a few paragraphs and then the
+   words taken out of them, and until now the first `<title>` line sent the
+   whole thing to the paragraph parser — the words at the bottom were read as
+   part of no paragraph and silently dropped.
+
+   What tells the two apart is the [YYMMDD X] line. It closes whatever came
+   before it and says nothing about what follows, so the first real line after
+   it decides: a line in angle brackets opens a paragraph, anything else opens
+   a word. Each side is handed to its own parser with its own tags still
+   attached, so a paragraph and a word pasted under the same date both keep it.
+
+   With no tag anywhere the first line decides for the whole paste, which is
+   what this did before. */
+function splitMixedPaste(raw){
+  const lines = String(raw || '').replace(/\r/g, '').split('\n');
+  const isTag   = l => /^\[\d{6}[\s-][A-Za-z]\]$/.test(l);
+  const isTitle = l => /^<[^>]*>$/.test(l);
+  const side = {para: [], voca: []};
+  let mode = null;          // undecided until a line that is not a tag
+  let pendingTag = null;    // held until we know which side it opens
+
+  lines.forEach(line => {
+    const t = line.trim();
+    if(isTag(t)){ pendingTag = line; mode = null; return; }
+    /* A blank line belongs to whatever is open; before anything is open it
+       is the gap under a tag and belongs to neither. */
+    if(!t){ if(mode) side[mode].push(line); return; }
+    if(!mode){
+      mode = isTitle(t) ? 'para' : 'voca';
+      if(side[mode].length) side[mode].push('');
+      if(pendingTag !== null){ side[mode].push(pendingTag); pendingTag = null; }
+    }
+    side[mode].push(line);
+  });
+
+  return {para: side.para.join('\n').trim(), voca: side.voca.join('\n').trim()};
+}
+
 function unifiedParsePaste(){
   const raw = document.getElementById('unifiedPasteArea').value;
 
@@ -3666,9 +3707,21 @@ function unifiedParsePaste(){
     return;
   }
 
-  const isPara = /^<[^\n]+>$/m.test(raw.trim());
-  unifiedDetectedType = isPara ? 'para' : 'voca';
-  if(isPara){
+  /* Both kinds in one paste: each is parsed by its own parser, out of its own
+     half of the text, and both previews are shown at once. The textarea is
+     what the parsers read, so it is lent to each in turn and put back. */
+  const split = splitMixedPaste(raw);
+  if(split.para && split.voca){
+    const area = document.getElementById('unifiedPasteArea');
+    unifiedDetectedType = 'both';
+    area.value = split.para; pParsePaste();
+    area.value = split.voca; parsePaste();   // draws both lists, see below
+    area.value = raw;
+    return;
+  }
+
+  unifiedDetectedType = split.para ? 'para' : 'voca';
+  if(split.para){
     pParsePaste();
   } else {
     parsePaste();
@@ -3822,11 +3875,18 @@ async function unifiedConfirmAdd(){
     await confirmMemoAdd();
     return;
   }
-  if(unifiedDetectedType === 'para'){
+  if(unifiedDetectedType === 'both'){
+    /* Two stores, saved one after the other. Neither depends on the other, so
+       a failure in one leaves the other already written rather than both half
+       done. */
+    await pConfirmAdd();
+    await confirmAdd();
+  } else if(unifiedDetectedType === 'para'){
     await pConfirmAdd();
   } else {
     await confirmAdd();
   }
+  unifiedDetectedType = 'voca';
   clearUnifiedAdd();
 }
 
@@ -3888,6 +3948,18 @@ function renderPastePreview(){
   confirmBtn.style.display = parsedPreview.length>0 ? 'inline-block' : 'none';
   if(parsedPreview.length === 0){
     previewEl.innerHTML = '<p class="hint">No words recognized. Please check the format.</p>';
+  }
+
+  /* Both kinds were pasted: the paragraphs go above the words, and the one
+     button says what the press will add. Drawn here rather than once at parse
+     time because skipping a duplicate rebuilds this list, and the paragraphs
+     have to survive that. */
+  if(unifiedDetectedType === 'both'){
+    const paras = pParsedPreview.length;
+    previewEl.innerHTML = paraPreviewHtml() + previewEl.innerHTML;
+    confirmBtn.textContent = `Add ${paras} paragraph(s) + ${active} word(s)`;
+    confirmBtn.disabled = (paras + active) === 0;
+    confirmBtn.style.display = (paras + active) > 0 ? 'inline-block' : 'none';
   }
 }
 
@@ -7265,23 +7337,29 @@ function parseParaBlockText(raw){
   return entries;
 }
 
-function pParsePaste(){
-  const raw = document.getElementById('unifiedPasteArea').value;
-  pParsedPreview = parseParaBlockText(raw);
-  const previewEl = document.getElementById('unifiedPreviewList');
-  previewEl.innerHTML = '';
-
-  pParsedPreview.forEach(item=>{
+/* The rows a parsed paragraph shows, as markup rather than as elements: a
+   mixed paste draws them above the words, and the word list is rebuilt every
+   time a duplicate is skipped. */
+function paraPreviewHtml(){
+  return pParsedPreview.map(item=>{
     const {mismatch, enCount, koCount} = buildSentencePairs(item);
-    const div = document.createElement('div');
-    div.className = 'preview-item' + (mismatch ? ' has-warning' : '');
     let html = `<span class="pw">${escapeHtml(item.titleEn)}</span><span class="pm">${item.titleKo ? escapeHtml(item.titleKo) : '(no translation)'} ${item.tag ? '· '+escapeHtml(item.tag) : ''}</span>`;
     if(mismatch){
       html += `<span class="preview-warning">⚠ Sentence count mismatch: EN ${enCount} vs KO ${koCount} — check punctuation (it will still save)</span>`;
     }
-    div.innerHTML = html;
-    previewEl.appendChild(div);
-  });
+    return `<div class="preview-item${mismatch ? ' has-warning' : ''}">${html}</div>`;
+  }).join('');
+}
+
+function pParsePaste(){
+  const raw = document.getElementById('unifiedPasteArea').value;
+  pParsedPreview = parseParaBlockText(raw);
+  /* In a mixed paste the words are parsed next and draw both lists together,
+     so this one leaves the preview alone. */
+  if(unifiedDetectedType === 'both') return;
+
+  const previewEl = document.getElementById('unifiedPreviewList');
+  previewEl.innerHTML = paraPreviewHtml();
 
   const confirmBtn = document.getElementById('unifiedConfirmAddBtn');
   confirmBtn.textContent = 'Add Paragraphs';
@@ -8655,6 +8733,10 @@ function pickTitleHtml(title){
 /* Which paragraph the Start button will open. */
 let pPickChosenId = null;
 function pPickChoose(id){
+  /* Pressing the row that is already chosen is the way in. The Start button
+     sits at the foot of a list that can run to a screen and a half, and going
+     back down to it for every test was the whole of the complaint. */
+  if(String(id) === String(pPickChosenId)){ pPickStartPrompt(); return; }
   pPickChosenId = id;
   document.querySelectorAll('#pPickList .pick-row').forEach(b => {
     const oc = b.getAttribute('onclick') || '';
@@ -8666,6 +8748,32 @@ function pPickChoose(id){
     const box = g.nextElementSibling;
     g.classList.toggle('selected', !!(box && box.querySelector('.pick-row.selected')));
   });
+}
+
+/* The chosen paragraph's name and one button. Deliberately not a confirmation:
+   nothing is at risk here, so there is no armed state and no second press. It
+   names the paragraph so that a mis-tap is visible before anything begins, and
+   the button is the same full-width primary as the one at the foot of the page,
+   because it is the same button. */
+function pPickStartPrompt(){
+  const para = paras.find(p => String(p.id) === String(pPickChosenId));
+  const ov = document.getElementById('pPickStartOverlay');
+  const box = document.getElementById('pPickStartBox');
+  if(!para || !ov || !box) return;
+  box.innerHTML =
+    '<button class="modal-close" onclick="hidePickStart()" aria-label="Close">\u2715</button>' +
+    '<p class="modal-title">' + escapeHtml(para.titleEn || '') +
+      (para.tag ? ' <span class="pick-tag">' + escapeHtml(para.tag) + '</span>' : '') +
+    '</p>' +
+    '<button class="btn btn-primary" style="width:100%;"' +
+      ' onclick="hidePickStart(); pStartPickedParagraph();">Start</button>';
+  ov.classList.add('show');
+}
+
+/* Closed before the test opens, or the dim backdrop would sit over it. */
+function hidePickStart(){
+  const ov = document.getElementById('pPickStartOverlay');
+  if(ov) ov.classList.remove('show');
 }
 
 function pLatestSentenceScores(p){
