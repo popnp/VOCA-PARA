@@ -1779,7 +1779,12 @@
     display:flex; align-items:baseline; justify-content:space-between;
     gap:3px; width:100%;
   }
+  /* Three names, because `.cal-cell.is-today .cal-daynum` has two and sets
+     `margin:auto` on either side — that rule centred the disc back when the
+     figure was a block the width of the cell. In a row of two it pushed the
+     disc off the left edge, so today's date stood where no other date did. */
   .cal-head .cal-daynum{flex:0 0 auto; margin-bottom:0;}
+  .cal-cell.is-today .cal-head .cal-daynum{margin-left:0; margin-right:0;}
   /* Cut at the edge rather than wrapped: a long name must not cost the cell
      a line it needs for what is on that day. */
   .cal-holi{
@@ -1788,6 +1793,9 @@
     color:var(--rust);
     white-space:nowrap; overflow:hidden; text-align:right;
   }
+  /* A day Korea keeps and Japan does not. Grey, because it is something to
+     remember rather than a day off. */
+  .cal-holi.kr{color:var(--text-muted);}
   /* Two lines, cut at the end of the second. `text-overflow` counts one line
      only, so the box model that can count lines is the one used here. */
   .cal-sched{
@@ -1824,6 +1832,62 @@
   /* Side by side where there is room, one above the other on a phone. */
   .dlog-grid{display:flex; gap:var(--sp-3); flex-wrap:wrap;}
   .dlog-field{flex:1 1 220px; min-width:0; display:block;}
+  /* ---- a day's lines ---- */
+  .dl-list{display:flex; flex-direction:column; gap:2px; align-items:flex-start;}
+  .dl-row{
+    display:flex; align-items:center; gap:var(--sp-2);
+    width:100%; min-height:28px;
+  }
+  .dl-text{
+    flex:0 1 auto; min-width:0; text-align:left;
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
+    line-height:1.4; color:var(--text-dark);
+    background:none; border:none; border-radius:0; padding:2px 0;
+    cursor:text; overflow-wrap:anywhere;
+  }
+  .dl-text.is-done{color:var(--text-muted); text-decoration:line-through;}
+  .dl-input{
+    flex:1 1 auto; min-width:0; max-width:100%;
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
+    line-height:1.4; color:var(--text-dark);
+    background:#FFFFFF; border:0.5px solid #D8D8D8; border-radius:0;
+    padding:2px var(--sp-1);
+  }
+  /* The box a to-do is ticked in. Square, like every other box in this app. */
+  .dl-check{
+    width:14px; height:14px; flex:0 0 auto; padding:0;
+    background:none; border:1px solid #111; border-radius:0;
+    cursor:pointer;
+  }
+  .dl-check.is-done{background:#111;}
+  /* The same 14px the box takes, with a small square in the middle of it. */
+  .dl-dot{
+    width:14px; height:14px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .dl-dot::before{content:''; width:5px; height:5px; background:#111; display:block;}
+  /* What turns a line into a to-do and back. Quiet until it is on. */
+  /* What turns a line into something tickable. A tick rather than a box:
+     beside the real box it would otherwise read as a second checkbox. */
+  .dl-kind{
+    flex:0 0 auto; padding:0 var(--sp-1);
+    font-family:var(--font-ui); font-size:var(--fs-label); line-height:1;
+    background:none; color:#E2E2E2;
+    border:none; border-radius:0; cursor:pointer;
+  }
+  .dl-kind.on{color:#111;}
+  .dl-kind:hover{color:var(--text-muted);}
+  .dl-empty{
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
+    background:none; color:var(--text-muted);
+    border:none; border-radius:0; padding:2px 0;
+    cursor:text; text-align:left;
+  }
+  .dl-add{margin-top:var(--sp-1);}
+
+  /* Bordered while it is empty, so there is something to aim at; once there
+     is writing in it the writing is the thing and the box is noise. */
+  .dlog-area:not(:placeholder-shown){border-color:transparent; padding-left:0;}
   .dlog-area{
     width:100%; margin-top:var(--sp-1);
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
@@ -1835,8 +1899,21 @@
     display:flex; align-items:center; gap:var(--sp-2);
     margin-top:var(--sp-3);
   }
-  .dlog-paste{margin-top:var(--sp-3);}
-  .dlog-paste textarea{
+  .gcolor-rows{display:flex; gap:var(--sp-2); flex-wrap:wrap;}
+  .gcolor-box{
+    width:34px; height:34px; display:block;
+    border:0.5px solid #D8D8D8;
+  }
+  .gcolor-box input[type="color"]{
+    width:100%; height:100%; display:block;
+    padding:0; border:none; border-radius:0;
+    background:none; cursor:pointer; -webkit-appearance:none; appearance:none;
+  }
+  .gcolor-box input[type="color"]::-webkit-color-swatch-wrapper{padding:0; border:none;}
+  .gcolor-box input[type="color"]::-webkit-color-swatch{border:none;}
+  .gcolor-box input[type="color"]::-moz-color-swatch{border:none;}
+
+  #holiArea{
     width:100%; font-family:var(--font-ui); font-size:var(--fs-abbr);
     line-height:1.5; border:0.5px solid #D8D8D8; border-radius:0;
     padding:var(--sp-2); resize:vertical;
@@ -1989,10 +2066,6 @@
     display:flex; align-items:center; gap:var(--sp-2);
     border-top:1px solid #111;
     padding:var(--sp-2) var(--page-pad) 0; margin-top:var(--sp-4);
-  }
-  .ng-swatch{
-    width:12px; height:12px; flex:0 0 auto;
-    border:0.5px solid rgba(0,0,0,0.3);
   }
   .ng-name{
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
@@ -2183,18 +2256,6 @@ if('serviceWorker' in navigator){
           <!-- What was on that day and what came of it. Hidden until a day
                is pressed; the ✕ puts it away again. -->
           <div id="dayLogBox" class="dlog" style="display:none;"></div>
-          <div class="dlog-tools">
-            <button class="tool-btn" onclick="openHoliPaste()">Days off</button>
-          </div>
-          <div id="holiWrap" class="dlog-paste" style="display:none;">
-            <label class="field-label" for="holiArea">Paste a list of days off</label>
-            <textarea id="holiArea" rows="8" spellcheck="false"></textarea>
-            <p class="hint" id="holiMsg"></p>
-            <div class="dlog-tools">
-              <button class="btn btn-primary" onclick="applyHoliPaste(this)">Add</button>
-              <button class="btn btn-ghost" onclick="closeHoliPaste()">Close</button>
-            </div>
-          </div>
         </div>
         <div class="proj-block">
       <div id="projList"></div>
@@ -2324,7 +2385,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-27c</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-27f</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -2346,6 +2407,33 @@ if('serviceWorker' in navigator){
         <rect x="10.8" y="3" width="2.4" height="18"/>
         <rect x="3" y="10.8" width="18" height="2.4"/></svg>
       </button>
+    </div>
+  </div>
+
+  <div class="card-panel">
+    <label class="field-label">포스트잇 그룹 색</label>
+    <p class="hint" style="margin:6px 0 10px;">위에서부터 순서대로 쓰이고, 일곱 번째 그룹은 다시 첫 색으로 돌아갑니다.</p>
+    <div id="groupColorRows" class="gcolor-rows"></div>
+    <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="resetGroupColors(this)">처음 색으로</button>
+    </div>
+  </div>
+
+  <!-- The days off. Pasted rather than typed one at a time, and in the same
+       block the couple app writes, so one list covers both. -->
+  <div class="card-panel">
+    <label class="field-label">공휴일</label>
+    <p class="hint" style="margin:6px 0 10px;">쀼 앱에서 쓰는 것과 같은 형식입니다. 같은 텍스트를 양쪽에 그대로 넣으면 됩니다.</p>
+    <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="openHoliPaste()">공휴일 추가</button>
+    </div>
+    <div id="holiWrap" style="display:none; margin-top:var(--sp-3);">
+      <textarea id="holiArea" rows="10" spellcheck="false"></textarea>
+      <div style="display:flex; gap:var(--sp-2); margin-top:var(--sp-2); flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="applyHoliPaste(this)">넣기</button>
+        <button class="btn btn-ghost" onclick="closeHoliPaste()">닫기</button>
+      </div>
+      <p class="hint" id="holiMsg" style="margin-top:8px;"></p>
     </div>
   </div>
 
@@ -3662,20 +3750,26 @@ function renderProjCal(){
     const off = holiOf(code);
     const offName = [off.jp, off.kr].filter(Boolean).join(' / ');
     const log = dayLogOf(code);
-    const sched = log.sched.length
-      ? '<div class="cal-sched">' + escapeHtmlT(log.sched.join(' / ')) + '</div>' : '';
+    const texts = dayLineTexts(code);
+    const sched = texts.length
+      ? '<div class="cal-sched">' + escapeHtmlT(texts.join(' / ')) + '</div>' : '';
     /* A paragraph does not fit in a cell this size, so what was written gets
        a mark and the box below gets the words. */
     const wrote = log.diary.length ? '<span class="cal-dot"></span>' : '';
 
+    /* The ground is darkened for a day nobody is at work, which here means
+       Japan: a Korean holiday is one to keep in mind, not one off. Saturday
+       and Sunday count for the same reason. */
+    const dow = new Date(projCalYear, projCalMonth, day).getDay();
     const el = document.createElement('div');
     el.className = 'cal-cell' + (code === today ? ' is-today' : '') +
-                   (offName ? ' is-off' : '') +
+                   ((off.jp || dow === 0 || dow === 6) ? ' is-off' : '') +
                    (code === calPickedCode ? ' is-picked' : '');
     el.innerHTML =
       '<div class="cal-head">' +
         '<span class="cal-daynum">' + day + '</span>' +
-        (offName ? '<span class="cal-holi">' + escapeHtmlT(offName) + '</span>' : '') +
+        (offName ? '<span class="cal-holi' + (off.jp ? '' : ' kr') + '">' +
+          escapeHtmlT(offName) + '</span>' : '') +
       '</div>' +
       sched +
       (marks ? '<div class="cal-marks">' + marks + '</div>' : '') +
@@ -6661,6 +6755,8 @@ function buildTxt(){
      note and the ';' lines under it are what is written on it — one line of
      the note per line of the file, a bare ';' being a blank line, so a note
      can be read and edited here the same way it is on the wall. */
+  /* The six papers, before the dividers that stand on them. */
+  lines.push(['~~', 'notecolors'].concat(groupColors).join('\t'));
   noteGroups.forEach(g => {
     lines.push([':', g.id, g.name || ''].join('\t'));
   });
@@ -6717,7 +6813,11 @@ function buildTxt(){
        nothing but these still has to be written out, or it would vanish on
        the next restore. */
     const lg = dayLogOf(code);
-    const logLines = lg.sched.map(s => '> ' + s)
+    /* '> dentist at 10' is a line of the day; '> [ ] laundry' is one with a
+       box on it, '> [x]' one that has been ticked. The bracket is what tells
+       them apart, and a line without one reads as it always did. */
+    const logLines = lg.sched.map(s =>
+        '> ' + (s.todo ? '[' + (s.done ? 'x' : ' ') + '] ' : '') + s.t)
       .concat(lg.diary.map(s => '| ' + s));
     const dayOff = holiOf(code);
     if(!holiEmpty(dayOff)) logLines.push(['!', dayOff.jp, dayOff.kr].join('\t'));
@@ -6805,6 +6905,7 @@ function parseTxt(raw){
   const logOut = {};        // what was on and what came of it, by day
   const holiOut = {};       // the days off
   const groupOut = [];      // the board's dividers
+  let colorOut = null;      // and the six papers they stand on
   const noteOut = [];       // and its paper
   const errors = [];
   const defs = [];          // activity definitions found in the file
@@ -6828,6 +6929,14 @@ function parseTxt(raw){
              color: parts[2] || '#999999', id: parts[3] || null}
           : {short: parts[0], group: parts[2] || 'Other',
              color: parts[3] || '#999999', id: parts[4] || null});
+      }
+      return;
+    }
+    // '~~ notecolors  AABBCC  …' — the six papers the groups stand on.
+    if(t.startsWith('~~')){
+      const p = t.slice(2).split('\t').map(x => x.trim()).filter(Boolean);
+      if(p[0] === 'notecolors' && p.length > 1){
+        colorOut = p.slice(1).map(x => x.replace('#', '').toUpperCase());
       }
       return;
     }
@@ -6939,10 +7048,13 @@ function parseTxt(raw){
 
     // '> what was on' / '| what came of it' / '! Japan\tKorea'.
     if(t.startsWith('>')){
-      const s = t.slice(1).trim();
-      if(s){
+      const body = t.slice(1).trim();
+      const box = /^\[([ xX]?)\]\s*(.*)$/.exec(body);
+      const txt = (box ? box[2] : body).trim();
+      if(txt){
         logOut[code] = logOut[code] || {sched: [], diary: []};
-        logOut[code].sched.push(s);
+        logOut[code].sched.push({t: txt, todo: !!box,
+                                 done: !!box && box[1].toLowerCase() === 'x'});
       }
       return;
     }
@@ -7059,7 +7171,7 @@ function parseTxt(raw){
 
   return {data:out, todoData:todoOut, planData:planOut, weekData:weekOut,
           projData:projOut, routineData:routineOut,
-          logData:logOut, holiData:holiOut,
+          logData:logOut, holiData:holiOut, colorData:colorOut,
           groupData:groupOut, noteData:notesKept, errors, defs};
 }
 
@@ -7087,7 +7199,7 @@ function activitiesFromDefs(defs){
 
 async function applyImport(){
   const {data, todoData, planData, weekData, projData, routineData,
-         logData, holiData, groupData, noteData, errors, defs} =
+         logData, holiData, colorData, groupData, noteData, errors, defs} =
     parseTxt(document.getElementById('importArea').value);
   const msg = document.getElementById('importMsg');
   if(errors.length){
@@ -7114,8 +7226,13 @@ async function applyImport(){
     Object.assign({}, p, {tasks: sanitizeTasks(p.tasks)}));
   routines = sanitizeRoutines(routineData);
   dayLog = logData || {};
+  /* Whatever order a hand-edited file put them in, the rule holds. */
+  Object.keys(dayLog).forEach(c => {
+    dayLog[c].sched = dayLogReorder((dayLog[c].sched || []).map(dayLine));
+  });
   holi = holiData || {};
   noteGroups = groupData || [];
+  if(Array.isArray(colorData) && colorData.length) groupColors = colorData;
   /* A note pointing at a divider the file does not carry comes back to the
      top of the board rather than to a group that is not there. */
   const gids = {};
@@ -7136,6 +7253,7 @@ async function applyImport(){
   closeImport();
   refreshAll();
   renderNotes();
+  renderGroupColors();
   renderProjCal();
   renderDayLog();
   msg.textContent = '';
@@ -7164,6 +7282,7 @@ function switchTab(){
 function openOptions(){
   refreshSyncIdField();
   renderBackupStatus();
+  renderGroupColors();
   renderColorRows();
   renderRoutineRows();
   renderRoutineDraft();
@@ -7238,10 +7357,35 @@ let dayLog = {};
    keeps, and the same pasted text, so one list serves both. */
 let holi = {};
 
+/* A line of a day is {t, todo, done}. It began as a plain string, so one is
+   read as a schedule line — a store written by the earlier build must still
+   open. Ticking is only ever asked of a line that says it is a to-do. */
+function dayLine(x){
+  if(typeof x === 'string') return {t: x, todo: false, done: false};
+  return {t: String((x && x.t) || ''), todo: !!(x && x.todo), done: !!(x && x.done)};
+}
 function dayLogOf(code){
   const d = dayLog[code] || {};
-  return {sched: Array.isArray(d.sched) ? d.sched : [],
+  return {sched: (Array.isArray(d.sched) ? d.sched : []).map(dayLine),
           diary: Array.isArray(d.diary) ? d.diary : []};
+}
+/* What the cell shows and what the backup writes: the words, nothing else. */
+function dayLineTexts(code){ return dayLogOf(code).sched.map(l => l.t).filter(Boolean); }
+
+/* Schedules first, to-dos under them — the rule holds in the stored order
+   rather than at drawing time, so what is written down is what is read back
+   and the backup needs no sorting of its own. A line joining the to-dos goes
+   to the end of them; one leaving goes to the end of the schedules. */
+function dayLogReorder(list){
+  return list.filter(l => !l.todo).concat(list.filter(l => l.todo));
+}
+function dayLogWrite(code, list){
+  const kept = list.filter(l => l.t);
+  const cur = dayLogOf(code);
+  if(!kept.length && !cur.diary.length) delete dayLog[code];
+  else dayLog[code] = {sched: kept, diary: cur.diary};
+  renderProjCal();
+  saveDayLog();
 }
 function dayLogEmpty(v){ return !v.sched.length && !v.diary.length; }
 function holiOf(code){
@@ -7312,21 +7456,150 @@ function renderDayLog(){
       '<button class="pi-tool" onclick="calPick(\'\')" aria-label="Close">✕</button>' +
     '</div>' +
     '<div class="dlog-grid">' +
-      '<label class="dlog-field">' +
-        '<span class="field-label">What was on</span>' +
-        '<textarea class="dlog-area" rows="3" spellcheck="false"' +
-          ' placeholder="One a line"' +
-          ' oninput="dayLogTyping(this,\'sched\')">' +
-          escapeHtmlT(v.sched.join('\n')) + '</textarea>' +
-      '</label>' +
-      '<label class="dlog-field">' +
-        '<span class="field-label">What came of it</span>' +
-        '<textarea class="dlog-area" rows="3" spellcheck="false"' +
+      '<div class="dlog-field">' + dayLineListHtml(v.sched) + '</div>' +
+      '<div class="dlog-field">' +
+        '<textarea class="dlog-area" rows="4" spellcheck="false" placeholder="일기"' +
           ' oninput="dayLogTyping(this,\'diary\')">' +
           escapeHtmlT(v.diary.join('\n')) + '</textarea>' +
-      '</label>' +
+      '</div>' +
     '</div>';
+  focusDayLine();
 }
+
+/* The day's lines, one row each. A row is the words; pressing them opens the
+   row itself for writing rather than a box somewhere else, and Enter puts the
+   next row underneath already open — which is how a list gets written in one
+   go instead of one press per line.
+
+   The ☐ button is what makes a line a to-do. Not every line of a day is
+   something to tick off: "dentist at 10" happens whether or not anyone ticks
+   it, and "drop off the laundry" does not. */
+function dayLineListHtml(list){
+  const rows = list.map((l, i) => {
+    const open = dayEditIdx === i;
+    /* A line with a box and a line without must start their words in the
+       same column, or a list reads as two lists. The one without gets a mark
+       the size of the box it does not have. */
+    const tick = l.todo
+      ? '<button class="dl-check' + (l.done ? ' is-done' : '') + '"' +
+          ' onclick="dayLineDone(' + i + ')" aria-label="Done"></button>'
+      : '<span class="dl-dot" aria-hidden="true"></span>';
+    const body = open
+      ? '<input class="dl-input" type="text" value="' + escapeAttr(l.t) + '"' +
+          ' onkeydown="dayLineKey(event,' + i + ')"' +
+          ' oninput="dayLineTyping(this,' + i + ')" aria-label="Line">'
+      : '<button class="dl-text' + (l.done ? ' is-done' : '') + '"' +
+          ' onclick="dayLineOpen(' + i + ')">' + escapeHtmlT(l.t) + '</button>';
+    return '<div class="dl-row">' + tick + body +
+      '<button class="dl-kind' + (l.todo ? ' on' : '') + '"' +
+        ' onclick="dayLineKind(' + i + ')"' +
+        ' aria-label="To-do" title="체크박스로 바꾸기">✓</button>' +
+    '</div>';
+  }).join('');
+  /* Nothing written yet: the word that used to stand over the box now stands
+     in it, and pressing it starts the first line. */
+  const starter = list.length ? '' :
+    '<button class="dl-empty" onclick="dayLineAdd()">스케줄</button>';
+  return '<div class="dl-list">' + rows + starter +
+    '<button class="add-btn dl-add" onclick="dayLineAdd()" aria-label="Add line">' +
+      NPLUS_SVG + '</button>' +
+  '</div>';
+}
+
+/* Which row is open, by position in the day's list. */
+let dayEditIdx = -1;
+
+function focusDayLine(){
+  const box = document.querySelector('#dayLogBox .dl-input');
+  if(box){ box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+
+function dayLineOpen(i){
+  dayEditIdx = i;
+  renderDayLog();
+}
+
+/* A new line, empty and already open. Written on nothing, it takes itself
+   away again when the row closes. A to-do is added under the to-dos and a
+   schedule under the schedules, so the rule holds while typing too. */
+function dayLineAdd(asTodo){
+  const list = dayLogOf(calPickedCode).sched;
+  const line = {t: '', todo: !!asTodo, done: false};
+  const at = asTodo ? list.length : list.filter(l => !l.todo).length;
+  list.splice(at, 0, line);
+  dayLog[calPickedCode] = {sched: list, diary: dayLogOf(calPickedCode).diary};
+  dayEditIdx = at;
+  renderDayLog();
+}
+
+/* Typed into, the line is kept as it is typed, and the grid follows along —
+   but the row itself is not rebuilt, or the caret would jump to the start. */
+function dayLineTyping(el, i){
+  const list = dayLogOf(calPickedCode).sched;
+  if(!list[i]) return;
+  list[i].t = el.value.trim();
+  dayLogWrite(calPickedCode, list);
+}
+
+function dayLineKey(ev, i){
+  if(ev.key === 'Enter'){
+    ev.preventDefault();
+    const list = dayLogOf(calPickedCode).sched;
+    /* An empty row and Enter is "I am done", not "one more": otherwise the
+       list grows a blank line every time somebody stops typing. */
+    if(!list[i] || !list[i].t){ dayLineClose(); return; }
+    dayLineAdd(list[i].todo);
+    return;
+  }
+  if(ev.key === 'Escape'){ ev.preventDefault(); dayLineClose(); }
+}
+
+/* Closing. A row with nothing on it is taken away rather than left as a blank
+   line nobody meant to write. */
+function dayLineClose(){
+  const i = dayEditIdx;
+  dayEditIdx = -1;
+  if(i !== -1){
+    const list = dayLogOf(calPickedCode).sched;
+    if(list[i] && !list[i].t){
+      list.splice(i, 1);
+      dayLogWrite(calPickedCode, list);
+    }
+  }
+  renderDayLog();
+}
+
+/* Schedule ↔ to-do. The line moves to the end of whichever block it has
+   joined, so the two never interleave. */
+function dayLineKind(i){
+  const list = dayLogOf(calPickedCode).sched;
+  if(!list[i]) return;
+  const line = list[i];
+  line.todo = !line.todo;
+  if(!line.todo) line.done = false;
+  list.splice(i, 1);
+  const moved = dayLogReorder(list.concat([line]));
+  dayEditIdx = -1;
+  dayLogWrite(calPickedCode, moved);
+  renderDayLog();
+}
+
+function dayLineDone(i){
+  const list = dayLogOf(calPickedCode).sched;
+  if(!list[i] || !list[i].todo) return;
+  list[i].done = !list[i].done;
+  dayLogWrite(calPickedCode, list);
+  renderDayLog();
+}
+
+/* Pressing away from an open row closes it, the same way an open note closes.
+   Everything typed is already saved, so there is nothing to lose. */
+document.addEventListener('pointerdown', e => {
+  if(dayEditIdx === -1) return;
+  const t = e.target;
+  if(t && t.closest && t.closest('.dl-row')) return;
+  dayLineClose();
+}, true);
 
 function dayLogTyping(el, which){
   const code = calPickedCode;
@@ -7363,6 +7636,8 @@ function openHoliPaste(){
   const box = document.getElementById('holiWrap');
   if(!box) return;
   box.style.display = 'block';
+  /* Opens with what is already in, so a paste can be checked against it and
+     the box doubles as a way of reading the list back. */
   document.getElementById('holiArea').value = holiToText();
   document.getElementById('holiMsg').textContent = '';
 }
@@ -7397,15 +7672,15 @@ async function applyHoliPaste(el){
   const codes = Object.keys(found);
   const msg = document.getElementById('holiMsg');
   if(!codes.length){
-    msg.textContent = 'Nothing recognised. Check the format.';
+    msg.textContent = '읽을 내용이 없습니다. 형식을 확인해 주세요.';
     return;
   }
-  if(!askConfirm('Add ' + codes.length + ' day(s) off?', el, 'Press again to add')) return;
+  if(!askConfirm(codes.length + '일을 넣습니다.', el, '한 번 더 누르면 넣습니다')) return;
   codes.forEach(c => { holi[c] = found[c]; });
   await saveDayLog();
   renderProjCal();
   renderDayLog();
-  msg.textContent = codes.length + ' day(s) off added.';
+  msg.textContent = codes.length + '일을 넣었습니다.';
 }
 
 function holiToText(){
@@ -7454,14 +7729,40 @@ let noteGroups = [];
    read by where a thing sits as much as by its colour, and six colours that
    stay distinct beat twelve that do not. All are light enough to carry the
    same black lettering the rest of the app uses. */
-const GROUP_COLORS = ['F2FF00', '00E5FF', '2CE17A', 'FFA3C7', 'FFB454', 'C9C9C9'];
+const GCOLOR_KEY = 'time-note-colors';
+const GROUP_COLORS_DEF = ['F2FF00', '00E5FF', '2CE17A', 'FFA3C7', 'FFB454', 'C9C9C9'];
+let groupColors = GROUP_COLORS_DEF.slice();
 const UNGROUPED_COLOR = 'FFFFFF';
 
 function groupColor(gid){
   if(!gid) return UNGROUPED_COLOR;
   const at = noteGroups.findIndex(g => g.id === gid);
   if(at === -1) return UNGROUPED_COLOR;
-  return GROUP_COLORS[at % GROUP_COLORS.length];
+  return groupColors[at % groupColors.length] || UNGROUPED_COLOR;
+}
+
+/* The six, as they are set. Changing one reaches every group standing on it
+   at once — a group is not given a colour, it is given a place in the six. */
+function renderGroupColors(){
+  const wrap = document.getElementById('groupColorRows');
+  if(!wrap) return;
+  wrap.innerHTML = groupColors.map((c, i) =>
+    '<span class="gcolor-box"><input type="color" value="#' + escapeAttr(c) + '"' +
+      ' onchange="setGroupColor(' + i + ', this.value)"' +
+      ' aria-label="Group colour ' + (i + 1) + '"></span>').join('');
+}
+function setGroupColor(i, value){
+  groupColors[i] = String(value || '').replace('#', '').toUpperCase();
+  saveNotes();
+  renderGroupColors();
+  renderNotes();
+}
+function resetGroupColors(el){
+  if(!askConfirm('여섯 색을 처음 상태로 되돌립니다.', el, '한 번 더 누르면 되돌립니다')) return;
+  groupColors = GROUP_COLORS_DEF.slice();
+  saveNotes();
+  renderGroupColors();
+  renderNotes();
 }
 function noteColor(note){ return note.color || groupColor(note.gid); }
 function groupById(gid){ return noteGroups.find(g => g.id === gid) || null; }
@@ -7475,6 +7776,7 @@ async function saveNotes(){
   try{
     await appStorage.set(NOTE_KEY, JSON.stringify(notes));
     await appStorage.set(NGROUP_KEY, JSON.stringify(noteGroups));
+    await appStorage.set(GCOLOR_KEY, JSON.stringify(groupColors));
   }catch(e){
     console.warn('note save failed', e);
   }
@@ -7489,6 +7791,12 @@ async function loadNotes(){
     const b = await appStorage.get(NGROUP_KEY);
     noteGroups = b && b.value ? (JSON.parse(b.value) || []) : [];
   }catch(e){ noteGroups = []; }
+  try{
+    const c = await appStorage.get(GCOLOR_KEY);
+    const got = c && c.value ? JSON.parse(c.value) : null;
+    if(Array.isArray(got) && got.length) groupColors = got.map(x => String(x).replace('#', '').toUpperCase());
+  }catch(e){}
+  if(!Array.isArray(groupColors) || !groupColors.length) groupColors = GROUP_COLORS_DEF.slice();
   if(!Array.isArray(notes)) notes = [];
   if(!Array.isArray(noteGroups)) noteGroups = [];
   notes.forEach(n => {
@@ -7672,10 +7980,8 @@ function noteAddBtnHtml(gid){
    no rows to divide, and a rule across a run of paper would cut notes in
    half. The groups still colour their notes there. */
 function groupBarHtml(g){
-  const swatch = '<span class="ng-swatch" style="background:#' +
-    escapeAttr(groupColor(g.id)) + ';"></span>';
   if(groupEditId === g.id){
-    return '<div class="ng-bar is-editing">' + swatch +
+    return '<div class="ng-bar is-editing">' +
       '<input class="ng-input" type="text" value="' + escapeAttr(g.name) + '"' +
         ' oninput="groupRename(this,\'' + g.id + '\')"' +
         ' onkeydown="groupNameKey(event)" aria-label="Group name">' +
@@ -7683,7 +7989,7 @@ function groupBarHtml(g){
       '<button class="pi-tool done" onclick="groupCloseEdit()" aria-label="Done">✓</button>' +
     '</div>';
   }
-  return '<div class="ng-bar">' + swatch +
+  return '<div class="ng-bar">' +
     '<button class="ng-name" onclick="groupOpenEdit(\'' + g.id + '\')">' +
       escapeHtmlT(g.name || '(no name)') + '</button>' +
   '</div>';
