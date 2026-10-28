@@ -1904,23 +1904,25 @@
   .dl-kind.on{color:#111;}
   .dl-kind:hover{color:var(--text-muted);}
   .dl-empty{
+    display:flex; align-items:center; gap:var(--sp-2);
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
     background:none; color:var(--text-muted);
     border:none; border-radius:0; padding:2px 0;
     cursor:text; text-align:left;
   }
+  .dl-empty-plus{color:var(--text-dark); font-size:var(--fs-body); line-height:1;}
+  /* A link in the day, and in the cell. Navy rather than the electric blue a
+     browser picks, which is the one colour in this app that belongs to
+     nothing. */
+  .dl-text a, .cal-sched .md-link, .dl-text .md-link{color:#2F4C86;}
+  .dl-text a{text-decoration:underline;}
+  .cal-sched .md-link{text-decoration:underline;}
+  .dl-text s, .cal-sched s{color:var(--text-muted);}
+  /* Pushed to the end of its row so the panel shuts from the same corner the
+     month is stepped from. */
+  .dlog-shut{flex:0 0 auto;}
   .dl-add{margin-top:var(--sp-1);}
 
-  /* Bordered while it is empty, so there is something to aim at; once there
-     is writing in it the writing is the thing and the box is noise. */
-  .dlog-area:not(:placeholder-shown){border-color:transparent; padding-left:0;}
-  .dlog-area{
-    width:100%; margin-top:var(--sp-1);
-    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
-    line-height:1.4; color:var(--text-dark);
-    border:0.5px solid #D8D8D8; border-radius:0;
-    padding:var(--sp-2); resize:vertical;
-  }
   .dlog-tools{
     display:flex; align-items:center; gap:var(--sp-2);
     margin-top:var(--sp-3);
@@ -2099,6 +2101,11 @@
     color:var(--text-dark); cursor:pointer; text-align:left;
   }
   .ng-name:hover{color:var(--text-muted);}
+  /* At the far end of the rule, level with the name. A chevron that can do
+     nothing is drawn as such: half-lit and not pressable. */
+  .ng-moves{display:flex; align-items:center; gap:var(--sp-1); flex:0 0 auto;}
+  .ng-move{flex:0 0 auto;}
+  .ng-move[disabled]{opacity:0.22; cursor:default; pointer-events:none;}
   .ng-input{
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
     flex:1 1 auto; min-width:0;
@@ -2411,7 +2418,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-28b</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-28c</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -3778,7 +3785,8 @@ function renderProjCal(){
     const log = dayLogOf(code);
     const texts = dayLineTexts(code);
     const sched = texts.length
-      ? '<div class="cal-sched">' + escapeHtmlT(texts.join(' / ')) + '</div>' : '';
+      ? '<div class="cal-sched">' +
+          texts.map(t => mdToHtml(t, false)).join(' / ') + '</div>' : '';
     /* A paragraph does not fit in a cell this size, so what was written gets
        a mark and the box below gets the words. */
     const wrote = log.diary.length ? '<span class="cal-dot"></span>' : '';
@@ -7376,6 +7384,46 @@ setInterval(() => { moveNowMarker(); dayRollTick(); }, 30000);
 
    Spending stays out of this app — the couple app is where money is kept.
    ========================================================================= */
+/* ---- the same shorthand the couple app writes in ----------------------
+   `**bold**`, `_underlined_` or `__underlined__`, `~~struck~~`, and
+   `[words](https://…)`. Written once here and used by the day's lines, so a
+   line carried between the two apps reads the same in both. */
+const RE_LINK = /\[([^\]]+)\]\(([^)\s]+)\)/g;
+const RE_U1   = /(^|[\s(\[])_([^_\n]+)_(?=$|[\s).,!?\]])/g;
+
+function mdEmphasis(s){
+  return s
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<u>$1</u>')
+    .replace(RE_U1, '$1<u>$2</u>')
+    .replace(/~~([^~]+)~~/g, '<s>$1</s>');
+}
+
+/* The links come out first and go back in last. Left in place, the marks
+   above run over the addresses too: an underscore inside a URL turns into a
+   <u> in the middle of the href and the link stops working.
+
+   `asLink` false keeps the wording and the underline but not the anchor —
+   which is what a calendar cell wants, since the whole square is already a
+   button and a link inside it would swallow the press that opens the day. */
+function mdToHtml(raw, asLink){
+  let s = escapeHtmlT(raw);
+  const links = [];
+  s = s.replace(RE_LINK, (m, t, u) => {
+    if(!/^(https?:|mailto:)/i.test(u)) return m;
+    links.push({t: t, u: u});
+    return '\u0000' + (links.length - 1) + '\u0000';
+  });
+  s = mdEmphasis(s);
+  return s.replace(/\u0000(\d+)\u0000/g, (m, i) => {
+    const l = links[+i];
+    const body = mdEmphasis(l.t);
+    return asLink === false
+      ? '<span class="md-link">' + body + '</span>'
+      : '<a href="' + l.u + '" target="_blank" rel="noopener">' + body + '</a>';
+  });
+}
+
 const DLOG_KEY = 'time-daylog';
 const HOLI_KEY = 'time-holi';
 /* {'261027': {sched:['치과 10시'], diary:['...']}} */
@@ -7467,16 +7515,43 @@ function calPick(code){
   renderDayLog();
 }
 
-/* Two boxes under the grid: what was on, and what came of it. Typed into,
-   they are kept on every keystroke and the grid is redrawn so the cell
-   follows along — but the box itself is not rebuilt, or the caret would jump
-   back to the start on every letter. */
+/* Two lists under the grid: what was on the day, and what came of it. Both
+   are written a line at a time — press, type, Enter for the next — and both
+   carry the same shorthand the couple app's notes use.
+
+   The second was a box of prose to begin with. It is a log, not an essay:
+   what gets written in it is one thing done after another, and a list says
+   that where a paragraph does not. */
+const DLOG_FIELDS = [
+  {key: 'sched', label: '스케줄',   todo: true},
+  {key: 'diary', label: '작업일지', todo: false}
+];
+
+/* The two are stored differently — the schedule carries a box and a tick per
+   line, the log is plain words — and both are drawn by the same code, so they
+   are read in and written back through one shape. */
+function dayLines(field){
+  const v = dayLogOf(calPickedCode);
+  return field === 'sched' ? v.sched
+       : v.diary.map(t => ({t: t, todo: false, done: false}));
+}
+function dayLinesWrite(field, list){
+  const cur = dayLogOf(calPickedCode);
+  const kept = list.filter((l, i) => l.t || (dayEditField === field && i === dayEditIdx));
+  const next = field === 'sched'
+    ? {sched: kept, diary: cur.diary}
+    : {sched: cur.sched, diary: kept.map(l => l.t)};
+  if(!next.sched.length && !next.diary.length) delete dayLog[calPickedCode];
+  else dayLog[calPickedCode] = next;
+  renderProjCal();              // the cell follows; the open box is left alone
+  saveDayLog();
+}
+
 function renderDayLog(){
   const wrap = document.getElementById('dayLogBox');
   if(!wrap) return;
   if(!calPickedCode){ wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
   wrap.style.display = '';
-  const v = dayLogOf(calPickedCode);
   const h = holiOf(calPickedCode);
   const off = [h.jp, h.kr].filter(Boolean).join(' / ');
   wrap.innerHTML =
@@ -7484,61 +7559,70 @@ function renderDayLog(){
       '<span class="dlog-date">' + escapeHtmlT(codeToLabel(calPickedCode)) + '</span>' +
       (off ? '<span class="dlog-holi">' + escapeHtmlT(off) + '</span>' : '') +
       '<span style="flex:1;"></span>' +
-      '<button class="pi-tool" onclick="calPick(\'\')" aria-label="Close">✕</button>' +
+      /* The same chevron the month and the projects are stepped with, turned
+         to point the way the panel goes. A ✕ said "delete"; this says "put
+         away", which is what it does. */
+      '<button class="mode-toggle dlog-shut" onclick="calPick(\'\')"' +
+        ' aria-label="접기" title="접기">' +
+        '<svg class="nav-chev chev-up" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor"' +
+        ' stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>' +
+      '</button>' +
     '</div>' +
     '<div class="dlog-grid">' +
-      '<div class="dlog-field">' + dayLineListHtml(v.sched) + '</div>' +
-      '<div class="dlog-field">' +
-        '<textarea class="dlog-area" rows="4" spellcheck="false" placeholder="일기"' +
-          ' oninput="dayLogTyping(this,\'diary\')">' +
-          escapeHtmlT(v.diary.join('\n')) + '</textarea>' +
-      '</div>' +
+      DLOG_FIELDS.map(f =>
+        '<div class="dlog-field">' + dayLineListHtml(f) + '</div>').join('') +
     '</div>';
   focusDayLine();
 }
 
-/* The day's lines, one row each. A row is the words; pressing them opens the
-   row itself for writing rather than a box somewhere else, and Enter puts the
-   next row underneath already open — which is how a list gets written in one
-   go instead of one press per line.
+/* One row a line. Pressing the words opens the row itself rather than a box
+   somewhere else, and Enter puts the next row underneath already open.
 
-   The ☐ button is what makes a line a to-do. Not every line of a day is
-   something to tick off: "dentist at 10" happens whether or not anyone ticks
-   it, and "drop off the laundry" does not. */
-function dayLineListHtml(list){
+   The ☐ button, on the schedule only, is what makes a line something to tick
+   off: "dentist at 10" happens whether or not anyone ticks it, "drop off the
+   laundry" does not. A log has nothing to tick — it is already done. */
+function dayLineListHtml(field){
+  const list = dayLines(field.key);
   const rows = list.map((l, i) => {
-    const open = dayEditIdx === i;
-    /* A line with a box and a line without must start their words in the
-       same column, or a list reads as two lists. The one without gets a mark
-       the size of the box it does not have. */
-    const tick = l.todo
+    const open = dayEditField === field.key && dayEditIdx === i;
+    const lead = l.todo
       ? '<button class="dl-check' + (l.done ? ' is-done' : '') + '"' +
-          ' onclick="dayLineDone(' + i + ')" aria-label="Done"></button>'
+          ' onclick="dayLineDone(\'' + field.key + '\',' + i + ')" aria-label="Done"></button>'
       : '<span class="dl-dot" aria-hidden="true"></span>';
     const body = open
       ? '<input class="dl-input" type="text" value="' + escapeAttr(l.t) + '"' +
-          ' onkeydown="dayLineKey(event,' + i + ')"' +
-          ' onblur="dayLineTyping(this,' + i + ')"' +
-          ' oninput="dayLineTyping(this,' + i + ')" aria-label="Line">'
+          ' onkeydown="dayLineKey(event,\'' + field.key + '\',' + i + ')"' +
+          ' onblur="dayLineTyping(this,\'' + field.key + '\',' + i + ')"' +
+          ' oninput="dayLineTyping(this,\'' + field.key + '\',' + i + ')" aria-label="Line">'
       : '<button class="dl-text' + (l.done ? ' is-done' : '') + '"' +
-          ' onclick="dayLineOpen(' + i + ')">' + escapeHtmlT(l.t) + '</button>';
-    return '<div class="dl-row">' + tick + body +
-      '<button class="dl-kind' + (l.todo ? ' on' : '') + '"' +
-        ' onclick="dayLineKind(' + i + ')"' +
-        ' aria-label="To-do" title="체크박스로 바꾸기">✓</button>' +
-    '</div>';
+          ' onclick="dayLineOpen(\'' + field.key + '\',' + i + ')">' +
+          mdToHtml(l.t) + '</button>';
+    const kind = field.todo
+      ? '<button class="dl-kind' + (l.todo ? ' on' : '') + '"' +
+          ' onclick="dayLineKind(\'' + field.key + '\',' + i + ')"' +
+          ' aria-label="To-do" title="체크박스로 바꾸기">✓</button>'
+      : '';
+    return '<div class="dl-row">' + lead + body + kind + '</div>';
   }).join('');
-  /* Nothing written yet: the word that used to stand over the box now stands
-     in it, and pressing it starts the first line. */
-  const starter = list.length ? '' :
-    '<button class="dl-empty" onclick="dayLineAdd()">스케줄</button>';
-  return '<div class="dl-list">' + rows + starter +
-    '<button class="add-btn dl-add" onclick="dayLineAdd()" aria-label="Add line">' +
-      NPLUS_SVG + '</button>' +
+
+  /* Nothing written yet: one line that is the name of the list and the way to
+     start it, and nothing else. A + standing under an empty list was a second
+     way to do the one thing there was to do. */
+  if(!list.length){
+    return '<div class="dl-list">' +
+      '<button class="dl-empty" onclick="dayLineAdd(\'' + field.key + '\')">' +
+        escapeHtmlT(field.label) + ' <span class="dl-empty-plus">+</span></button>' +
+    '</div>';
+  }
+  return '<div class="dl-list">' + rows +
+    '<button class="add-btn dl-add" onclick="dayLineAdd(\'' + field.key + '\')"' +
+      ' aria-label="Add line">' + NPLUS_SVG + '</button>' +
   '</div>';
 }
 
-/* Which row is open, by position in the day's list. */
+/* Which list, and which row of it, is open. */
+let dayEditField = '';
 let dayEditIdx = -1;
 
 function focusDayLine(){
@@ -7555,14 +7639,15 @@ function dayLineCommit(){
   if(dayEditIdx === -1) return;
   const el = document.querySelector('#dayLogBox .dl-input');
   if(!el) return;
-  const list = dayLogOf(calPickedCode).sched;
+  const list = dayLines(dayEditField);
   if(!list[dayEditIdx]) return;
   list[dayEditIdx].t = String(el.value || '').trim();
-  dayLogWrite(calPickedCode, list);
+  dayLinesWrite(dayEditField, list);
 }
 
-function dayLineOpen(i){
+function dayLineOpen(field, i){
   dayLineCommit();
+  dayEditField = field;
   dayEditIdx = i;
   renderDayLog();
 }
@@ -7570,34 +7655,35 @@ function dayLineOpen(i){
 /* A new line, empty and already open. Written on nothing, it takes itself
    away again when the row closes. A to-do is added under the to-dos and a
    schedule under the schedules, so the rule holds while typing too. */
-function dayLineAdd(asTodo){
+function dayLineAdd(field, asTodo){
   dayLineCommit();
-  const list = dayLogOf(calPickedCode).sched;
+  const list = dayLines(field);
   const line = {t: '', todo: !!asTodo, done: false};
   const at = asTodo ? list.length : list.filter(l => !l.todo).length;
   list.splice(at, 0, line);
-  dayLog[calPickedCode] = {sched: list, diary: dayLogOf(calPickedCode).diary};
+  dayEditField = field;
   dayEditIdx = at;
+  dayLinesWrite(field, list);
   renderDayLog();
 }
 
 /* Typed into, the line is kept as it is typed, and the grid follows along —
    but the row itself is not rebuilt, or the caret would jump to the start. */
-function dayLineTyping(el, i){
-  const list = dayLogOf(calPickedCode).sched;
+function dayLineTyping(el, field, i){
+  const list = dayLines(field);
   if(!list[i]) return;
   list[i].t = el.value.trim();
-  dayLogWrite(calPickedCode, list);
+  dayLinesWrite(field, list);
 }
 
-function dayLineKey(ev, i){
+function dayLineKey(ev, field, i){
   if(ev.key === 'Enter'){
     ev.preventDefault();
-    const list = dayLogOf(calPickedCode).sched;
+    const list = dayLines(field);
     /* An empty row and Enter is "I am done", not "one more": otherwise the
        list grows a blank line every time somebody stops typing. */
     if(!list[i] || !list[i].t){ dayLineClose(); return; }
-    dayLineAdd(list[i].todo);
+    dayLineAdd(field, list[i].todo);
     return;
   }
   if(ev.key === 'Escape'){ ev.preventDefault(); dayLineClose(); }
@@ -7607,38 +7693,35 @@ function dayLineKey(ev, i){
    line nobody meant to write. */
 function dayLineClose(){
   dayLineCommit();
-  const i = dayEditIdx;
-  dayEditIdx = -1;
+  const field = dayEditField, i = dayEditIdx;
+  dayEditField = ''; dayEditIdx = -1;
   if(i !== -1){
-    const list = dayLogOf(calPickedCode).sched;
-    if(list[i] && !list[i].t){
-      list.splice(i, 1);
-    }
-    dayLogWrite(calPickedCode, list);
+    const list = dayLines(field);
+    if(list[i] && !list[i].t) list.splice(i, 1);
+    dayLinesWrite(field, list);
   }
   renderDayLog();
 }
 
 /* Schedule ↔ to-do. The line moves to the end of whichever block it has
    joined, so the two never interleave. */
-function dayLineKind(i){
-  const list = dayLogOf(calPickedCode).sched;
+function dayLineKind(field, i){
+  const list = dayLines(field);
   if(!list[i]) return;
   const line = list[i];
   line.todo = !line.todo;
   if(!line.todo) line.done = false;
   list.splice(i, 1);
-  const moved = dayLogReorder(list.concat([line]));
-  dayEditIdx = -1;
-  dayLogWrite(calPickedCode, moved);
+  dayEditField = ''; dayEditIdx = -1;
+  dayLinesWrite(field, dayLogReorder(list.concat([line])));
   renderDayLog();
 }
 
-function dayLineDone(i){
-  const list = dayLogOf(calPickedCode).sched;
+function dayLineDone(field, i){
+  const list = dayLines(field);
   if(!list[i] || !list[i].todo) return;
   list[i].done = !list[i].done;
-  dayLogWrite(calPickedCode, list);
+  dayLinesWrite(field, list);
   renderDayLog();
 }
 
@@ -7649,24 +7732,14 @@ document.addEventListener('pointerdown', e => {
   const t = e.target;
   if(!t || !t.closest) return;
   if(t.closest('.dl-row')) return;
-  /* These three open a row of their own, and each writes the open one out
-     first. Closing here as well would redraw the list under the finger, take
-     away the very button that was pressed, and the press would never become
-     a tap — so pressing + while writing did nothing at all. */
+  /* These open a row of their own, and each writes the open one out first.
+     Closing here as well would redraw the list under the finger, take away
+     the very button that was pressed, and the press would never become a tap
+     — so pressing + while writing did nothing at all. */
   if(t.closest('.dl-add') || t.closest('.dl-empty')) return;
   dayLineClose();
 }, true);
 
-function dayLogTyping(el, which){
-  const code = calPickedCode;
-  if(!code) return;
-  const cur = dayLogOf(code);
-  cur[which] = logParseLines(el.value, which === 'diary');
-  if(dayLogEmpty(cur)) delete dayLog[code];
-  else dayLog[code] = cur;
-  renderProjCal();              // the cell follows; the box is left alone
-  saveDayLog();
-}
 
 function codeToLabel(code){
   const y = 2000 + parseInt(code.slice(0, 2), 10);
@@ -8060,6 +8133,26 @@ function noteAddBtnHtml(gid){
    to it. Drawn only when the board is stacked — in one wrapping run there are
    no rows to divide, and a rule across a run of paper would cut notes in
    half. The groups still colour their notes there. */
+/* Which way a group can go. The board is read top to bottom, so where a
+   group sits IS how it ranks — the two chevrons are the only way to say that,
+   and at either end the one that would do nothing is shown as doing nothing
+   rather than quietly ignoring the press. */
+function groupMoveHtml(g){
+  const at = noteGroups.findIndex(x => x.id === g.id);
+  const btn = (dir, cls, label) =>
+    '<button class="mode-toggle ng-move" ' +
+      (dir === -1 ? (at <= 0 ? 'disabled ' : '')
+                  : (at >= noteGroups.length - 1 ? 'disabled ' : '')) +
+      'onclick="groupMove(\'' + g.id + '\',' + dir + ')" ' +
+      'aria-label="' + label + '" title="' + label + '">' +
+      '<svg class="nav-chev ' + cls + '" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor"' +
+      ' stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>' +
+    '</button>';
+  return '<span class="ng-moves">' +
+    btn(-1, 'chev-up', '위로') + btn(1, 'chev-down', '아래로') + '</span>';
+}
+
 function groupBarHtml(g){
   if(groupEditId === g.id){
     return '<div class="ng-bar is-editing">' +
@@ -8068,12 +8161,28 @@ function groupBarHtml(g){
         ' onkeydown="groupNameKey(event)" aria-label="Group name">' +
       '<button class="pi-tool" onclick="groupDelete(this,\'' + g.id + '\')">Delete</button>' +
       '<button class="pi-tool done" onclick="groupCloseEdit()" aria-label="Done">✓</button>' +
+      groupMoveHtml(g) +
     '</div>';
   }
   return '<div class="ng-bar">' +
     '<button class="ng-name" onclick="groupOpenEdit(\'' + g.id + '\')">' +
       escapeHtmlT(g.name || '(no name)') + '</button>' +
+    '<span style="flex:1;"></span>' +
+    groupMoveHtml(g) +
   '</div>';
+}
+
+/* Moving a group moves its colour with its place, because the colour belongs
+   to the place rather than to the group — the first group is the first paper
+   wherever its name came from. */
+function groupMove(id, dir){
+  const at = noteGroups.findIndex(g => g.id === id);
+  const to = at + dir;
+  if(at === -1 || to < 0 || to >= noteGroups.length) return;
+  const [g] = noteGroups.splice(at, 1);
+  noteGroups.splice(to, 0, g);
+  renderNotes();
+  saveNotes();
 }
 
 function renderNotes(){
