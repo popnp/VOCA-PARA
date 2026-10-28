@@ -2411,7 +2411,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-27i</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-28a</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -7407,7 +7407,11 @@ function dayLogReorder(list){
   return list.filter(l => !l.todo).concat(list.filter(l => l.todo));
 }
 function dayLogWrite(code, list){
-  const kept = list.filter(l => l.t);
+  /* A row with nothing on it is not kept — except the one being written on,
+     which is empty for as long as it takes to type the first letter. Dropping
+     it mid-edit left the open box pointing at a row that was no longer there,
+     and from then on every keystroke went nowhere. */
+  const kept = list.filter((l, i) => l.t || i === dayEditIdx);
   const cur = dayLogOf(code);
   if(!kept.length && !cur.diary.length) delete dayLog[code];
   else dayLog[code] = {sched: kept, diary: cur.diary};
@@ -7514,6 +7518,7 @@ function dayLineListHtml(list){
     const body = open
       ? '<input class="dl-input" type="text" value="' + escapeAttr(l.t) + '"' +
           ' onkeydown="dayLineKey(event,' + i + ')"' +
+          ' onblur="dayLineTyping(this,' + i + ')"' +
           ' oninput="dayLineTyping(this,' + i + ')" aria-label="Line">'
       : '<button class="dl-text' + (l.done ? ' is-done' : '') + '"' +
           ' onclick="dayLineOpen(' + i + ')">' + escapeHtmlT(l.t) + '</button>';
@@ -7541,7 +7546,23 @@ function focusDayLine(){
   if(box){ box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
 }
 
+/* Whatever is in the open box right now, written into the day. Every keypress
+   already does this, but a keypress is not guaranteed: an IME composing
+   Hangul can hold the last syllables back, and a box taken out of the page
+   mid-composition takes them with it. So the box is read once more before it
+   goes, and that reading is the one that counts. */
+function dayLineCommit(){
+  if(dayEditIdx === -1) return;
+  const el = document.querySelector('#dayLogBox .dl-input');
+  if(!el) return;
+  const list = dayLogOf(calPickedCode).sched;
+  if(!list[dayEditIdx]) return;
+  list[dayEditIdx].t = String(el.value || '').trim();
+  dayLogWrite(calPickedCode, list);
+}
+
 function dayLineOpen(i){
+  dayLineCommit();
   dayEditIdx = i;
   renderDayLog();
 }
@@ -7550,6 +7571,7 @@ function dayLineOpen(i){
    away again when the row closes. A to-do is added under the to-dos and a
    schedule under the schedules, so the rule holds while typing too. */
 function dayLineAdd(asTodo){
+  dayLineCommit();
   const list = dayLogOf(calPickedCode).sched;
   const line = {t: '', todo: !!asTodo, done: false};
   const at = asTodo ? list.length : list.filter(l => !l.todo).length;
@@ -7584,14 +7606,15 @@ function dayLineKey(ev, i){
 /* Closing. A row with nothing on it is taken away rather than left as a blank
    line nobody meant to write. */
 function dayLineClose(){
+  dayLineCommit();
   const i = dayEditIdx;
   dayEditIdx = -1;
   if(i !== -1){
     const list = dayLogOf(calPickedCode).sched;
     if(list[i] && !list[i].t){
       list.splice(i, 1);
-      dayLogWrite(calPickedCode, list);
     }
+    dayLogWrite(calPickedCode, list);
   }
   renderDayLog();
 }
@@ -7624,7 +7647,13 @@ function dayLineDone(i){
 document.addEventListener('pointerdown', e => {
   if(dayEditIdx === -1) return;
   const t = e.target;
-  if(t && t.closest && t.closest('.dl-row')) return;
+  if(!t || !t.closest) return;
+  if(t.closest('.dl-row')) return;
+  /* These three open a row of their own, and each writes the open one out
+     first. Closing here as well would redraw the list under the finger, take
+     away the very button that was pressed, and the press would never become
+     a tap — so pressing + while writing did nothing at all. */
+  if(t.closest('.dl-add') || t.closest('.dl-empty')) return;
   dayLineClose();
 }, true);
 
