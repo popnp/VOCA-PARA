@@ -325,28 +325,44 @@
     margin-left:auto; margin-right:auto;
   }
   .cal-marks{display:flex; flex-direction:column; row-gap:2px;}
-  /* A deadline. The activity's colour fills it and the name sits on top, cut
-     with an ellipsis rather than wrapping — a cell is a seventh of the screen
-     and two lines of name would push the row out of shape. */
+  /* A deadline: red, box and lettering alike, cut with an ellipsis rather
+     than wrapping — a cell is a seventh of the screen and two lines of name
+     would push the row out of shape. The activity's colour says what KIND of
+     work a thing is and is drawn on the dial and the strip; a deadline is not
+     a kind of work, it is a date, so it gets the one colour that means date. */
   .cal-mark{
     font-family:var(--font-ui);
-    font-size:var(--fs-cell);
+    /* The chip tracks the cell, because the cell is a seventh of the page and
+       nothing else. 11px is the size of the errands written under it — it was
+       13px, louder than the lines it sits over — and it comes down to 9px on a
+       phone, which is what it takes for the count to stand on its own line
+       whole at 390px rather than be cut mid-word. */
+    font-size:clamp(9px, 1.4vw, 11px);
     font-weight:500;
     line-height:1.3;
-    color:#111;
+    color:var(--rust);
     padding:1px 4px;
     border-radius:0;
-    display:block;
+    display:flex; align-items:baseline; gap:3px; flex-wrap:wrap;
     max-width:100%;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    overflow:hidden; white-space:nowrap;
     background:none;
-    border:0.5px solid #6B6B6B;
+    border:0.5px solid var(--rust);
     text-align:left;
     cursor:pointer;
   }
-  /* On a dark activity the lettering turns, by the same rule the running
-     header uses. */
-  .cal-mark.on-dark{color:#FFFFFF;}
+  /* The count first and the name after, because a cell is narrow: the name is
+     what gets cut, and a count cut off says nothing at all. A chip only ever
+     stands on the date it is due, so the count is always the same word. */
+  .cal-mark .cm-d{flex:0 0 auto; font-weight:600;}
+  /* The name keeps a floor of its own rather than shrinking to nothing: given
+     room it sits beside the count, and on a phone — where a cell is a seventh
+     of 390px — it drops to a line underneath instead of being cut to two
+     letters. No breakpoint does this; the cell's own width does. */
+  .cal-mark .cm-n{
+    flex:1 1 3.5em; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
   /* One of a project's items: an outline in the project's colour, never a
      fill, so a glance separates the project's own deadline from the smaller
      ones leading up to it. */
@@ -357,6 +373,7 @@
   .cal-mark.is-task.is-done{
     text-decoration:line-through;
     color:var(--text-muted);
+    border-color:var(--text-muted);
   }
   .proj-cal-wrap{margin-top:var(--sp-2);}
   .proj-cal-nav{
@@ -674,7 +691,12 @@
     row-gap:2px;
     pointer-events:none;
   }
-  .clock-due .cal-mark{cursor:default; max-width:100%;}
+  /* The same chip over the dial, where there is no seven-column grid to track
+     and the face is large on a phone too: it keeps the cell size it had. */
+  .clock-due .cal-mark{
+    cursor:default; max-width:100%;
+    font-size:var(--fs-cell); flex-wrap:nowrap;
+  }
 
   /* The date and total are laid over the dial's right side — the 00:00-06:00
      quadrant, which is shaded off-hours and rarely carries a wedge. Right
@@ -1298,23 +1320,10 @@
     flex:1; min-width:0; overflow-wrap:anywhere;
     cursor:pointer;
   }
-  /* Importance, written as stars in the text. Two: bold and red. One: bold.
-     None: exactly as before, so the ordinary case gains no decoration. */
-  /* Two stars: white on black rather than red text. Red was already the delete
-     colour, and on a list of black lines it read as a warning about the item
-     rather than as its rank. */
-  .todo-text.p2{
-    font-weight:600;
-    color:#FFFFFF;
-    background:#111111;
-    padding:0 4px;
-  }
-  .todo-text.p1{font-weight:600;}
   /* Struck through, not faded. Fading it would read as "can't press this" —
      that is what :disabled looks like everywhere else in both apps. */
   .todo-row.is-done .todo-text{text-decoration:line-through;}
-  /* Not from today: the whole line steps back to grey. Weight still carries
-     the importance, so a left-over urgent item stays bold. */
+  /* Not from today: the whole line steps back to grey. */
   /* One mark, standing in the second of the two columns — the one the ✕, the ↔
      and the > all sit in. .todo-tools already ends its children at the right
      edge, so nothing has to be said here beyond letting it: a width or a
@@ -1330,9 +1339,6 @@
   }
   .todo-row.is-past .todo-day,
   .todo-row.is-past .todo-text{color:var(--text-muted);}
-  /* The black plate outranks that: a left-over urgent line stays urgent, and
-     goes grey on black rather than losing its plate. */
-  .todo-row.is-past .todo-text.p2{color:#CFCFCF; background:#111111;}
   .todo-edit-row.is-done input[type="text"]{text-decoration:line-through;}
   /* Kept only inside the day editor, where the text is in a box being typed
      into and so can't double as the button. */
@@ -1786,9 +1792,11 @@
     border-radius:0;
   }
   /* ---- the day's own record, on the projects calendar ---- */
-  /* The cell grew from one figure to four things, so it gets the room. Two
-     lines of errands at 11px, the figure above them and the marks below. */
-  .cal-cell{min-height:84px;}
+  /* The floor is a full day measured, not a round number: the figure, a
+     deadline on it, three lines of errands at 11px and the mark that says
+     something was written come to 101.8px, so the cell never has to grow for
+     a day that has everything on it and the month keeps its rows even. */
+  .cal-cell{min-height:102px;}
   .cal-head{
     display:flex; align-items:baseline; justify-content:space-between;
     gap:3px; width:100%;
@@ -1801,20 +1809,21 @@
   .cal-cell.is-today .cal-head .cal-daynum{margin-left:0; margin-right:0;}
   /* Cut at the edge rather than wrapped: a long name must not cost the cell
      a line it needs for what is on that day. */
+  /* Both countries' days in the one grey. The ground under the cell is what
+     says which of them is a day off — red as well was the same thing said
+     twice, and it took the one loud colour the month has, which now belongs
+     to deadlines. */
   .cal-holi{
     flex:0 1 auto; min-width:0;
     font-size:var(--fs-tick); font-weight:400; line-height:1.2;
-    color:var(--rust);
+    color:var(--text-muted);
     white-space:nowrap; overflow:hidden; text-align:right;
   }
-  /* A day Korea keeps and Japan does not. Grey, because it is something to
-     remember rather than a day off. */
-  .cal-holi.kr{color:var(--text-muted);}
-  /* Two lines, cut at the end of the second. `text-overflow` counts one line
+  /* Three lines, cut at the end of the third. `text-overflow` counts one line
      only, so the box model that can count lines is the one used here. */
   .cal-sched{
     display:-webkit-box;
-    -webkit-line-clamp:2;
+    -webkit-line-clamp:3;
     -webkit-box-orient:vertical;
     overflow:hidden;
     font-size:11px; font-weight:400; line-height:1.3;
@@ -1854,10 +1863,18 @@
     margin-bottom:var(--sp-2);
   }
   .dlog-date{font-size:var(--fs-label); font-weight:500; color:var(--text-dark);}
-  .dlog-holi{font-size:var(--fs-abbr); color:var(--rust);}
+  /* Grey, like the name in the cell above it: the one loud colour in this
+     band belongs to the deadlines standing directly underneath. */
+  .dlog-holi{font-size:var(--fs-abbr); color:var(--text-muted);}
   /* Side by side where there is room, one above the other on a phone. */
   .dlog-grid{display:flex; gap:var(--sp-3); flex-wrap:wrap;}
-  .dlog-field{flex:1 1 220px; min-width:0; display:block;}
+  /* Three to two. The bases are in that ratio as well as the growth, so the
+     two keep it at every width rather than only at the one where there is no
+     room left to share out. Side by side where there is room; on a phone the
+     second drops under the first. */
+  .dlog-field{min-width:0; display:block;}
+  .dlog-field.f-sched{flex:3 1 180px;}
+  .dlog-field.f-log{flex:2 1 120px;}
   /* ---- a day's lines ---- */
   .dl-list{display:flex; flex-direction:column; gap:2px; align-items:flex-start;}
   .dl-row{
@@ -1872,6 +1889,12 @@
     cursor:text; overflow-wrap:anywhere;
   }
   .dl-text.is-done{color:var(--text-muted); text-decoration:line-through;}
+  /* A deadline, in the same red the month draws it in. Its dot too, so the
+     row reads as one thing and not as a bullet with red words after it. */
+  .dl-due .dl-text{color:var(--rust);}
+  .dl-due .dl-d{font-weight:600;}
+  .dl-due .dl-dot::before{background:var(--rust);}
+  .dl-due .dl-text.is-done{color:var(--text-muted);}
   .dl-input{
     flex:1 1 auto; min-width:0; max-width:100%;
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
@@ -1903,21 +1926,43 @@
   }
   .dl-kind.on{color:#111;}
   .dl-kind:hover{color:var(--text-muted);}
+  /* The name of the list and a + after it, both in the same grey. It is a
+     line of text saying what goes here, not a control — the control is the
+     + button below, and that one only exists once there is a list. */
   .dl-empty{
-    display:flex; align-items:center; gap:var(--sp-2);
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
     background:none; color:var(--text-muted);
     border:none; border-radius:0; padding:2px 0;
     cursor:text; text-align:left;
   }
-  .dl-empty-plus{color:var(--text-dark); font-size:var(--fs-body); line-height:1;}
+  /* The log as it is read: one piece of writing, its line breaks kept. */
+  .dl-prose{
+    width:100%; text-align:left;
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
+    line-height:1.5; color:var(--text-dark);
+    background:none; border:none; border-radius:0; padding:2px 0;
+    cursor:text; overflow-wrap:anywhere;
+  }
+  /* And as it is written. No box: the writing is the thing, and a border
+     around it was one more line on a page that already has enough. */
+  .dl-area{
+    width:100%; min-height:96px;
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:400;
+    line-height:1.5; color:var(--text-dark);
+    background:none; border:none; border-radius:0; padding:2px 0;
+    resize:vertical; outline:none;
+  }
   /* A link in the day, and in the cell. Navy rather than the electric blue a
      browser picks, which is the one colour in this app that belongs to
      nothing. */
-  .dl-text a, .cal-sched .md-link, .dl-text .md-link{color:#2F4C86;}
-  .dl-text a{text-decoration:underline;}
+  .dl-text a, .dl-prose a,
+  .cal-sched .md-link, .dl-text .md-link, .todo-text .md-link{color:#2F4C86;}
+  .dl-text a, .dl-prose a{text-decoration:underline;}
   .cal-sched .md-link{text-decoration:underline;}
-  .dl-text s, .cal-sched s{color:var(--text-muted);}
+  .dl-text s, .dl-prose s, .cal-sched s, .todo-text s{color:var(--text-muted);}
+  /* A link written into an item of the list: marked, but not a link you can
+     follow — the whole line is the button that opens it for rewording. */
+  .todo-text .md-link{text-decoration:underline;}
   /* Pushed to the end of its row so the panel shuts from the same corner the
      month is stepped from. */
   .dlog-shut{flex:0 0 auto;}
@@ -2086,25 +2131,40 @@
   .add-btn svg{width:16px; height:16px; fill:currentColor; display:block;}
   .add-btn:hover{opacity:0.6;}
 
-  /* ---- a divider, and the group it opens ---- */
-  /* The rule runs the width of the wall, because that is what it divides;
-     the name and the buttons on it are set in to the app's own column, so
-     they stand under the switches rather than against the window. */
+  /* ---- the head of a group ---- */
+  /* No rule across it: the gap above the name and the name itself are enough
+     to say a new group starts here, and a line every few notes cut the wall
+     into strips. The name and the buttons are set in to the app's own column,
+     so they stand under the switches rather than against the window. */
   .ng-bar{
     display:flex; align-items:center; gap:var(--sp-2);
-    border-top:1px solid #111;
-    padding:var(--sp-2) var(--page-pad) 0; margin-top:var(--sp-4);
+    padding:var(--sp-2) var(--page-pad) 0; margin-top:var(--sp-5);
+    /* The name is the middle of the rule whatever stands at its end: lifted
+       out of the row rather than held in a middle column, which would have
+       to be as wide as the chevrons on both sides to centre anything. */
+    position:relative; justify-content:flex-end;
   }
+  .ng-bar.is-editing{justify-content:flex-start;}
+  .ng-bar .ng-name{
+    position:absolute; left:50%; transform:translateX(-50%);
+    max-width:60%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  /* The first group opens the wall; there is nothing above it to stand clear
+     of, so it keeps no gap of its own. */
+  #noteStack > .ng-bar:first-child{margin-top:0; padding-top:0;}
   .ng-name{
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
     background:none; border:none; border-radius:0; padding:0;
-    color:var(--text-dark); cursor:pointer; text-align:left;
+    color:var(--text-dark); cursor:pointer; text-align:center;
   }
   .ng-name:hover{color:var(--text-muted);}
   /* At the far end of the rule, level with the name. A chevron that can do
      nothing is drawn as such: half-lit and not pressable. */
   .ng-moves{display:flex; align-items:center; gap:var(--sp-1); flex:0 0 auto;}
   .ng-move{flex:0 0 auto;}
+  /* The same 11px the projects are reordered with. Left unsized they took the
+     24px box whole and read as the biggest thing on the rule. */
+  .ng-move .nav-chev, .dlog-shut .nav-chev{width:11px; height:11px;}
   .ng-move[disabled]{opacity:0.22; cursor:default; pointer-events:none;}
   .ng-input{
     font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
@@ -2116,6 +2176,7 @@
   .ng-foot{
     margin-top:var(--sp-5);
     padding-left:var(--page-pad); padding-right:var(--page-pad);
+    display:flex; justify-content:center;
   }
 
   /* ---- the three switches over the board ---- */
@@ -2418,7 +2479,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-28c</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-28g</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -3460,10 +3521,10 @@ function projTasksHtml(p){
           ' onkeydown="projTaskRenameKey(event,\'' + p.id + '\',\'' + t.id + '\')"' +
           ' onblur="projTaskRenameCommit(this,\'' + p.id + '\',\'' + t.id + '\')"' +
           ' aria-label="Reword this item">'
-      : '<span class="todo-text' + (todoLevel(t.text) ? ' p' + todoLevel(t.text) : '') + '"' +
+      : '<span class="todo-text"' +
           ' onclick="projTaskStartEdit(\'' + p.id + '\',\'' + t.id + '\')"' +
           ' role="button" tabindex="0" title="Reword">' +
-          escapeHtmlT(todoDisplayText(t.text)) + '</span>';
+          mdToHtml(todoDisplayText(t.text), false) + '</span>';
     return '<div class="todo-row ptask-row' + (t.done ? ' is-done' : '') + '">' +
       /* The count first, then the date it counts to — the same reading order
          the project above uses, one step down in size. One press target over
@@ -3706,6 +3767,14 @@ function shiftProjMonth(delta){
 /* Deadlines by date: {code: [{project, task}, ...]}. A project sits on its own
    deadline with no task beside it; an item of a project sits on its own, if it
    was given one. Anything with no date has no day to sit on. */
+/* What a deadline reads as, wherever it is drawn: the count, then the name.
+   A deadline is only ever drawn on the date it falls, so the count is always
+   the same word — the one the couple app uses. */
+function dueChipHtml(name){
+  return '<span class="cm-d">D-day</span>' +
+         '<span class="cm-n">' + escapeHtmlT(name) + '</span>';
+}
+
 function projDeadlineMap(){
   const map = {};
   const put = (c, entry) => {
@@ -3752,29 +3821,26 @@ function renderProjCal(){
     const due = map[code] || [];
     const marks = due.map(e => {
       const p = e.p, t = e.t;
-      const a = p.actId ? actById(p.actId) : null;
       if(!t){
-        // The project itself: its colour fills the chip.
-        const style = a
-          ? ' style="background:' + a.color + '; border-color:' + a.color + ';"'
-          : '';
-        const dark = a && isDarkColor(a.color) ? ' on-dark' : '';
+        /* A deadline is red, box and lettering alike, whatever colour the
+           activity it belongs to is drawn in elsewhere. The activity's colour
+           says WHAT kind of work it is; on a month the thing worth seeing
+           first is that something is due. */
         const name = p.name || '(untitled)';
-        return '<button class="cal-mark' + dark + '"' + style +
+        return '<button class="cal-mark"' +
                ' title="' + escapeAttr(name) + '"' +
                ' onclick="openProjEditor(\'' + p.id + '\')">' +
-               escapeHtmlT(name) + '</button>';
+               dueChipHtml(name) + '</button>';
       }
       /* One of a project's items: the same chip, drawn as an outline in the
          project's colour rather than filled by it. A lesser deadline belonging
          to a greater one, said by weight rather than by a new shape. Done, it
          is struck through — the same mark the list itself uses. */
-      const style = a ? ' style="border-color:' + a.color + ';"' : '';
       const name = todoDisplayText(t.text) || '(untitled)';
-      return '<button class="cal-mark is-task' + (t.done ? ' is-done' : '') + '"' + style +
+      return '<button class="cal-mark is-task' + (t.done ? ' is-done' : '') + '"' +
              ' title="' + escapeAttr(p.name + ' — ' + name) + '"' +
              ' onclick="projTaskToggle(\'' + p.id + '\',\'' + t.id + '\')">' +
-             escapeHtmlT(name) + '</button>';
+             dueChipHtml(name) + '</button>';
     }).join('');
     /* What the day is, beside its figure and pushed to the far end: wrapped
        underneath it took a line of a cell that has two of errands to show,
@@ -3802,11 +3868,12 @@ function renderProjCal(){
     el.innerHTML =
       '<div class="cal-head">' +
         '<span class="cal-daynum">' + day + '</span>' +
-        (offName ? '<span class="cal-holi' + (off.jp ? '' : ' kr') + '">' +
-          escapeHtmlT(offName) + '</span>' : '') +
+        (offName ? '<span class="cal-holi">' + escapeHtmlT(offName) + '</span>' : '') +
       '</div>' +
-      sched +
+      /* The deadline first and the errands under it, the same order the day's
+         own panel reads in: what the day is FOR comes before what is on it. */
       (marks ? '<div class="cal-marks">' + marks + '</div>' : '') +
+      sched +
       (wrote ? '<div class="cal-foot">' + wrote + '</div>' : '');
     /* The chips inside carry their own presses and stop them there; anywhere
        else on the square opens the day. */
@@ -4578,16 +4645,11 @@ function clockDueHtml(code){
   if(!due.length) return '';
   const marks = due.map(e => {
     const p = e.p, t = e.t;
-    const a = p.actId ? actById(p.actId) : null;
     if(!t){
-      const style = a ? ' style="background:' + a.color + '; border-color:' + a.color + ';"' : '';
-      const dark = a && isDarkColor(a.color) ? ' on-dark' : '';
-      return '<span class="cal-mark' + dark + '"' + style + '>' +
-             escapeHtmlT(p.name || '(untitled)') + '</span>';
+      return '<span class="cal-mark">' + dueChipHtml(p.name || '(untitled)') + '</span>';
     }
-    const style = a ? ' style="border-color:' + a.color + ';"' : '';
-    return '<span class="cal-mark is-task' + (t.done ? ' is-done' : '') + '"' + style + '>' +
-           escapeHtmlT(todoDisplayText(t.text) || '(untitled)') + '</span>';
+    return '<span class="cal-mark is-task' + (t.done ? ' is-done' : '') + '">' +
+           dueChipHtml(todoDisplayText(t.text) || '(untitled)') + '</span>';
   }).join('');
   return '<div class="clock-due">' + marks + '</div>';
 }
@@ -5016,16 +5078,19 @@ function todoById(code, id){
   return todosFor(code).find(t => t.id === id) || null;
 }
 
-/* Importance is written into the line itself, as stars. Two or more is the top
-   band, one is the middle, none is ordinary. The stars are a marker rather than
-   part of what was written, so they come out again before the line is drawn. */
-function todoLevel(text){
-  const n = (String(text || '').match(/\*/g) || []).length;
-  return n >= 2 ? 2 : (n === 1 ? 1 : 0);
-}
+/* Stars used to be a rank: one or two of them anywhere in a line and the list
+   drew it heavier, and they were taken out again before it was drawn. Both
+   things are gone — the same line can now say it in markdown, **like this**,
+   and two ways of writing the same emphasis meant the second one ate the
+   first: '**중요**' read as rank two and lost its stars on the way out.
 
+   Lines written under the old rule still carry their leading stars, so a run
+   at the very start is dropped here — but only when nothing later in the line
+   is a star, which leaves anything actually using markdown alone. */
 function todoDisplayText(text){
-  return String(text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  const m = t.match(/^\*+\s*/);
+  return (m && t.slice(m[0].length).indexOf('*') === -1) ? t.slice(m[0].length) : t;
 }
 
 /* What the main screen lists: the items of the day being LOOKED AT, plus
@@ -5036,10 +5101,8 @@ function todoDisplayText(text){
    belongs to. A day's own items always stay, finished or not — seeing what was
    done is the point of looking at a day at all.
 
-   Order is importance first, then date within each band — so every two-star
-   item appears before any one-star item, and inside a band today leads,
-   yesterday follows, and so on back. Date codes are YYMMDD, so plain string
-   comparison is date comparison. */
+   Order is by date, today first and back from there. Date codes are YYMMDD,
+   so plain string comparison is date comparison. */
 function mainTodoRows(){
   const anchor = currentViewCode();
   const rows = [];
@@ -5050,20 +5113,17 @@ function mainTodoRows(){
     if(carried && todoTodayOnly) return;
     todosFor(c).forEach(t => {
       if(carried && t.done) return;
-      rows.push({code: c, t, carried, level: todoLevel(t.text)});
+      rows.push({code: c, t, carried});
     });
   });
-  rows.sort((a, b) =>
-    (b.level - a.level) ||
-    (a.code < b.code ? 1 : a.code > b.code ? -1 : 0));
+  rows.sort((a, b) => (a.code < b.code ? 1 : a.code > b.code ? -1 : 0));
   return rows;
 }
 
 /* Whether a line is one of the standing to-dos writing itself out. Matched on
    the wording rather than on a mark stored with the item: the wording is what
-   travels through a backup and back, and a mark would not. Stars and spacing
-   are stripped from both sides first, so '**water' and 'water' are the same
-   line said twice. */
+   travels through a backup and back, and a mark would not. Spacing is settled
+   on both sides first, and an old leading star run with it. */
 function isRoutineText(text){
   const t = todoDisplayText(text);
   if(!t) return false;
@@ -5089,12 +5149,10 @@ function lastTodoRows(){
     todosFor(c).forEach(t => {
       if(t.done) return;
       if(isRoutineText(t.text)) return;
-      rows.push({code: c, t, carried: true, level: todoLevel(t.text)});
+      rows.push({code: c, t, carried: true});
     });
   });
-  rows.sort((a, b) =>
-    (b.level - a.level) ||
-    (a.code < b.code ? 1 : a.code > b.code ? -1 : 0));
+  rows.sort((a, b) => (a.code < b.code ? 1 : a.code > b.code ? -1 : 0));
   return rows;
 }
 
@@ -5216,10 +5274,10 @@ function todoRowHtml(r){
           ' onkeydown="todoRenameKey(event,\'' + r.code + '\',\'' + r.t.id + '\')"' +
           ' onblur="todoRenameCommit(this,\'' + r.code + '\',\'' + r.t.id + '\')"' +
           ' aria-label="Reword this item">'
-      : '<span class="todo-text' + (r.level ? ' p' + r.level : '') + '"' +
+      : '<span class="todo-text"' +
           ' onclick="todoStartEdit(\'' + r.code + '\',\'' + r.t.id + '\')"' +
           ' role="button" tabindex="0" title="Reword">' +
-          escapeHtmlT(todoDisplayText(r.t.text)) +
+          mdToHtml(todoDisplayText(r.t.text), false) +
         '</span>';
     return '<div class="todo-row' + (r.t.done ? ' is-done' : '') +
       (r.carried ? ' is-past' : '') + '">' +
@@ -7515,35 +7573,35 @@ function calPick(code){
   renderDayLog();
 }
 
-/* Two lists under the grid: what was on the day, and what came of it. Both
-   are written a line at a time — press, type, Enter for the next — and both
-   carry the same shorthand the couple app's notes use.
+/* Two things under the grid, and they are not the same kind of thing.
 
-   The second was a box of prose to begin with. It is a log, not an essay:
-   what gets written in it is one thing done after another, and a list says
-   that where a paragraph does not. */
-const DLOG_FIELDS = [
-  {key: 'sched', label: '스케줄',   todo: true},
-  {key: 'diary', label: '작업일지', todo: false}
-];
+   The schedule is a list: one errand a line, written one after another, each
+   with a box it may be ticked in. The log is prose — what the day came to,
+   in whatever length that takes — so it stays one piece of writing with its
+   line breaks kept, the way it was before.
 
-/* The two are stored differently — the schedule carries a box and a tick per
-   line, the log is plain words — and both are drawn by the same code, so they
-   are read in and written back through one shape. */
-function dayLines(field){
-  const v = dayLogOf(calPickedCode);
-  return field === 'sched' ? v.sched
-       : v.diary.map(t => ({t: t, todo: false, done: false}));
-}
-function dayLinesWrite(field, list){
+   What they share is the shorthand: **bold**, _underlined_, [links](…), and
+   the same grey line standing in for each while nothing is written. */
+
+/* ---- the schedule ----------------------------------------------------- */
+function dayLines(){ return dayLogOf(calPickedCode).sched; }
+
+function dayLinesWrite(list){
   const cur = dayLogOf(calPickedCode);
-  const kept = list.filter((l, i) => l.t || (dayEditField === field && i === dayEditIdx));
-  const next = field === 'sched'
-    ? {sched: kept, diary: cur.diary}
-    : {sched: cur.sched, diary: kept.map(l => l.t)};
-  if(!next.sched.length && !next.diary.length) delete dayLog[calPickedCode];
-  else dayLog[calPickedCode] = next;
+  /* A row with nothing on it is not kept — except the one being written on,
+     which is empty for as long as it takes to type the first letter. */
+  const kept = list.filter((l, i) => l.t || i === dayEditIdx);
+  if(!kept.length && !cur.diary.length) delete dayLog[calPickedCode];
+  else dayLog[calPickedCode] = {sched: kept, diary: cur.diary};
   renderProjCal();              // the cell follows; the open box is left alone
+  saveDayLog();
+}
+
+function dayDiaryWrite(lines){
+  const cur = dayLogOf(calPickedCode);
+  if(!cur.sched.length && !lines.length) delete dayLog[calPickedCode];
+  else dayLog[calPickedCode] = {sched: cur.sched, diary: lines};
+  renderProjCal();
   saveDayLog();
 }
 
@@ -7570,59 +7628,119 @@ function renderDayLog(){
       '</button>' +
     '</div>' +
     '<div class="dlog-grid">' +
-      DLOG_FIELDS.map(f =>
-        '<div class="dlog-field">' + dayLineListHtml(f) + '</div>').join('') +
+      '<div class="dlog-field f-sched">' + dayLineListHtml() + '</div>' +
+      '<div class="dlog-field f-log">' + dayDiaryHtml() + '</div>' +
     '</div>';
   focusDayLine();
 }
 
-/* One row a line. Pressing the words opens the row itself rather than a box
-   somewhere else, and Enter puts the next row underneath already open.
+/* One row an errand. Pressing the words opens the row itself rather than a
+   box somewhere else, and Enter puts the next row underneath already open.
 
-   The ☐ button, on the schedule only, is what makes a line something to tick
-   off: "dentist at 10" happens whether or not anyone ticks it, "drop off the
-   laundry" does not. A log has nothing to tick — it is already done. */
-function dayLineListHtml(field){
-  const list = dayLines(field.key);
+   The ☐ button is what makes a line something to tick off: "dentist at 10"
+   happens whether or not anyone ticks it, "drop off the laundry" does not. */
+/* What falls due on this day, standing at the top of the schedule. Not part
+   of the schedule and not stored with it: a deadline belongs to its project
+   and is changed there, so these rows are read-only and open the project
+   rather than a text box. They are shown here because a day is read in one
+   place, and "what is due" is the first thing about a day. */
+function dayDueHtml(){
+  const due = projDeadlineMap()[String(calPickedCode)] || [];
+  if(!due.length) return '';
+  return due.map(e => {
+    const name = e.t ? (todoDisplayText(e.t.text) || '(untitled)')
+                     : (e.p.name || '(untitled)');
+    const done = e.t && e.t.done;
+    return '<div class="dl-row dl-due">' +
+      '<span class="dl-dot" aria-hidden="true"></span>' +
+      '<button class="dl-text' + (done ? ' is-done' : '') + '"' +
+        ' onclick="openProjEditor(\'' + e.p.id + '\')"' +
+        ' title="' + escapeAttr(e.p.name || '') + '">' +
+        '<span class="dl-d">D-day</span> ' + escapeHtmlT(name) + '</button>' +
+    '</div>';
+  }).join('');
+}
+
+function dayLineListHtml(){
+  const list = dayLines();
+  const due = dayDueHtml();
+  /* Nothing written yet: the name of the list in grey and nothing else. The
+     + button belongs to a list that exists — before that there is one thing
+     to do and one place to press. A deadline standing above it is not a line
+     somebody wrote, so it does not count as a list. */
+  if(!list.length){
+    return '<div class="dl-list">' + due +
+      '<button class="dl-empty" onclick="dayLineAdd()">스케줄 +</button></div>';
+  }
   const rows = list.map((l, i) => {
-    const open = dayEditField === field.key && dayEditIdx === i;
+    const open = dayEditIdx === i;
     const lead = l.todo
       ? '<button class="dl-check' + (l.done ? ' is-done' : '') + '"' +
-          ' onclick="dayLineDone(\'' + field.key + '\',' + i + ')" aria-label="Done"></button>'
+          ' onclick="dayLineDone(' + i + ')" aria-label="Done"></button>'
       : '<span class="dl-dot" aria-hidden="true"></span>';
     const body = open
       ? '<input class="dl-input" type="text" value="' + escapeAttr(l.t) + '"' +
-          ' onkeydown="dayLineKey(event,\'' + field.key + '\',' + i + ')"' +
-          ' onblur="dayLineTyping(this,\'' + field.key + '\',' + i + ')"' +
-          ' oninput="dayLineTyping(this,\'' + field.key + '\',' + i + ')" aria-label="Line">'
+          ' onkeydown="dayLineKey(event,' + i + ')"' +
+          ' onblur="dayLineTyping(this,' + i + ')"' +
+          ' oninput="dayLineTyping(this,' + i + ')" aria-label="Line">'
       : '<button class="dl-text' + (l.done ? ' is-done' : '') + '"' +
-          ' onclick="dayLineOpen(\'' + field.key + '\',' + i + ')">' +
-          mdToHtml(l.t) + '</button>';
-    const kind = field.todo
-      ? '<button class="dl-kind' + (l.todo ? ' on' : '') + '"' +
-          ' onclick="dayLineKind(\'' + field.key + '\',' + i + ')"' +
-          ' aria-label="To-do" title="체크박스로 바꾸기">✓</button>'
-      : '';
-    return '<div class="dl-row">' + lead + body + kind + '</div>';
-  }).join('');
-
-  /* Nothing written yet: one line that is the name of the list and the way to
-     start it, and nothing else. A + standing under an empty list was a second
-     way to do the one thing there was to do. */
-  if(!list.length){
-    return '<div class="dl-list">' +
-      '<button class="dl-empty" onclick="dayLineAdd(\'' + field.key + '\')">' +
-        escapeHtmlT(field.label) + ' <span class="dl-empty-plus">+</span></button>' +
+          ' onclick="dayLineOpen(' + i + ')">' + mdToHtml(l.t) + '</button>';
+    return '<div class="dl-row">' + lead + body +
+      '<button class="dl-kind' + (l.todo ? ' on' : '') + '"' +
+        ' onclick="dayLineKind(' + i + ')"' +
+        ' aria-label="To-do" title="체크박스로 바꾸기">✓</button>' +
     '</div>';
-  }
-  return '<div class="dl-list">' + rows +
-    '<button class="add-btn dl-add" onclick="dayLineAdd(\'' + field.key + '\')"' +
-      ' aria-label="Add line">' + NPLUS_SVG + '</button>' +
-  '</div>';
+  }).join('');
+  return '<div class="dl-list">' + due + rows +
+    '<button class="add-btn dl-add" onclick="dayLineAdd()" aria-label="Add line">' +
+      NPLUS_SVG + '</button></div>';
 }
 
-/* Which list, and which row of it, is open. */
-let dayEditField = '';
+/* ---- the log ----------------------------------------------------------
+   One piece of writing, not a list, so it gets no + of its own: there is
+   never a second log to add. Read it and the marks are set; press it and the
+   box opens on the words as they were typed. */
+let dayDiaryOpen = false;
+
+function dayDiaryHtml(){
+  const lines = dayLogOf(calPickedCode).diary;
+  if(dayDiaryOpen){
+    return '<textarea class="dl-area" rows="5" spellcheck="false"' +
+      ' oninput="dayDiaryTyping(this)" onblur="dayDiaryTyping(this)"' +
+      ' aria-label="작업일지">' + escapeHtmlT(lines.join('\n')) + '</textarea>';
+  }
+  if(!lines.length){
+    return '<button class="dl-empty" onclick="dayDiaryEdit()">작업일지 +</button>';
+  }
+  /* Blank lines are kept — a paragraph break is something somebody typed on
+     purpose — so an empty line draws as an empty line rather than closing up. */
+  return '<button class="dl-prose" onclick="dayDiaryEdit()">' +
+    lines.map(t => t ? mdToHtml(t) : '&nbsp;').join('<br>') + '</button>';
+}
+
+function dayDiaryEdit(){
+  dayLineClose();
+  dayDiaryOpen = true;
+  renderDayLog();
+  const box = document.querySelector('#dayLogBox .dl-area');
+  if(box){ box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+
+function dayDiaryTyping(el){
+  dayDiaryWrite(logParseLines(el.value, true));
+}
+
+/* Whatever is in the box right now, for the same reason the schedule reads
+   its own box before it closes: an IME can hold the last syllables back. */
+function dayDiaryShut(){
+  if(!dayDiaryOpen) return;
+  const el = document.querySelector('#dayLogBox .dl-area');
+  if(el) dayDiaryWrite(logParseLines(el.value, true));
+  dayDiaryOpen = false;
+  renderDayLog();
+}
+
+/* ---- a row of the schedule -------------------------------------------- */
 let dayEditIdx = -1;
 
 function focusDayLine(){
@@ -7639,51 +7757,51 @@ function dayLineCommit(){
   if(dayEditIdx === -1) return;
   const el = document.querySelector('#dayLogBox .dl-input');
   if(!el) return;
-  const list = dayLines(dayEditField);
+  const list = dayLines();
   if(!list[dayEditIdx]) return;
   list[dayEditIdx].t = String(el.value || '').trim();
-  dayLinesWrite(dayEditField, list);
+  dayLinesWrite(list);
 }
 
-function dayLineOpen(field, i){
+function dayLineOpen(i){
+  dayDiaryShut();
   dayLineCommit();
-  dayEditField = field;
   dayEditIdx = i;
   renderDayLog();
 }
 
 /* A new line, empty and already open. Written on nothing, it takes itself
-   away again when the row closes. A to-do is added under the to-dos and a
-   schedule under the schedules, so the rule holds while typing too. */
-function dayLineAdd(field, asTodo){
+   away again when the row closes. A to-do is added under the to-dos and an
+   errand under the errands, so the rule holds while typing too. */
+function dayLineAdd(asTodo){
+  dayDiaryShut();
   dayLineCommit();
-  const list = dayLines(field);
+  const list = dayLines();
   const line = {t: '', todo: !!asTodo, done: false};
   const at = asTodo ? list.length : list.filter(l => !l.todo).length;
   list.splice(at, 0, line);
-  dayEditField = field;
   dayEditIdx = at;
-  dayLinesWrite(field, list);
+  dayLinesWrite(list);
   renderDayLog();
 }
 
 /* Typed into, the line is kept as it is typed, and the grid follows along —
    but the row itself is not rebuilt, or the caret would jump to the start. */
-function dayLineTyping(el, field, i){
-  const list = dayLines(field);
+function dayLineTyping(el, i){
+  const list = dayLines();
   if(!list[i]) return;
   list[i].t = el.value.trim();
-  dayLinesWrite(field, list);
+  dayLinesWrite(list);
 }
 
-function dayLineKey(ev, field, i){
+function dayLineKey(ev, i){
   if(ev.key === 'Enter'){
     ev.preventDefault();
-    const list = dayLines(field);
+    const list = dayLines();
     /* An empty row and Enter is "I am done", not "one more": otherwise the
        list grows a blank line every time somebody stops typing. */
     if(!list[i] || !list[i].t){ dayLineClose(); return; }
-    dayLineAdd(field, list[i].todo);
+    dayLineAdd(list[i].todo);
     return;
   }
   if(ev.key === 'Escape'){ ev.preventDefault(); dayLineClose(); }
@@ -7693,51 +7811,52 @@ function dayLineKey(ev, field, i){
    line nobody meant to write. */
 function dayLineClose(){
   dayLineCommit();
-  const field = dayEditField, i = dayEditIdx;
-  dayEditField = ''; dayEditIdx = -1;
+  const i = dayEditIdx;
+  dayEditIdx = -1;
   if(i !== -1){
-    const list = dayLines(field);
+    const list = dayLines();
     if(list[i] && !list[i].t) list.splice(i, 1);
-    dayLinesWrite(field, list);
+    dayLinesWrite(list);
   }
   renderDayLog();
 }
 
 /* Schedule ↔ to-do. The line moves to the end of whichever block it has
    joined, so the two never interleave. */
-function dayLineKind(field, i){
-  const list = dayLines(field);
+function dayLineKind(i){
+  const list = dayLines();
   if(!list[i]) return;
   const line = list[i];
   line.todo = !line.todo;
   if(!line.todo) line.done = false;
   list.splice(i, 1);
-  dayEditField = ''; dayEditIdx = -1;
-  dayLinesWrite(field, dayLogReorder(list.concat([line])));
+  dayEditIdx = -1;
+  dayLinesWrite(dayLogReorder(list.concat([line])));
   renderDayLog();
 }
 
-function dayLineDone(field, i){
-  const list = dayLines(field);
+function dayLineDone(i){
+  const list = dayLines();
   if(!list[i] || !list[i].todo) return;
   list[i].done = !list[i].done;
-  dayLinesWrite(field, list);
+  dayLinesWrite(list);
   renderDayLog();
 }
 
-/* Pressing away from an open row closes it, the same way an open note closes.
-   Everything typed is already saved, so there is nothing to lose. */
+/* Pressing away from an open row or an open log closes it. Everything typed
+   is already saved, so there is nothing to lose. */
 document.addEventListener('pointerdown', e => {
-  if(dayEditIdx === -1) return;
+  if(dayEditIdx === -1 && !dayDiaryOpen) return;
   const t = e.target;
   if(!t || !t.closest) return;
-  if(t.closest('.dl-row')) return;
-  /* These open a row of their own, and each writes the open one out first.
-     Closing here as well would redraw the list under the finger, take away
-     the very button that was pressed, and the press would never become a tap
-     — so pressing + while writing did nothing at all. */
-  if(t.closest('.dl-add') || t.closest('.dl-empty')) return;
-  dayLineClose();
+  if(t.closest('.dl-row') || t.closest('.dl-area')) return;
+  /* These open something of their own, and each writes the open one out
+     first. Closing here as well would redraw the panel under the finger,
+     take away the very button that was pressed, and the press would never
+     become a tap — so pressing + while writing did nothing at all. */
+  if(t.closest('.dl-add') || t.closest('.dl-empty') || t.closest('.dl-prose')) return;
+  if(dayEditIdx !== -1) dayLineClose();
+  if(dayDiaryOpen) dayDiaryShut();
 }, true);
 
 
@@ -8167,7 +8286,6 @@ function groupBarHtml(g){
   return '<div class="ng-bar">' +
     '<button class="ng-name" onclick="groupOpenEdit(\'' + g.id + '\')">' +
       escapeHtmlT(g.name || '(no name)') + '</button>' +
-    '<span style="flex:1;"></span>' +
     groupMoveHtml(g) +
   '</div>';
 }
@@ -8201,7 +8319,8 @@ function renderNotes(){
     '</div>';
   });
   html += '<div class="ng-foot">' +
-    '<button class="tool-btn" onclick="groupAdd()">+ 그룹</button>' +
+    '<button class="add-btn" onclick="groupAdd()" aria-label="그룹 추가"' +
+      ' title="그룹 추가">' + NPLUS_SVG + '</button>' +
   '</div>';
   stack.innerHTML = html;
 }
