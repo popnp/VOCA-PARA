@@ -16,7 +16,7 @@
 */
 
 /* Bump this on every release. Changing it is what retires the old cache. */
-const VERSION = '2026-10-28g';
+const VERSION = '2026-10-29a';
 const PREFIX = 'popnp-';
 const CACHE = PREFIX + VERSION;
 
