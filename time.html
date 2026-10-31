@@ -2129,6 +2129,26 @@
   /* The + that adds one more note to a group, in the bottom right of that
      group's last sheet. Absolute, so it costs the writing above it no room
      and the lettering stays centred on the whole square. */
+  /* The day it was written, in the corner the + does not use. It goes down
+     with the paper like everything else on it, but not below 8px — under
+     that it is a smudge rather than a date. */
+  .pi-date{
+    position:absolute; left:var(--sp-2); bottom:var(--sp-2);
+    font-family:var(--font-ui); font-weight:400;
+    font-size:max(8px, calc(var(--pi-sml) * var(--pi-z) * 0.72));
+    line-height:1; color:#111; opacity:0.45;
+    pointer-events:none;
+  }
+  .pi.editing .pi-date{opacity:0.3;}
+  .arch-empty{
+    font-family:var(--font-ui); font-size:var(--fs-label);
+    color:var(--text-muted); text-align:center;
+    margin:var(--sp-5) 0; padding:0 var(--page-pad);
+  }
+  .tool-n{font-family:var(--font-ui); font-size:var(--fs-abbr); line-height:1;}
+  .note-tools .tool-btn{gap:var(--sp-1);}
+  .tool-btn[disabled]{opacity:0.3; cursor:default;}
+
   .pi .pi-add{
     position:absolute; right:var(--sp-2); bottom:var(--sp-2);
     color:#111;
@@ -2387,6 +2407,7 @@ if('serviceWorker' in navigator){
         <div class="note-tools">
           <button class="tool-btn" id="noteLayoutBtn" onclick="noteToggleFlow()" aria-label="Layout"></button>
           <button class="tool-btn" id="noteZoomBtn" onclick="noteStepZoom()" aria-label="Note size">100%</button>
+          <button class="tool-btn" id="noteArchBtn" onclick="noteToggleArch()" aria-label="보관함"></button>
         </div>
         <div id="noteStack"></div>
       </section>
@@ -2490,7 +2511,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-30a</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-31a</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -6864,7 +6885,8 @@ function buildTxt(){
     lines.push([':', g.id, g.name || ''].join('\t'));
   });
   notes.forEach(nt => {
-    lines.push(['^', nt.id, nt.gid || '', nt.color || ''].join('\t'));
+    lines.push(['^', nt.id, nt.gid || '', nt.color || '',
+                noteDateCode(nt), nt.arch ? 'x' : ''].join('\t'));
     (nt.lines || []).forEach(l => {
       lines.push(';\t' + (l.t ? (l.s ? '-' + l.t : l.t) : ''));
     });
@@ -7123,12 +7145,17 @@ function parseTxt(raw){
                      name: (p[1] || '').trim()});
       return;
     }
-    // '^ id\tgid\tcolour' opens a note; the ';' lines under it are its text.
+    /* '^ id\tgid\tcolour\twritten\tx' opens a note; the ';' lines under it are
+       its text. The last two came later — a file without them reads as a
+       note with no date that is out on the wall, which is what it was. */
     if(t.startsWith('^')){
       const p = fieldsAfterMarker(t);
+      const made = (p[3] || '').trim();
       noteOut.push({id: (p[0] || '').trim() || ('n_' + noteOut.length),
                     gid: (p[1] || '').trim(),
                     color: (p[2] || '').trim().replace('#', '').toUpperCase(),
+                    created: /^\d{6}$/.test(made) ? codeToDate(made).getTime() : null,
+                    arch: (p[4] || '').trim().toLowerCase() === 'x',
                     lines: []});
       return;
     }
@@ -7976,11 +8003,12 @@ function holiToText(){
 const NOTE_KEY  = 'time-notes';
 const NGROUP_KEY = 'time-notegroups';
 
-/* {id, gid, color, lines:[{s:false, t:'...'}]}
+/* {id, gid, color, created, arch, lines:[{s:false, t:'...'}]}
    `gid` is the group the note sits under, '' for the notes written before
    the first divider. `color` is a colour given to this one note by hand and
    is empty until somebody sets one — so a group recoloured later reaches
-   every note that has not been painted over. */
+   every note that has not been painted over. `created` is when it was
+   written and `arch` whether it has been put away in the box. */
 let notes = [];
 /* {id, name} in the order they are drawn. */
 let noteGroups = [];
@@ -8011,7 +8039,9 @@ function groupColor(gid){
 function noteGroupsFix(){
   const known = {};
   noteGroups.forEach(g => { known[g.id] = true; });
-  const loose = notes.filter(nt => !known[nt.gid]);
+  /* Only what is on the wall. A note in the box whose group was taken away
+     would otherwise conjure a group back into existence to hold it. */
+  const loose = notes.filter(nt => !nt.arch && !known[nt.gid]);
   if(loose.length){
     const first = {id: noteUid(), name: '그룹 1'};
     noteGroups.unshift(first);
@@ -8051,10 +8081,55 @@ function resetGroupColors(el){
 }
 function noteColor(note){ return note.color || groupColor(note.gid); }
 function groupById(gid){ return noteGroups.find(g => g.id === gid) || null; }
-function notesIn(gid){ return notes.filter(n => n.gid === gid); }
+function notesIn(gid){ return notes.filter(n => n.gid === gid && !n.arch); }
 
 function noteUid(){
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/* When a note was written, in milliseconds, or null if there is no saying.
+
+   Notes made before there was a field for it still know: noteUid() is
+   Date.now() in base 36 with five random characters after it, so the time is
+   sitting in the id of every note ever made here. Read back only when it
+   lands in a believable century — a note whose id came from somewhere else
+   (a hand-written backup, another app) has no date rather than a wrong one. */
+const NOTE_T_MIN = Date.UTC(2020, 0, 1), NOTE_T_MAX = Date.UTC(2100, 0, 1);
+function noteMadeAt(note){
+  const given = Number((note || {}).created);
+  if(isFinite(given) && given > NOTE_T_MIN && given < NOTE_T_MAX) return given;
+  const m = /^([0-9a-z]{8,10})[0-9a-z]{5}$/.exec(String((note || {}).id || ''));
+  if(!m) return null;
+  const t = parseInt(m[1], 36);
+  return (t > NOTE_T_MIN && t < NOTE_T_MAX) ? t : null;
+}
+
+/* The same YYMMDD every other date in this app is written in — for the
+   backup, which is read and edited by hand and should not have a count of
+   milliseconds in it. The time of day is dropped with it; nothing shows the
+   time of day, and the id still carries it for a note that has one. */
+function noteDateCode(note){
+  const t = noteMadeAt(note);
+  if(t === null) return '';
+  const d = new Date(t);
+  return ymdToCode(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/* '10.28'. The year is left off: a wall is this year's, and the box below
+   sorts by date anyway, so the two numbers that differ are the two shown. */
+function noteDateText(note){
+  const t = noteMadeAt(note);
+  if(t === null) return '';
+  const d = new Date(t);
+  return pad2(d.getMonth() + 1) + '.' + pad2(d.getDate());
+}
+
+/* Put away, newest first. Sorted by when they were written rather than by
+   when they were put away: the date on the paper is the one on screen, and a
+   box ordered by an invisible second date reads as no order at all. */
+function archivedNotes(){
+  return notes.filter(nt => nt.arch)
+              .sort((a, b) => (noteMadeAt(b) || 0) - (noteMadeAt(a) || 0));
 }
 
 async function saveNotes(){
@@ -8088,6 +8163,7 @@ async function loadNotes(){
     if(!Array.isArray(n.lines)) n.lines = [];
     if(typeof n.gid !== 'string') n.gid = '';
     if(typeof n.color !== 'string') n.color = '';
+    n.arch = !!n.arch;
   });
 }
 
@@ -8156,6 +8232,17 @@ function noteApplyView(){
     l.innerHTML = noteFlow ? NFLOW_SVG : NSTACK_SVG;
     l.classList.toggle('on', noteFlow);
   }
+  /* The count stands beside the box, because whether the box is worth
+     opening is the only thing you want to know before opening it. */
+  const a = document.getElementById('noteArchBtn');
+  if(a){
+    const kept = notes.filter(nt => nt.arch).length;
+    a.innerHTML = NARCH_SVG + (kept ? '<span class="tool-n">' + kept + '</span>' : '');
+    a.classList.toggle('on', noteArchView);
+    a.title = noteArchView ? '벽으로 돌아가기' : '보관함 (' + kept + ')';
+  }
+  /* Laying the box out in rows would be laying out groups it does not have. */
+  if(l) l.disabled = noteArchView;
 }
 
 function noteSetZoom(z, keep){
@@ -8170,6 +8257,16 @@ function noteStepZoom(){
   const i = NZ_STEPS.findIndex(z => z < noteZoom - 0.005);
   noteSetZoom(i === -1 ? NZ_STEPS[0] : NZ_STEPS[i], true);
 }
+/* The box is a drawer, not a mode: it is not remembered across a reload, and
+   leaving it is the same press that opened it. */
+let noteArchView = false;
+function noteToggleArch(){
+  noteArchView = !noteArchView;
+  noteEditId = null;
+  groupEditId = null;
+  renderNotes();
+}
+
 function noteToggleFlow(){
   noteFlow = !noteFlow;
   try{ localStorage.setItem(NLAY_KEY, noteFlow ? '1' : '0'); }catch(e){}
@@ -8205,6 +8302,14 @@ const NSTACK_SVG =
   '<rect x="6" y="0.5" width="4" height="4" fill="currentColor"/>' +
   '<rect x="6" y="6" width="4" height="4" fill="currentColor"/>' +
   '<rect x="6" y="11.5" width="4" height="4" fill="currentColor"/></svg>';
+/* The box things are put away in: a lid across the top, a body under it and
+   the slot you lift it by. Square, like the two switches beside it. */
+const NARCH_SVG =
+  '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+  '<rect x="0.5" y="2" width="15" height="3.4" fill="currentColor"/>' +
+  '<path d="M2.2 6.6 H13.8 V14 H2.2 Z" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+  '<rect x="6" y="9" width="4" height="1.6" fill="currentColor"/></svg>';
+
 const NFLOW_SVG =
   '<svg viewBox="0 0 16 16" aria-hidden="true">' +
   '<rect x="0.5" y="3.25" width="4" height="4" fill="currentColor"/>' +
@@ -8236,10 +8341,15 @@ function noteHtml(note, carriesAdd){
         ' onclick="event.stopPropagation();noteAdd(\'' + note.gid + '\')">' +
         NPLUS_SVG + '</button>'
     : '';
+  /* The day it was written, in the one corner nothing else uses — the + has
+     the other. Small and grey: it is what the note is filed under, not part
+     of what it says. */
+  const when = noteDateText(note);
+  const date = when ? '<span class="pi-date">' + when + '</span>' : '';
   if(noteEditId !== note.id){
     return '<div class="pi" role="button" tabindex="0"' + bg +
       ' onclick="notePress(event,\'' + note.id + '\')">' +
-      noteBodyHtml(note) + add + '</div>';
+      noteBodyHtml(note) + date + add + '</div>';
   }
   return '<div class="pi editing"' + bg + '>' +
     '<textarea class="pi-edit" spellcheck="false"' +
@@ -8252,10 +8362,31 @@ function noteHtml(note, carriesAdd){
       (note.color
         ? '<button class="pi-tool" onclick="noteColorReset(\'' + note.id + '\')">Default</button>'
         : '') +
+      /* Put away, or taken back out. Both are the same press and neither
+         asks twice: nothing is lost either way, which is the whole point of
+         having it stand next to Delete. */
+      '<button class="pi-tool" onclick="noteArchToggle(\'' + note.id + '\')">' +
+        (note.arch ? 'Restore' : 'Archive') + '</button>' +
       '<button class="pi-tool" onclick="noteDelete(this,\'' + note.id + '\')">Delete</button>' +
       '<button class="pi-tool done" onclick="noteClose()" aria-label="Done">✓</button>' +
     '</div>' +
+    date +
   '</div>';
+}
+
+/* Into the box, or back onto the wall. A note coming back whose group has
+   gone in the meantime joins the first one rather than vanishing into a
+   group that is not there. */
+function noteArchToggle(id){
+  const note = notes.find(n => n.id === id);
+  if(!note) return;
+  note.arch = !note.arch;
+  if(!note.arch && !noteGroups.some(g => g.id === note.gid)){
+    note.gid = (noteGroups[0] || {}).id || '';
+  }
+  noteEditId = null;
+  renderNotes();
+  saveNotes();
 }
 
 function noteAddBtnHtml(gid){
@@ -8324,6 +8455,17 @@ function renderNotes(){
   noteApplyView();
   if(noteGroupsFix()) saveNotes();
 
+  /* The box. No dividers and no +: it is somewhere things are kept, not a
+     wall to arrange, and the only thing to do here is read one or take it
+     back. One run, newest first. */
+  if(noteArchView){
+    const kept = archivedNotes();
+    stack.innerHTML = kept.length
+      ? '<div class="pi-row">' + kept.map(nt => noteHtml(nt, false)).join('') + '</div>'
+      : '<p class="arch-empty">보관한 포스트잇이 없습니다.</p>';
+    return;
+  }
+
   let html = '';
   noteGroups.forEach(g => {
     const ns = notesIn(g.id);
@@ -8362,7 +8504,8 @@ function noteOpen(id){
    empty, it is taken away again when it closes. */
 function noteAdd(gid){
   noteGroupsFix();
-  const note = {id: noteUid(), gid: gid || (noteGroups[0] || {}).id || '', color: '', lines: []};
+  const note = {id: noteUid(), gid: gid || (noteGroups[0] || {}).id || '',
+                color: '', created: Date.now(), arch: false, lines: []};
   notes.push(note);
   noteOpen(note.id);
   saveNotes();
