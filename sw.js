@@ -1,8 +1,5 @@
-/* Service worker for BBYU, which lives in a repository of its own.
-
-   A separate site from the other two apps, so it has its own storage, its own
-   caches and its own worker. Nothing here can reach them and nothing of
-   theirs can reach this.
+/* Service worker for the two apps in this folder — Voca/Para/Memo and Time.
+   BBYU has moved to a folder of its own and brought its own worker with it.
 
    What this does and, more importantly, what it does not do:
 
@@ -19,16 +16,20 @@
 */
 
 /* Bump this on every release. Changing it is what retires the old cache. */
-const VERSION = '2026-10-29a';
-const PREFIX = 'bbyu-';
+const VERSION = '2026-10-30a';
+const PREFIX = 'popnp-';
 const CACHE = PREFIX + VERSION;
 
 const ASSETS = [
   './',
   './index.html',
-  './bbyu.webmanifest',
-  './icon-bbyu-192.png',
-  './icon-bbyu-512.png'
+  './time.html',
+  './voca.webmanifest',
+  './time.webmanifest',
+  './icon-voca-192.png',
+  './icon-voca-512.png',
+  './icon-time-192.png',
+  './icon-time-512.png'
 ];
 
 self.addEventListener('install', event => {
@@ -43,8 +44,8 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      /* Only this app's own old caches. A blanket sweep here would take the
-         other folder's with it. */
+      /* Only this folder's own old caches. A blanket sweep here would take
+         BBYU's with it — caches belong to the site, not to the folder. */
       .then(keys => Promise.all(
         keys.filter(k => k.indexOf(PREFIX) === 0 && k !== CACHE)
             .map(k => caches.delete(k))

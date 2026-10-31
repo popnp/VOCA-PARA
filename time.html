@@ -2490,7 +2490,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="card-panel">
-    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-29a</p>
+    <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-30a</p>
     <label class="field-label">Activities</label>
     <div id="colorRows"></div>
     <div style="display:flex; gap:var(--sp-2); margin-top:10px; flex-wrap:wrap;">
@@ -3781,9 +3781,9 @@ function shiftProjMonth(delta){
 /* What a deadline reads as, wherever it is drawn: the count, then the name.
    A deadline is only ever drawn on the date it falls, so the count is always
    the same word — the one the couple app uses. */
-function dueChipHtml(name){
+function dueChipHtml(name, md){
   return '<span class="cm-d">D-day</span>' +
-         '<span class="cm-n">' + escapeHtmlT(name) + '</span>';
+         '<span class="cm-n">' + (md ? mdToHtml(name, false) : escapeHtmlT(name)) + '</span>';
 }
 
 function projDeadlineMap(){
@@ -3851,7 +3851,7 @@ function renderProjCal(){
       return '<button class="cal-mark is-task' + (t.done ? ' is-done' : '') + '"' +
              ' title="' + escapeAttr(p.name + ' — ' + name) + '"' +
              ' onclick="projTaskToggle(\'' + p.id + '\',\'' + t.id + '\')">' +
-             dueChipHtml(name) + '</button>';
+             dueChipHtml(name, true) + '</button>';
     }).join('');
     /* What the day is, beside its figure and pushed to the far end: wrapped
        underneath it took a line of a cell that has two of errands to show,
@@ -4660,7 +4660,7 @@ function clockDueHtml(code){
       return '<span class="cal-mark">' + dueChipHtml(p.name || '(untitled)') + '</span>';
     }
     return '<span class="cal-mark is-task' + (t.done ? ' is-done' : '') + '">' +
-           dueChipHtml(todoDisplayText(t.text) || '(untitled)') + '</span>';
+           dueChipHtml(todoDisplayText(t.text) || '(untitled)', true) + '</span>';
   }).join('');
   return '<div class="clock-due">' + marks + '</div>';
 }
@@ -7667,7 +7667,8 @@ function dayDueHtml(){
       '<button class="dl-text' + (done ? ' is-done' : '') + '"' +
         ' onclick="openProjEditor(\'' + e.p.id + '\')"' +
         ' title="' + escapeAttr(e.p.name || '') + '">' +
-        '<span class="dl-d">D-day</span> ' + escapeHtmlT(name) + '</button>' +
+        '<span class="dl-d">D-day</span> ' +
+        (e.t ? mdToHtml(name, false) : escapeHtmlT(name)) + '</button>' +
     '</div>';
   }).join('');
 }
