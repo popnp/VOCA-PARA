@@ -782,6 +782,43 @@
     font-size:var(--fs-label); color:var(--text-muted); line-height:1.5;
   }
   .extra-row.open .extra-body{display:block;}
+  /* The label, and after it the little bordered word that says what kind of
+     line this is. Grouped, so the box travels with the label rather than
+     drifting to the far end where the chevron lives. */
+  .extra-name{display:flex; align-items:baseline; gap:var(--sp-2); min-width:0; flex:1 1 auto;}
+  /* One line, like the four labels above it. A memo can be given a long
+     title, and a row that wraps to two lines sets the box and the chevron on
+     different lines and breaks the rhythm of the block. */
+  .extra-label{
+    min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .extra-tag{
+    flex:0 0 auto;
+    font-family:var(--font-ui); font-size:10px; font-weight:400;
+    letter-spacing:0.04em; line-height:1.4;
+    padding:1px 5px;
+    color:var(--text-muted);
+    border:0.5px solid #6B6B6B; border-radius:0;
+  }
+  /* A memo opened in one of these lines. Its own type scale is the one the
+     memo page uses — 30px titles over 22px prose — which beside four 16px
+     labels reads as a different document breaking in. So it comes down to
+     the size of the block it is in, and the hierarchy is carried by weight,
+     which is what it was carrying in the first place: a heading is bold and
+     black, the prose under it is neither. */
+  .extra-body .memo-body{color:var(--text-muted);}
+  .extra-body .memo-head{
+    font-size:var(--fs-label); font-weight:600; color:var(--text-dark);
+    margin:var(--sp-3) 0 2px;
+  }
+  .extra-body .memo-head:first-child{margin-top:0;}
+  .extra-body .memo-word{
+    font-size:var(--fs-label); line-height:1.5;
+    margin-top:var(--sp-3); color:var(--text-dark);
+  }
+  .extra-body .memo-word:first-child{margin-top:0;}
+  .extra-body .memo-line{font-size:var(--fs-label); line-height:1.5; color:var(--text-muted);}
+  .extra-body .memo-gap{height:var(--sp-1);}
 
   .quiz-tag-row{margin-bottom:var(--sp-4);}
   .prompt-text{
@@ -1509,6 +1546,38 @@
      information (the word already exists), not a problem. */
   .preview-item.is-dupe{border-left:3px solid var(--link-blue); padding-left:6px;}
   .preview-note{font-size:var(--fs-label); color:var(--link-blue); display:block; margin-top:2px; flex-basis:100%;}
+  /* The fields this paste writes a second way. One row each: the name, the
+     two sides to choose between, and the words of whichever is taken — set
+     in from the left so the block reads as belonging to the word above it. */
+  .preview-fields{
+    display:block; flex-basis:100%;
+    margin:6px 0 2px; padding-left:10px;
+    border-left:0.5px solid var(--paper-line);
+  }
+  .pf-row{display:block;}
+  .pf-row + .pf-row{margin-top:8px;}
+  .pf-label{
+    font-family:var(--font-ui); font-size:13px; font-weight:500;
+    color:var(--text-dark); margin-right:6px;
+  }
+  .pf-pick{display:inline-flex; gap:4px; vertical-align:baseline;}
+  .pf-btn{
+    /* 12px, written out: this file has no token below 16px, and a button
+       the size of the words it is choosing between reads as the louder of
+       the two. */
+    font-family:var(--font-ui); font-size:12px; font-weight:400;
+    line-height:1.5; padding:1px 6px; cursor:pointer;
+    background:none; color:var(--text-muted);
+    border:0.5px solid var(--paper-line); border-radius:0;
+  }
+  /* The side being taken. Black on white rather than a fill: the preview is
+     already carrying a blue bar and a red bar, and a third colour here would
+     be a third thing to learn. */
+  .pf-btn.on{color:var(--text-dark); border-color:var(--text-dark); font-weight:500;}
+  .pf-text{
+    display:block; margin-top:2px;
+    font-size:13px; line-height:1.45; color:var(--text-muted);
+  }
   /* Skipped rows stay listed but visibly inert. */
   .preview-item.is-skipped .pw,
   .preview-item.is-skipped .pm{opacity:0.4; text-decoration:line-through;}
@@ -2183,7 +2252,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-10-30a</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-11-02a</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -3598,6 +3667,30 @@ function parseExampleBlank(example, headWord){
   return {ok:false};
 }
 
+/* The named lines of two versions of one word, brought together by label.
+   A label the card has not got is added; a label it has is replaced only
+   where the preview said to. The card's own order is kept, and anything new
+   goes on the end, so a card does not reshuffle itself on every paste.
+
+   `pick` is the preview's answers, or the word 'fill' — fill what is
+   missing and touch nothing else, which is what the two blocks of a single
+   paste do, there being no preview and no card to ask about. */
+function mergeExtras(have, bring, pick){
+  const fillOnly = (pick === 'fill');
+  const answers = fillOnly ? {} : (pick || {});
+  const out = (have || []).map(e => Object.assign({}, e));
+  (bring || []).forEach(e => {
+    if(!e || !e.label || !e.text) return;
+    const at = out.findIndex(x => x && x.label === e.label);
+    if(at === -1){ out.push({label: e.label, text: e.text}); return; }
+    if(fillOnly) return;
+    if(out[at].text !== e.text && answers['x:' + e.label] !== 'old'){
+      out[at] = {label: e.label, text: e.text};
+    }
+  });
+  return out;
+}
+
 function groupParsedEntries(entries){
   const grouped = {};
   entries.forEach(item=>{
@@ -3605,11 +3698,20 @@ function groupParsedEntries(entries){
     if(!grouped[key]){
       grouped[key] = {word:item.word, meaning:item.meaning, examples:item.examples.slice(), tag:item.tag, testHistory:item.testHistory, phonetics:item.phonetics||'', extras:(item.extras||[]).slice()};
     } else {
+      /* One word written twice in the same paste. Nothing is asked here —
+         there is no card yet to argue with — so the rule is the one the
+         merge above uses when it is not asking: fill what is missing, leave
+         what is there. The named lines come together label by label rather
+         than all-or-nothing, which is how a second block can add 어원 to a
+         first block that only had 쓸때. */
       if(!grouped[key].meaning && item.meaning) grouped[key].meaning = item.meaning;
       if(!grouped[key].tag && item.tag) grouped[key].tag = item.tag;
       if(!grouped[key].phonetics && item.phonetics) grouped[key].phonetics = item.phonetics;
-      if(!grouped[key].extras.length && (item.extras||[]).length) grouped[key].extras = item.extras.slice();
-      if(item.testHistory) grouped[key].testHistory = item.testHistory;
+      grouped[key].extras = mergeExtras(grouped[key].extras, item.extras, 'fill');
+      if(Array.isArray(item.testHistory) &&
+         item.testHistory.length > (grouped[key].testHistory || []).length){
+        grouped[key].testHistory = item.testHistory;
+      }
       item.examples.forEach(ex=>{
         if(ex && grouped[key].examples.indexOf(ex) === -1) grouped[key].examples.push(ex);
       });
@@ -3890,6 +3992,56 @@ async function unifiedConfirmAdd(){
   clearUnifiedAdd();
 }
 
+/* A word already saved, pasted again. Three kinds of field, and they are not
+   decided the same way:
+
+     examples      added, never replaced — a list only grows
+     a field the
+     card has not    filled in, no question asked — nothing is lost by it
+     a field the
+     card already
+     has, written
+     differently   ASKED, here in the preview, one field at a time
+
+   The last one is the whole point. Merging used to keep the old quietly,
+   which meant a rewritten 뜻풀이 or 어원 was thrown away without a word; the
+   obvious fix — letting the new one win — throws away the old one just as
+   quietly. Neither is a decision anybody made, so the decision is shown. */
+function previewConflicts(item, existing){
+  const out = [];
+  if(existing.meaning && item.meaning && existing.meaning !== item.meaning){
+    out.push({key: 'meaning', label: '뜻풀이',
+              old: existing.meaning, neu: item.meaning});
+  }
+  (item.extras || []).forEach(e => {
+    if(!e || !e.label || !e.text) return;
+    const was = (existing.extras || []).find(x => x && x.label === e.label);
+    if(was && was.text !== e.text){
+      out.push({key: 'x:' + e.label, label: e.label, old: was.text, neu: e.text});
+    }
+  });
+  return out;
+}
+
+/* The labels this paste brings that the card has not got. Added either way,
+   so they are told rather than asked. */
+function previewAdded(item, existing){
+  return (item.extras || [])
+    .filter(e => e && e.label && e.text &&
+                 !(existing.extras || []).some(x => x && x.label === e.label))
+    .map(e => e.label);
+}
+
+/* Which side of one field is being taken. New unless said otherwise: the
+   thing just written is usually the later thought. */
+function previewPick(idx, key, side){
+  const item = parsedPreview[idx];
+  if(!item) return;
+  item.pick = item.pick || {};
+  item.pick[key] = side;
+  renderPastePreview();
+}
+
 // Toggling re-renders the list, which is also what refreshes the button count.
 function togglePreviewSkip(idx){
   const item = parsedPreview[idx];
@@ -3929,10 +4081,35 @@ function renderPastePreview(){
       html += `<span class="preview-warning">⚠ ${badExamples.length} example(s) don't match the word — use [brackets] to mark the actual form used (it will still save)</span>`;
     }
     if(dupe){
-      html += `<span class="preview-note">Already saved — examples will be added to the existing card.`
+      const existing = findCardByWord(item.word);
+      const clash = previewConflicts(item, existing);
+      const added = previewAdded(item, existing);
+      item.pick = item.pick || {};
+      html += `<span class="preview-note">이미 있는 단어 — 예문은 기존 카드에 더해집니다.`
+        + (added.length ? ' 새 항목 ' + escapeHtml(added.join('·')) + ' 추가.' : '')
         + ` <button class="preview-skip" onclick="togglePreviewSkip(${idx})">`
-        + (item.skip ? "Don't skip" : 'Skip this one')
+        + (item.skip ? '다시 넣기' : '이 단어는 건너뛰기')
         + `</button></span>`;
+      /* One row per field that is written two ways, the text of whichever
+         side is taken shown underneath it — a choice between two things you
+         cannot see is not a choice. */
+      if(clash.length && !item.skip){
+        html += '<span class="preview-fields">' + clash.map(c => {
+          const key = c.key;
+          const side = item.pick[key] === 'old' ? 'old' : 'new';
+          const body = side === 'old' ? c.old : c.neu;
+          return '<span class="pf-row">' +
+            '<span class="pf-label">' + escapeHtml(c.label) + '</span>' +
+            '<span class="pf-pick">' +
+              '<button class="pf-btn' + (side === 'new' ? ' on' : '') + '"' +
+                ' onclick="previewPick(' + idx + ',\'' + escapeAttr(key) + '\',\'new\')">새로 쓴 것</button>' +
+              '<button class="pf-btn' + (side === 'old' ? ' on' : '') + '"' +
+                ' onclick="previewPick(' + idx + ',\'' + escapeAttr(key) + '\',\'old\')">그대로 두기</button>' +
+            '</span>' +
+            '<span class="pf-text">' + escapeHtml(body) + '</span>' +
+          '</span>';
+        }).join('') + '</span>';
+      }
     }
     div.innerHTML = html;
     previewEl.appendChild(div);
@@ -3968,11 +4145,24 @@ async function confirmAdd(){
     if(item.skip) return; // deselected in the preview
     const existing = findCardByWord(item.word);
     if(existing){
-      if(!existing.meaning && item.meaning) existing.meaning = item.meaning;
+      const pick = item.pick || {};
+      /* An empty field is filled without asking; a field written two ways is
+         whichever side was taken in the preview, and new is the default
+         there. The tag and the pronunciation are not asked about: one is a
+         filing mark and the other does not get rewritten. */
+      if(item.meaning && (!existing.meaning || pick.meaning !== 'old')){
+        existing.meaning = item.meaning;
+      }
       if(!existing.tag && item.tag) existing.tag = item.tag;
       if(!existing.phonetics && item.phonetics) existing.phonetics = item.phonetics;
-      if(!(existing.extras||[]).length && (item.extras||[]).length) existing.extras = item.extras.slice();
-      if(item.testHistory) existing.testHistory = item.testHistory;
+      existing.extras = mergeExtras(existing.extras, item.extras, pick);
+      /* Never shorter. The history is a bare row of scores with no dates on
+         it, so there is no merging the two — but a backup that is behind
+         should not be able to wipe out results taken since. */
+      if(Array.isArray(item.testHistory) &&
+         item.testHistory.length > (existing.testHistory || []).length){
+        existing.testHistory = item.testHistory;
+      }
       item.examples.forEach(ex=>{
         if(existing.examples.indexOf(ex) === -1) existing.examples.push(ex);
       });
@@ -4876,19 +5066,57 @@ function renderQuizCard(){
 /* One renderer for both places the named lines are drawn — the card's back and
    the word list's detail panel. The card itself flips on click, so the press
    has to be stopped here or opening a line turns the card over. */
-function extrasHtml(list){
+/* One row of the block: a label that opens, and what it opens onto. The
+   `tag` is the little bordered word after the label, which says what kind of
+   line this is when it is not one of the four written on the card itself. */
+function extraRowHtml(label, bodyHtml, tag){
+  return '<div class="extra-row">' +
+    '<button type="button" class="extra-head" onclick="event.stopPropagation(); toggleExtra(this);">' +
+      '<span class="extra-name">' +
+        '<span class="extra-label">' + escapeHtml(label) + '</span>' +
+        (tag ? '<span class="extra-tag">' + escapeHtml(tag) + '</span>' : '') +
+      '</span>' +
+      '<svg class="extra-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+        '<path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/>' +
+      '</svg>' +
+    '</button>' +
+    /* The card turns over when pressed, and an opened line is inside it. A
+       press here is somebody reading — or following a [word] — so it stops
+       at the line rather than turning the card over under them. */
+    '<div class="extra-body" onclick="event.stopPropagation();">' + bodyHtml + '</div>' +
+  '</div>';
+}
+
+/* The memos that name this word, each as one more line of the same block.
+   They used to be a button that opened a window over the card; a memo is
+   written about the word in front of you, so it belongs on the same list as
+   everything else written about it — opened when wanted, quiet until then. */
+function memoRowsHtml(word){
+  if(!word) return '';
+  return memosLinkingWord(word).map(m =>
+    extraRowHtml(memoRowLabel(m),
+                 '<div class="memo-body">' + memoBodyToHtml(m.body, '', true) + '</div>',
+                 'memo')).join('');
+}
+
+/* What to call a memo on that line: its own title, the date it is filed under
+   if it has none, and failing both the word 메모 — a line with no label at all
+   is a line nobody can tell apart from the one above it. */
+function memoRowLabel(memo){
+  return memoTitleOf(memo) || memoTagOf(memo) || '메모';
+}
+
+/* One renderer for both places the named lines are drawn — the card's back and
+   the word list's detail panel. The card itself flips on click, so the press
+   has to be stopped here or opening a line turns the card over. */
+function extrasHtml(list, word){
   const items = (list||[]).filter(e => e && e.label && e.text);
-  if(!items.length) return '';
-  return '<div class="extras-block">' + items.map(e =>
-    '<div class="extra-row">' +
-      '<button type="button" class="extra-head" onclick="event.stopPropagation(); toggleExtra(this);">' +
-        '<span>' + escapeHtml(e.label) + '</span>' +
-        '<svg class="extra-chev" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
-          '<path d="M7 3.5 L18.5 12 L7 20.5" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="square" stroke-linejoin="miter"/>' +
-        '</svg>' +
-      '</button>' +
-      '<div class="extra-body">' + escapeHtml(e.text) + '</div>' +
-    '</div>').join('') + '</div>';
+  const memoRows = memoRowsHtml(word);
+  if(!items.length && !memoRows) return '';
+  return '<div class="extras-block">' +
+    items.map(e => extraRowHtml(e.label, escapeHtml(e.text), '')).join('') +
+    memoRows +
+  '</div>';
 }
 
 function toggleExtra(btn){
@@ -4902,12 +5130,11 @@ function toggleExtra(btn){
    than in each of them. */
 function setBackMemoRow(card){
   const extras = document.getElementById('backExtras');
-  if(extras) extras.innerHTML = extrasHtml(card.extras);
+  if(extras) extras.innerHTML = extrasHtml(card.extras, card.word);
+  /* The chip that used to stand here opened a window; the memo is a line of
+     the block above now, so there is nothing left for this row to hold. */
   const row = document.getElementById('backMemoRow');
-  if(!row) return;
-  const chip = memoLinkChip(card.word, true);
-  row.innerHTML = chip;
-  row.style.display = chip ? 'block' : 'none';
+  if(row){ row.innerHTML = ''; row.style.display = 'none'; }
 }
 
 function refreshBackContent(){
@@ -5216,7 +5443,7 @@ function toggleMemoView(){
    A bracketed word with no matching card stays plain text rather than becoming
    a dead link; adding the word later makes the link work by itself, since only
    the text is stored and links are resolved at display time. */
-function memoBodyToHtml(body, afterTitle){
+function memoBodyToHtml(body, afterTitle, skipTitle){
   const lines = String(body || '').split('\n');
   const out = [];
   let headPlaced = false;
@@ -5230,7 +5457,11 @@ function memoBodyToHtml(body, afterTitle){
 
     const titleMatch = line.match(/^<([^>]+)>$/);
     if(titleMatch){
-      out.push('<div class="memo-title">' + escapeHtml(titleMatch[1].trim()) + '</div>');
+      /* Opened from a line that is already named after the memo, the title
+         would be the same words twice in a row. */
+      if(!skipTitle){
+        out.push('<div class="memo-title">' + escapeHtml(titleMatch[1].trim()) + '</div>');
+      }
       // The tag and test history belong directly under the title.
       if(afterTitle && !headPlaced){ out.push(afterTitle); headPlaced = true; }
       return;
