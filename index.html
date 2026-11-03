@@ -782,6 +782,43 @@
     font-size:var(--fs-label); color:var(--text-muted); line-height:1.5;
   }
   .extra-row.open .extra-body{display:block;}
+
+  /* ---- what a save by hand is about to do -------------------------- */
+  .edit-plan{
+    margin-top:var(--sp-3); padding-top:var(--sp-3);
+    border-top:0.5px solid #6B6B6B;
+  }
+  .ep-counts{
+    display:flex; gap:var(--sp-4);
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
+    color:var(--text-dark);
+  }
+  /* The one thing on this screen that cannot be undone by typing. */
+  .ep-counts .ep-danger{color:var(--rust);}
+  .ep-warn{
+    margin-top:var(--sp-2);
+    font-size:var(--fs-label); line-height:1.4; color:var(--rust);
+  }
+  .ep-group{margin-top:var(--sp-3);}
+  .ep-head{
+    font-family:var(--font-ui); font-size:var(--fs-label); font-weight:500;
+    color:var(--text-dark); margin-bottom:2px;
+  }
+  .ep-del .ep-head{color:var(--rust);}
+  .ep-items{display:flex; flex-wrap:wrap; gap:2px var(--sp-3);}
+  .ep-item{
+    font-size:var(--fs-label); line-height:1.5; color:var(--text-muted);
+    overflow-wrap:anywhere;
+  }
+  .ep-del .ep-item{color:var(--rust);}
+  /* Which parts of it change, after the name — the detail that says whether
+     a line marked "수정" is the one you meant to touch. */
+  .ep-fields{font-size:12px; color:var(--text-muted); margin-left:4px;}
+  .ep-del .ep-fields{color:var(--rust);}
+  .ep-done{
+    font-family:var(--font-ui); font-size:var(--fs-label);
+    color:var(--text-dark); display:flex; align-items:center; gap:var(--sp-2);
+  }
   /* The label, and after it the little bordered word that says what kind of
      line this is. Grouped, so the box travels with the label rather than
      drifting to the far end where the chevron lives. */
@@ -2252,7 +2289,7 @@ if('serviceWorker' in navigator){
   <section id="view-edit" class="view">
     <div class="card-panel">
       <div class="panel-inner">
-        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-11-02a</p>
+        <p class="hint" style="margin:0 0 var(--sp-4);">Build 2026-11-03a</p>
         <label class="field-label">Sync across devices</label>
         <p class="hint" style="margin:6px 0 10px;">Your words are stored online under the code below. Paste this same code on another device to see the same data there. Anyone with the code can read and change it, so keep it private.</p>
         <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap; align-items:center;">
@@ -2329,10 +2366,11 @@ if('serviceWorker' in navigator){
           <textarea id="memoManualEditArea" style="min-height:320px; font-family:var(--font-ui); font-weight:300; font-size:var(--fs-label);"></textarea>
           <p class="hint">Each memo starts with its rating line <code>&#10214;3,1,0&#10215;</code>. Leave the brackets empty for a memo that has never been rated. Everything under that line is the memo itself. Saving replaces all memos with what is written here.</p>
           <div class="actions" style="margin-top:8px;">
-            <button class="btn btn-primary" onclick="saveMemoManualEdit(this)">Save &amp; Update App</button>
+            <button class="btn btn-primary" onclick="saveMemoManualEdit()">Save &amp; Update App</button>
             <button class="btn btn-ghost" onclick="copyMemoManualEdit()">Copy</button>
             <button class="btn btn-ghost" onclick="cancelManualEdit()">Cancel</button>
           </div>
+          <div class="edit-plan" id="memoManualEditPlan" style="display:none;"></div>
         </div>
 
 <div id="pManualEditPanel" style="display:none; margin-top:16px;">
@@ -2352,6 +2390,7 @@ if('serviceWorker' in navigator){
             <button class="btn btn-ghost" onclick="pCopyManualEdit()">Copy</button>
             <button class="btn btn-ghost" onclick="pCancelManualEdit()">Cancel</button>
           </div>
+          <div class="edit-plan" id="pManualEditPlan" style="display:none;"></div>
         </div>
 
 <div id="manualEditPanel" style="display:none; margin-top:16px;">
@@ -2372,6 +2411,7 @@ if('serviceWorker' in navigator){
             <button class="btn btn-ghost" onclick="copyManualEdit()">Copy</button>
             <button class="btn btn-ghost" onclick="cancelManualEdit()">Cancel</button>
           </div>
+          <div class="edit-plan" id="manualEditPlan" style="display:none;"></div>
         </div>
         </div>
       </div>
@@ -6893,7 +6933,154 @@ function cancelManualEdit(){
   closeEditByTxt();
 }
 
-async function saveManualEdit(){
+/* =========================================================================
+   What a save by hand is about to do.
+
+   All three of these panels work the same way: the text replaces the slice
+   that is shown, whole. That is what makes them useful — a word taken out of
+   the text is taken out of the app — and it is also what makes them
+   dangerous, because a block deleted by accident goes just as quietly as one
+   deleted on purpose. So the press no longer saves. It works out what would
+   change, says so, and waits.
+
+   Matching is by the thing's own name — the word, the paragraph's English
+   title, the memo's title — because that is what a person edits by. Rename
+   one and it reads as a deletion and an addition, which is honest: that is
+   what the save will do to it.
+   ========================================================================= */
+function editPlan(oldList, newList, keyOf, fieldsOf){
+  const seen = {};
+  const plan = {add: [], del: [], mod: [], warn: []};
+  oldList.forEach(o => { seen[keyOf(o)] = {old: o}; });
+  newList.forEach(v => {
+    const k = keyOf(v);
+    if(seen[k]) seen[k].neu = v;
+    else { seen[k] = {neu: v}; }
+  });
+  Object.keys(seen).forEach(k => {
+    const pair = seen[k];
+    if(!pair.neu){ plan.del.push({key: k, old: pair.old}); return; }
+    if(!pair.old){ plan.add.push({key: k, neu: pair.neu}); return; }
+    const a = fieldsOf(pair.old), b = fieldsOf(pair.neu);
+    const changed = Object.keys(b).filter(name => a[name] !== b[name]);
+    if(changed.length) plan.mod.push({key: k, old: pair.old, neu: pair.neu, fields: changed});
+  });
+  return plan;
+}
+
+/* The summary itself. Deletions first and in red, because that is the one
+   thing on this screen that cannot be got back by typing it again. */
+function editPlanHtml(plan, nounDeleted){
+  const line = (label, items, cls) => items.length
+    ? '<div class="ep-group ' + cls + '">' +
+        '<div class="ep-head">' + label + ' ' + items.length + '</div>' +
+        '<div class="ep-items">' + items.map(it =>
+          '<span class="ep-item">' + escapeHtml(it.key) +
+          (it.fields && it.fields.length
+            ? '<span class="ep-fields">' + escapeHtml(it.fields.join(', ')) + '</span>'
+            : '') + '</span>').join('') +
+        '</div></div>'
+    : '';
+  const counts = '<div class="ep-counts">' +
+    '<span>추가 ' + plan.add.length + '</span>' +
+    '<span>수정 ' + plan.mod.length + '</span>' +
+    '<span class="' + (plan.del.length ? 'ep-danger' : '') + '">삭제 ' + plan.del.length + '</span>' +
+  '</div>';
+  const warns = plan.warn.length
+    ? '<div class="ep-warn">' + plan.warn.map(escapeHtml).join('<br>') + '</div>' : '';
+  const body = line(nounDeleted + ' 삭제', plan.del, 'ep-del') +
+               line('수정', plan.mod, 'ep-mod') +
+               line('추가', plan.add, 'ep-add');
+  return counts + warns +
+    (body || '<p class="hint" style="margin:var(--sp-2) 0;">바뀌는 것이 없습니다.</p>');
+}
+
+/* The one step back. Only the last save, only until the next one — enough to
+   catch the press that should not have happened, and not a history to keep. */
+let editUndo = null;
+
+function showEditPlan(id, plan, confirmFn, nounDeleted){
+  const box = document.getElementById(id);
+  if(!box) return;
+  box.innerHTML = editPlanHtml(plan, nounDeleted || '') +
+    '<div class="actions" style="margin-top:var(--sp-3);">' +
+      '<button class="btn btn-primary" onclick="' + confirmFn + '">확인하고 저장</button>' +
+      '<button class="btn btn-ghost" onclick="hideEditPlan(\'' + id + '\')">돌아가기</button>' +
+    '</div>';
+  box.style.display = 'block';
+}
+
+function hideEditPlan(id){
+  const box = document.getElementById(id);
+  if(box){ box.innerHTML = ''; box.style.display = 'none'; }
+}
+
+function showEditUndo(id, msg){
+  const box = document.getElementById(id);
+  if(!box) return;
+  box.innerHTML = '<div class="ep-done">' + escapeHtml(msg) +
+    ' <button class="btn btn-ghost" onclick="undoEditSave(\'' + id + '\')">되돌리기</button></div>';
+  box.style.display = 'block';
+}
+
+async function undoEditSave(id){
+  if(!editUndo){ hideEditPlan(id); return; }
+  const u = editUndo;
+  editUndo = null;
+  if(u.kind === 'voca'){ cards = u.data; await saveCards(); renderCalendar(); }
+  if(u.kind === 'para'){ paras = u.data; await pSaveEntries(); pRenderCalendar(); }
+  if(u.kind === 'memo'){ memos = u.data; await saveMemos(); renderMemoList(); }
+  hideEditPlan(id);
+  alert('되돌렸습니다.');
+}
+
+/* What the text would do to the words shown. Worked out from the same
+   parse and the same slice rule the save itself uses, so the two cannot
+   disagree about what is about to happen. */
+function manualEditPlanVoca(){
+  const raw = document.getElementById('manualEditArea').value;
+  const grouped = groupParsedEntries(parseBlockText(raw));
+  const filter = document.getElementById('manualEditDateFilter').value;
+  const catV = document.getElementById('manualEditCatV').checked;
+  const catW = document.getElementById('manualEditCatW').checked;
+  const catR = document.getElementById('manualEditCatR').checked;
+  const catS = document.getElementById('manualEditCatS').checked;
+  const anyCat = catV || catW || catR || catS;
+  const catMap = {V:catV, W:catW, R:catR, S:catS};
+  const inShownSlice = (c) => {
+    const p = parseTag(c.tag);
+    return ((filter === '__all__') || (p.date === filter)) &&
+           (!anyCat || (p.category && catMap[p.category]));
+  };
+  const fields = c => ({
+    '뜻풀이': String(c.meaning || ''),
+    '예문': (c.examples || []).join('\u0001'),
+    '발음': String(c.phonetics || ''),
+    '태그': String(c.tag || ''),
+    '항목': (c.extras || []).map(e => e.label + '=' + e.text).join('\u0001'),
+    '시험기록': (c.testHistory || []).join(',')
+  });
+  const plan = editPlan(cards.filter(inShownSlice), grouped,
+                        c => String(c.word || '').trim(), fields);
+  /* A word whose history line is gone from the text loses the history, and
+     nothing on screen would say so. */
+  const lost = plan.mod.filter(m => m.fields.indexOf('시험기록') !== -1 &&
+                                    (m.old.testHistory || []).length >
+                                    (m.neu.testHistory || []).length);
+  if(lost.length){
+    plan.warn.push('시험 기록이 줄어듭니다 — ' +
+      lost.map(m => m.key).slice(0, 6).join(', ') +
+      (lost.length > 6 ? ' 외 ' + (lost.length - 6) : '') +
+      '. 글에서 ⟦…⟧ 줄을 지우면 기록도 지워집니다.');
+  }
+  return plan;
+}
+
+function saveManualEdit(){
+  showEditPlan('manualEditPlan', manualEditPlanVoca(), 'applyManualEdit()', '단어');
+}
+
+async function applyManualEdit(){
   const raw = document.getElementById('manualEditArea').value;
   const entries = parseBlockText(raw);
   const grouped = groupParsedEntries(entries);
@@ -6929,15 +7116,17 @@ async function saveManualEdit(){
   };
 
   const preserved = cards.filter(c => !inShownSlice(c));
+  /* The list as it stands, kept for one press of 되돌리기. */
+  editUndo = {kind: 'voca', data: cards.map(c => Object.assign({}, c))};
   cards = preserved.concat(newCards);
 
   await saveCards();
-  closeEditByTxt();
   renderCalendar();
   document.getElementById('dayDetail').style.display = 'none';
   openWordIds.clear();
   editWordId = null;
-  alert(`Saved. ${cards.length} word(s) now in the app.`);
+  refreshManualEditArea();
+  showEditUndo('manualEditPlan', '저장했습니다. 단어 ' + cards.length + '개.');
 }
 
 function downloadFullExport(){
@@ -7157,14 +7346,37 @@ function copyMemoManualEdit(){
   }
 }
 
-async function saveMemoManualEdit(el){
-  // Unlike the word and paragraph panels this one has no date filter, so saving
-  // replaces every memo at once. Worth a second press.
-  if(!askConfirmVoca('Replace all memos with this text?', el, 'Press again to replace')) return;
+/* This panel has no date filter, so a save replaces EVERY memo — which is
+   the one place the summary matters most. Matched by title; a memo with no
+   title falls back to its first line, since that is what it is read by. */
+function memoKeyOf(m){
+  const t = memoTitleOf(m);
+  if(t) return t;
+  const first = String((m && m.body) || '').split('\n')
+    .map(s => s.trim()).filter(Boolean)[0] || '(빈 메모)';
+  return first.slice(0, 30);
+}
+
+function memoManualEditPlan(){
+  const next = parseMemoExportText(document.getElementById('memoManualEditArea').value);
+  const fields = m => ({
+    '내용': String((m && m.body) || '').trim(),
+    '별점': ((m && m.history) || []).join(',')
+  });
+  return editPlan(memos, next, memoKeyOf, fields);
+}
+
+function saveMemoManualEdit(){
+  showEditPlan('memoManualEditPlan', memoManualEditPlan(), 'applyMemoManualEdit()', '메모');
+}
+
+async function applyMemoManualEdit(){
+  editUndo = {kind: 'memo', data: memos.map(m => Object.assign({}, m))};
   memos = parseMemoExportText(document.getElementById('memoManualEditArea').value);
   await saveMemos();
   renderMemoList();
   refreshMemoManualEditArea();
+  showEditUndo('memoManualEditPlan', '저장했습니다. 메모 ' + memos.length + '개.');
 }
 
 /* On a static host the data lives in localStorage, which is wiped by "clear
@@ -10488,7 +10700,45 @@ function pCopyManualEdit(){
   }
 }
 
-async function pSaveManualEdit(){
+function pManualEditPlan(){
+  const entries = parseParaBlockText(document.getElementById('pManualEditArea').value);
+  const filter = document.getElementById('pManualEditDateFilter').value;
+  const catW = document.getElementById('pManualEditCatW').checked;
+  const catR = document.getElementById('pManualEditCatR').checked;
+  const catS = document.getElementById('pManualEditCatS').checked;
+  const anyCat = catW || catR || catS;
+  const catMap = {W:catW, R:catR, S:catS};
+  const inShownSlice = (p) => {
+    const t = parseTag(p.tag);
+    return ((filter === '__all__') || (t.date === filter)) &&
+           (!anyCat || (t.category && catMap[t.category]));
+  };
+  const fields = p => ({
+    '본문': String(p.contentEn || ''),
+    '번역': String(p.contentKo || ''),
+    '번역 제목': String(p.titleKo || ''),
+    '태그': String(p.tag || '')
+  });
+  const plan = editPlan(paras.filter(inShownSlice), entries,
+                        p => String(p.titleEn || '').trim(), fields);
+  /* The sentences' own test history only travels when the English title AND
+     the English body both match. Touch the body and it starts over, which
+     is not something the text itself shows. */
+  const reset = plan.mod.filter(m => m.fields.indexOf('본문') !== -1 &&
+    (m.old.sentences || []).some(s => (s.testHistory || []).length));
+  if(reset.length){
+    plan.warn.push('본문을 고치면 문장별 시험 기록이 초기화됩니다 — ' +
+      reset.map(m => m.key).slice(0, 4).join(', ') +
+      (reset.length > 4 ? ' 외 ' + (reset.length - 4) : '') + '.');
+  }
+  return plan;
+}
+
+function pSaveManualEdit(){
+  showEditPlan('pManualEditPlan', pManualEditPlan(), 'pApplyManualEdit()', '파라');
+}
+
+async function pApplyManualEdit(){
   const raw = document.getElementById('pManualEditArea').value;
   const entries = parseParaBlockText(raw);
   const filter = document.getElementById('pManualEditDateFilter').value;
@@ -10525,15 +10775,16 @@ async function pSaveManualEdit(){
   };
 
   const preserved = oldParas.filter(p => !inShownSlice(p));
+  editUndo = {kind: 'para', data: oldParas.map(p => Object.assign({}, p))};
   paras = preserved.concat(newParas);
 
   await pSaveEntries();
-  closeEditByTxt();
   renderCalendarIfParaListOpen();
   document.getElementById('pDayDetail').style.display = 'none';
   pOpenIds.clear();
   pEditId = null;
-  alert(`Saved. ${paras.length} paragraph(s) now in the app.`);
+  pRefreshManualEditArea();
+  showEditUndo('pManualEditPlan', '저장했습니다. 파라 ' + paras.length + '개.');
 }
 
 function renderCalendarIfParaListOpen(){
